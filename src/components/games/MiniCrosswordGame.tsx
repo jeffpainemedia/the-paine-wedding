@@ -388,10 +388,10 @@ export default function MiniCrosswordGame() {
             </div>
 
             {/* ── Main 2-col: grid left, clues right ── */}
-            <div className="grid items-stretch md:grid-cols-2">
+            <div className="grid md:grid-cols-2">
 
-                {/* Left: grid panel */}
-                <div className="bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-4 md:p-5">
+                {/* Left: grid panel — self-start so it doesn't stretch when right col grows */}
+                <div className="self-start bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-4 md:p-5">
                     {/* Active entry badge above the grid */}
                     <div className="mb-2.5 flex items-center justify-between text-[11px]">
                         <span className="uppercase tracking-[0.22em] text-white/55">
@@ -438,7 +438,8 @@ export default function MiniCrosswordGame() {
                                         }}
                                         value={letters[cell.key] ?? ""}
                                         onChange={(event) => updateCell(cell.key, event.target.value)}
-                                        onFocus={() => {
+                                        onFocus={(event) => {
+                                            event.target.select();
                                             const entry = getEntryForCell(cell.key, activeEntry?.direction);
                                             if (entry) setActiveEntryId(entry.id);
                                             setFocusedCellKey(cell.key);
@@ -448,10 +449,14 @@ export default function MiniCrosswordGame() {
                                         onKeyDown={(event) => handleInputKeyDown(event, cell)}
                                         maxLength={1}
                                         inputMode="text"
+                                        autoComplete="off"
+                                        autoCorrect="off"
                                         autoCapitalize="characters"
+                                        spellCheck={false}
+                                        data-form-type="other"
                                         aria-label={`Crossword cell ${cell.row + 1}, ${cell.col + 1}`}
                                         disabled={isSolved}
-                                        className="h-full w-full bg-transparent px-0 pb-0 pt-3 text-center text-xl font-semibold uppercase tracking-[0.05em] text-primary outline-none [caret-color:transparent] selection:bg-transparent"
+                                        className="h-full w-full cursor-default bg-transparent px-0 pb-0 pt-3 text-center text-xl font-semibold uppercase tracking-[0.05em] text-primary outline-none [caret-color:transparent] selection:bg-transparent"
                                     />
                                 </label>
                             );
@@ -532,11 +537,21 @@ export default function MiniCrosswordGame() {
 
                     {/* Completion / score submission */}
                     {isSolved ? (
-                        <div className="px-5 py-5 md:px-6">
+                        <div className="px-5 py-5 md:px-6 space-y-4">
+                            {/* Congratulations banner */}
+                            <div className="rounded-[1.5rem] border border-accent/25 bg-[linear-gradient(160deg,#fffbf0_0%,#fdf3d8_100%)] px-5 py-4 text-center">
+                                <p className="text-2xl">🎉</p>
+                                <p className="mt-1.5 font-heading text-xl text-primary">You solved it!</p>
+                                <p className="mt-1 text-sm text-text-secondary">
+                                    Finished in {Math.floor(durationSeconds / 60)}:{String(durationSeconds % 60).padStart(2, "0")}
+                                    {revealedEntryIds.length > 0 ? ` · ${revealedEntryIds.length} reveal${revealedEntryIds.length > 1 ? "s" : ""}` : " · clean solve"}
+                                    {" · "}<span className="font-semibold text-primary">{score} pts</span>
+                                </p>
+                            </div>
                             {scoreSubmitted ? (
                                 <div className="rounded-[1.5rem] border border-emerald-200/70 bg-[linear-gradient(160deg,#f2faf5_0%,#e8f5ed_100%)] px-5 py-4">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Crossword Complete</p>
-                                    <p className="mt-2 text-sm text-text-secondary">Score locked in. You can keep revisiting from this browser.</p>
+                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Score Locked In</p>
+                                    <p className="mt-2 text-sm text-text-secondary">You're on the leaderboard. Check back to see how others do.</p>
                                 </div>
                             ) : (
                                 <ScoreSubmissionForm

@@ -101,13 +101,13 @@ export default function ScoreSubmissionForm({
             <form className="mt-6 grid gap-4" onSubmit={handleSubmit}>
                 {storedPlayer ? (
                     <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-[1rem] border border-primary/12 bg-white px-4 py-3">
+                        <div className="min-w-0 rounded-[1rem] border border-primary/12 bg-white px-4 py-3">
                             <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">Username</p>
-                            <p className="mt-2 text-text-primary">{username}</p>
+                            <p className="mt-2 truncate text-text-primary">{username}</p>
                         </div>
-                        <div className="rounded-[1rem] border border-primary/12 bg-white px-4 py-3">
+                        <div className="min-w-0 rounded-[1rem] border border-primary/12 bg-white px-4 py-3">
                             <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">Email</p>
-                            <p className="mt-2 text-text-primary">{email}</p>
+                            <p className="mt-2 truncate text-text-primary">{email}</p>
                         </div>
                     </div>
                 ) : (
