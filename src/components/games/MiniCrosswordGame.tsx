@@ -399,25 +399,7 @@ export default function MiniCrosswordGame() {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="relative overflow-hidden rounded-[2.2rem] border border-primary/12 bg-white shadow-[0_24px_80px_rgba(20,42,68,0.10)]">
-
-            {/* ── Start overlay ── */}
-            {!gameStarted && (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 rounded-[2.2rem] bg-[linear-gradient(160deg,rgba(23,55,86,0.97)_0%,rgba(15,32,51,0.97)_100%)] px-8 text-center backdrop-blur-sm">
-                    <p className="text-xs uppercase tracking-[0.35em] text-white/45">Daily Puzzle</p>
-                    <h2 className="font-heading text-4xl text-white">Mini Crossword</h2>
-                    <p className="max-w-xs text-sm leading-relaxed text-white/60">
-                        Six clues built around Ashlyn &amp; Jeffrey. The timer starts when you do.
-                    </p>
-                    <button
-                        type="button"
-                        onClick={handleStartGame}
-                        className="mt-2 rounded-full bg-accent px-10 py-3.5 text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-                    >
-                        Start
-                    </button>
-                </div>
-            )}
+        <div className="overflow-hidden rounded-[2.2rem] border border-primary/12 bg-white shadow-[0_24px_80px_rgba(20,42,68,0.10)]">
 
             {/* ── Header bar ── */}
             <div className="border-b border-primary/8 bg-[#fbf8f3] px-5 py-4">
@@ -478,27 +460,29 @@ export default function MiniCrosswordGame() {
                 </div>
             </div>
 
-            {/* ── Active clue bar ── */}
-            <div className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
-                {activeEntry ? (
-                    <p className="text-sm leading-snug text-primary">
-                        <span className="mr-1.5 font-semibold">
-                            {activeEntry.number}{activeEntry.direction === "across" ? "A" : "D"}
-                        </span>
-                        {activeEntry.clue}
-                        {revealedEntryIds.includes(activeEntry.id) && (
-                            <span className="ml-2 text-[10px] uppercase tracking-widest text-secondary opacity-70">· revealed</span>
-                        )}
+            {/* ── Clue bar + Grid + Clues wrapper (overlays live here) ── */}
+            <div className="relative">
+
+                {/* Start overlay — fades in, covers clue bar + grid + clues; header stays visible */}
+                <div
+                    className={`absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-[rgba(23,55,86,0.52)] px-8 text-center backdrop-blur-sm transition-opacity duration-300 ${
+                        !gameStarted ? "opacity-100" : "opacity-0 pointer-events-none"
+                    }`}
+                >
+                    <p className="text-xs uppercase tracking-[0.35em] text-white/55">Ready to play?</p>
+                    <p className="max-w-xs text-sm leading-relaxed text-white/70">
+                        Six clues built around Ashlyn &amp; Jeffrey. The timer starts when you do.
                     </p>
-                ) : (
-                    <p className="text-sm text-text-secondary">Tap a square or clue to begin</p>
-                )}
-            </div>
+                    <button
+                        type="button"
+                        onClick={handleStartGame}
+                        className="rounded-full bg-accent px-10 py-3.5 text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    >
+                        Start
+                    </button>
+                </div>
 
-            {/* ── Grid + Clues ── */}
-            <div className="relative flex flex-col md:flex-row">
-
-                {/* Pause overlay — covers grid AND clues, fades in */}
+                {/* Pause overlay — same style, covers same area */}
                 <div
                     className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[rgba(23,55,86,0.52)] backdrop-blur-sm transition-opacity duration-300 ${
                         isPaused ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -513,6 +497,26 @@ export default function MiniCrosswordGame() {
                         Resume
                     </button>
                 </div>
+
+                {/* ── Active clue bar ── */}
+                <div className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
+                    {activeEntry ? (
+                        <p className="text-sm leading-snug text-primary">
+                            <span className="mr-1.5 font-semibold">
+                                {activeEntry.number}{activeEntry.direction === "across" ? "A" : "D"}
+                            </span>
+                            {activeEntry.clue}
+                            {revealedEntryIds.includes(activeEntry.id) && (
+                                <span className="ml-2 text-[10px] uppercase tracking-widest text-secondary opacity-70">· revealed</span>
+                            )}
+                        </p>
+                    ) : (
+                        <p className="text-sm text-text-secondary">Tap a square or clue to begin</p>
+                    )}
+                </div>
+
+                {/* ── Grid + Clues ── */}
+                <div className="flex flex-col md:flex-row">
 
                 {/* Grid */}
                 <div className="flex items-center justify-center bg-[#fbf8f3] p-5 md:p-8">
@@ -665,6 +669,8 @@ export default function MiniCrosswordGame() {
                     </div>
                 </div>
             </div>
+
+            </div>{/* end clue bar + grid + clues wrapper */}
 
             {/* ── Completion screen ── */}
             {solved && (
