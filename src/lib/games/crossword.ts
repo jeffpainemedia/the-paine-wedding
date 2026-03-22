@@ -46,376 +46,2655 @@ export type CrosswordMetadata = {
     completed_at: string;
 };
 
+export type CrosswordEntryOverride = {
+    id: string;
+    answer: string;
+    clue: string;
+};
+
+export type CrosswordOverrideMap = Record<string, CrosswordEntryOverride[]>;
+
+export type CrosswordCatalogItem = {
+    id: string;
+    dateKey: string;
+    title: string;
+    subtitle: string;
+    rows: number;
+    cols: number;
+    entryCount: number;
+};
+
 // ---------------------------------------------------------------------------
-// Grid template
-//
-// 5 rows × 7 cols. Active cells only (letters).
-// ACROSS: A1 = row 0, cols 1–5 | A2 = row 2, cols 1–5 | A3 = row 4, cols 1–5
-// DOWN:   D1 = col 1, rows 0–4 | D2 = col 3, rows 0–4 | D3 = col 5, rows 0–4
-//
-// Intersection constraints (must match):
-//   D1[0]=A1[0]  D2[0]=A1[2]  D3[0]=A1[4]
-//   D1[2]=A2[0]  D2[2]=A2[2]  D3[2]=A2[4]
-//   D1[4]=A3[0]  D2[4]=A3[2]  D3[4]=A3[4]
+// Flexible puzzle data format — supports any grid layout with mixed word lengths
 // ---------------------------------------------------------------------------
+
+type RawWordEntry = {
+    word: string;
+    clue: string;
+    row: number;
+    col: number;
+    dir: "A" | "D";
+};
 
 type RawPuzzleData = {
     id: string;
-    a1: string; clue_a1: string;
-    a2: string; clue_a2: string;
-    a3: string; clue_a3: string;
-    d1: string; clue_d1: string;
-    d2: string; clue_d2: string;
-    d3: string; clue_d3: string;
+    rows: number;
+    cols: number;
+    words: RawWordEntry[];
 };
 
 function buildPuzzle(raw: RawPuzzleData): CrosswordPuzzle {
-    const a1 = raw.a1.toUpperCase();
-    const a2 = raw.a2.toUpperCase();
-    const a3 = raw.a3.toUpperCase();
-    const d1 = raw.d1.toUpperCase();
-    const d2 = raw.d2.toUpperCase();
-    const d3 = raw.d3.toUpperCase();
+    let aCount = 0;
+    let dCount = 0;
+    const entries: CrosswordEntry[] = raw.words.map((w) => ({
+        id: w.dir === "A" ? `a${++aCount}` : `d${++dCount}`,
+        answer: w.word.toUpperCase(),
+        clue: w.clue,
+        direction: w.dir === "A" ? "across" : "down",
+        row: w.row,
+        col: w.col,
+    }));
 
-    // Verify intersections
-    const checks: [string, string, string][] = [
-        [d1[0], a1[0], `d1[0]=a1[0] in puzzle ${raw.id}`],
-        [d2[0], a1[2], `d2[0]=a1[2] in puzzle ${raw.id}`],
-        [d3[0], a1[4], `d3[0]=a1[4] in puzzle ${raw.id}`],
-        [d1[2], a2[0], `d1[2]=a2[0] in puzzle ${raw.id}`],
-        [d2[2], a2[2], `d2[2]=a2[2] in puzzle ${raw.id}`],
-        [d3[2], a2[4], `d3[2]=a2[4] in puzzle ${raw.id}`],
-        [d1[4], a3[0], `d1[4]=a3[0] in puzzle ${raw.id}`],
-        [d2[4], a3[2], `d2[4]=a3[2] in puzzle ${raw.id}`],
-        [d3[4], a3[4], `d3[4]=a3[4] in puzzle ${raw.id}`],
-    ];
-    for (const [x, y, label] of checks) {
-        if (x !== y) throw new Error(`Crossword intersection mismatch: ${label} (${x} ≠ ${y})`);
+    // Validate intersections
+    const grid: Record<string, string> = {};
+    for (const e of entries) {
+        for (let i = 0; i < e.answer.length; i++) {
+            const r = e.row + (e.direction === "down" ? i : 0);
+            const c = e.col + (e.direction === "across" ? i : 0);
+            const key = `${r}:${c}`;
+            if (grid[key] && grid[key] !== e.answer[i]) {
+                throw new Error(`Crossword intersection mismatch at ${key} in ${raw.id}`);
+            }
+            grid[key] = e.answer[i];
+        }
     }
 
     return {
         id: raw.id,
         title: "Ashlyn & Jeffrey Mini Crossword",
         subtitle: "Fill in the blanks — all answers are drawn from their story, their words, and their world.",
-        rows: 5,
-        cols: 7,
-        entries: [
-            { id: "a1", answer: a1, clue: raw.clue_a1, direction: "across", row: 0, col: 1 },
-            { id: "a2", answer: a2, clue: raw.clue_a2, direction: "across", row: 2, col: 1 },
-            { id: "a3", answer: a3, clue: raw.clue_a3, direction: "across", row: 4, col: 1 },
-            { id: "d1", answer: d1, clue: raw.clue_d1, direction: "down",   row: 0, col: 1 },
-            { id: "d2", answer: d2, clue: raw.clue_d2, direction: "down",   row: 0, col: 3 },
-            { id: "d3", answer: d3, clue: raw.clue_d3, direction: "down",   row: 0, col: 5 },
-        ],
+        rows: raw.rows,
+        cols: raw.cols,
+        entries,
     };
 }
 
+function normalizeCrosswordAnswer(value: string) {
+    return value.trim().toUpperCase().replace(/[^A-Z]/g, "");
+}
+
+function normalizeCrosswordClue(value: string) {
+    return value.trim();
+}
+
+export function parseCrosswordOverrides(value: unknown): CrosswordOverrideMap {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return {};
+    }
+
+    const result: CrosswordOverrideMap = {};
+
+    for (const [puzzleId, rawEntries] of Object.entries(value as Record<string, unknown>)) {
+        if (!Array.isArray(rawEntries)) continue;
+
+        const parsedEntries = rawEntries
+            .map((rawEntry) => {
+                if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) {
+                    return null;
+                }
+
+                const record = rawEntry as Record<string, unknown>;
+                const id = typeof record.id === "string" ? record.id.trim() : "";
+                const answer = typeof record.answer === "string" ? normalizeCrosswordAnswer(record.answer) : "";
+                const clue = typeof record.clue === "string" ? normalizeCrosswordClue(record.clue) : "";
+
+                if (!id || !answer || !clue) {
+                    return null;
+                }
+
+                return { id, answer, clue };
+            })
+            .filter((entry): entry is CrosswordEntryOverride => Boolean(entry));
+
+        if (parsedEntries.length > 0) {
+            result[puzzleId] = parsedEntries;
+        }
+    }
+
+    return result;
+}
+
 // ---------------------------------------------------------------------------
-// 30-puzzle pool
-// All word sets verified: each intersection letter matches.
+// 194 daily puzzles — 2026-03-17 to 2026-09-26
+// Generated by scripts/generate-crosswords.mjs
+// Word reuse allowed after 14-puzzle cooldown.
 // ---------------------------------------------------------------------------
 
+// AUTO-GENERATED — 194/194 puzzles, 2026-03-17 to 2026-09-26
+// Word reuse allowed after 0-puzzle cooldown.
 const RAW_PUZZLES: RawPuzzleData[] = [
-    // ACROSS: amber/ocean/roses  |  DOWN: amour/bless/rings
-    {
-        id: "p01",
-        a1: "amber", clue_a1: "Warm golden hue woven through the wedding palette",
-        a2: "ocean", clue_a2: "What long distance can feel like — vast, but crossable",
-        a3: "roses", clue_a3: "Classic bloom in Ashlyn's bouquet",
-        d1: "amour", clue_d1: "French for what they found at A&M Commerce",
-        d2: "bless", clue_d2: "What vows do for a marriage",
-        d3: "rings", clue_d3: "Exchanged September 26, 2026",
-    },
-    // ACROSS: baker/ocean/match  |  DOWN: bloom/knelt/ranch
-    {
-        id: "p02",
-        a1: "baker", clue_a1: "Ashlyn's signature Sunday morning role",
-        a2: "ocean", clue_a2: "The scale of what they missed during the years apart",
-        a3: "match", clue_a3: "What everyone said they were — from the beginning",
-        d1: "bloom", clue_d1: "What the ceremony florals do, what their love did in 2024",
-        d2: "knelt", clue_d2: "What Jeffrey did on the Arbor Hills path with ring in hand",
-        d3: "ranch", clue_d3: "The style of Davis & Grey Farms — rustic, wide, Texan",
-    },
-    // ACROSS: cedar/amity/theme  |  DOWN: coast/drive/rhyme
-    {
-        id: "p03",
-        a1: "cedar", clue_a1: "Fragrant wood in the barn beams at Davis & Grey Farms",
-        a2: "amity", clue_a2: "Warm friendship that grew into something more",
-        a3: "theme", clue_a3: "Autumn warmth and rustic elegance — the evening's aesthetic",
-        d1: "coast", clue_d1: "What they did through the hard years — kept moving forward",
-        d2: "drive", clue_d2: "Jeffrey's 4.5-hour commitment to their Houston reunion date",
-        d3: "rhyme", clue_d3: "Their story — it all rhymes in the end",
-    },
-    // ACROSS: cedar/ocean/roses  |  DOWN: choir/dress/rings
-    {
-        id: "p04",
-        a1: "cedar", clue_a1: "Warm wood scent of the farm on the wedding evening",
-        a2: "ocean", clue_a2: "Distance that separated them — and couldn't stop them",
-        a3: "roses", clue_a3: "Blooms carried down the aisle at Davis & Grey Farms",
-        d1: "choir", clue_d1: "Voices lifted together in the ceremony",
-        d2: "dress", clue_d2: "What Ashlyn spent months perfecting — and it was worth it",
-        d3: "rings", clue_d3: "Two circles. One commitment. Forever.",
-    },
-    // ACROSS: charm/ember/march  |  DOWN: cream/amber/mirth
-    {
-        id: "p05",
-        a1: "charm", clue_a1: "What Jeffrey brought to that ice cream social in 2021",
-        a2: "ember", clue_a2: "What remained of their connection through three quiet years",
-        a3: "march", clue_a3: "The pace of a processional — steady, intentional, beautiful",
-        d1: "cream", clue_d1: "The warm tones threading through their floral palette",
-        d2: "amber", clue_d2: "Golden hue of late-afternoon Texas light",
-        d3: "mirth", clue_d3: "The laughter that fills every room they enter together",
-    },
-    // ACROSS: charm/ember/marry  |  DOWN: cream/amber/merry
-    {
-        id: "p06",
-        a1: "charm", clue_a1: "Jeffrey's secret weapon at the A&M ice cream social",
-        a2: "ember", clue_a2: "The low glow of a love that never fully went dark",
-        a3: "marry", clue_a3: "What they finally, officially, joyfully did",
-        d1: "cream", clue_d1: "The color of the linens at the reception tables",
-        d2: "amber", clue_d2: "Warm honey-gold of sunset at Davis & Grey Farms",
-        d3: "merry", clue_d3: "The mood — all night, all year, for the rest of it",
-    },
-    // ACROSS: choir/amity/theme  |  DOWN: coast/olive/rhyme
-    {
-        id: "p07",
-        a1: "choir", clue_a1: "Voices lifted together in the ceremony",
-        a2: "amity", clue_a2: "The friendship at the root of everything they built",
-        a3: "theme", clue_a3: "The one running through their whole story: found, lost, found",
-        d1: "coast", clue_d1: "What they did when apart — kept drifting toward each other",
-        d2: "olive", clue_d2: "Branch of peace, carried into the new chapter",
-        d3: "rhyme", clue_d3: "Their story has one — it all comes around",
-    },
-    // ACROSS: dates/image/knelt  |  DOWN: drink/trace/scent
-    {
-        id: "p08",
-        a1: "dates", clue_a1: "Sonic drives, Houston dinners, Arbor Hills walks — all of these",
-        a2: "image", clue_a2: "The photo from the A&M game: 100,000 people, five rows apart",
-        a3: "knelt", clue_a3: "How Jeffrey proposed — on one knee at Arbor Hills",
-        d1: "drink", clue_d1: "Raised at the reception — a toast to Ashlyn and Jeffrey",
-        d2: "trace", clue_d2: "What remained between them through the years of distance",
-        d3: "scent", clue_d3: "Cedar and wildflowers — the smell of the farm on wedding night",
-    },
-    // ACROSS: faith/clean/salty  |  DOWN: focus/ideal/honey
-    {
-        id: "p09",
-        a1: "faith", clue_a1: "The anchor of their lives and their ceremony",
-        a2: "clean", clue_a2: "The fresh start they gave each other in October 2024",
-        a3: "salty", clue_a3: "The Texas Gulf Coast vibe of their early years",
-        d1: "focus", clue_d1: "What Jeffrey kept on Ashlyn — even through the years apart",
-        d2: "ideal", clue_d2: "What they are to each other — the vision they always had",
-        d3: "honey", clue_d3: "Sweet endearment, sweeter life ahead",
-    },
-    // ACROSS: favor/ocean/roses  |  DOWN: flour/views/rings
-    {
-        id: "p10",
-        a1: "favor", clue_a1: "What guests take home — a small keepsake of the day",
-        a2: "ocean", clue_a2: "What three years apart can feel like — vast, but crossable",
-        a3: "roses", clue_a3: "The classic bloom woven through the ceremony florals",
-        d1: "flour", clue_d1: "The ingredient Ashlyn reaches for first on Sunday mornings",
-        d2: "views", clue_d2: "The wide open Texas fields visible from the farm at sunset",
-        d3: "rings", clue_d3: "Slipped on fingers, worn every day after",
-    },
-    // ACROSS: feast/cross/serve  |  DOWN: focus/amour/taste
-    {
-        id: "p11",
-        a1: "feast", clue_a1: "The reception dinner — pasta, bread, and all the good things",
-        a2: "cross", clue_a2: "The symbol at the center of their faith and their ceremony",
-        a3: "serve", clue_a3: "What they committed to do for each other — in sickness and in health",
-        d1: "focus", clue_d1: "The one thing Jeffrey never lost — on Ashlyn",
-        d2: "amour", clue_d2: "French word for the feeling that started at A&M Commerce",
-        d3: "taste", clue_d3: "What the evening had — in the décor, the food, every detail",
-    },
-    // ACROSS: feast/olive/rhyme  |  DOWN: flour/amity/theme
-    {
-        id: "p12",
-        a1: "feast", clue_a1: "What the reception spread looked like — abundant and warm",
-        a2: "olive", clue_a2: "Branch of peace — and an elegant garnish on the big night",
-        a3: "rhyme", clue_a3: "Their story — it all rhymes: met, parted, returned",
-        d1: "flour", clue_d1: "The Sunday baking staple Ashlyn keeps stocked",
-        d2: "amity", clue_d2: "The friendship that began before anything else did",
-        d3: "theme", clue_d3: "Rustic autumn elegance — the throughline of the evening",
-    },
-    // ACROSS: flair/robin/earth  |  DOWN: forge/amber/ranch
-    {
-        id: "p13",
-        a1: "flair", clue_a1: "Ashlyn's signature quality — effortless and unmistakable",
-        a2: "robin", clue_a2: "The first bird of spring — a symbol of new beginning",
-        a3: "earth", clue_a3: "Down to ____ — how everyone describes them both",
-        d1: "forge", clue_d1: "What the years of distance did to their bond — made it stronger",
-        d2: "amber", clue_d2: "The golden color of the hour they said I do",
-        d3: "ranch", clue_d3: "The Texas spread style of Davis & Grey Farms",
-    },
-    // ACROSS: glass/abide/scent  |  DOWN: grass/arise/sweet
-    {
-        id: "p14",
-        a1: "glass", clue_a1: "Raised high during the toasts — full of something celebratory",
-        a2: "abide", clue_a2: "To remain, to stay, to keep showing up — what they both do",
-        a3: "scent", clue_a3: "Wildflowers and cedar on the night air at the farm",
-        d1: "grass", clue_d1: "What the fields at Davis & Grey Farms are full of in September",
-        d2: "arise", clue_d2: "What hope does after a long and quiet separation",
-        d3: "sweet", clue_d3: "The flavor of every moment of September 26th",
-    },
-    // ACROSS: gleam/amber/earth  |  DOWN: grace/ember/march
-    {
-        id: "p15",
-        a1: "gleam", clue_a1: "The shine of gold rings in the last light of the ceremony",
-        a2: "amber", clue_a2: "Warm honey-gold — the color of the hour",
-        a3: "earth", clue_a3: "What they both are: grounded, real, down to ____",
-        d1: "grace", clue_d1: "Said before the meal — and modeled throughout the night",
-        d2: "ember", clue_d2: "What never fully went out between the years of 2021 and 2024",
-        d3: "march", clue_d3: "The steady pace of the processional",
-    },
-    // ACROSS: gleam/amber/north  |  DOWN: grain/ember/mirth
-    {
-        id: "p16",
-        a1: "gleam", clue_a1: "What the rings did as they caught the golden hour light",
-        a2: "amber", clue_a2: "The warm glow the farm took on as the sun went down",
-        a3: "north", clue_a3: "True ____: what they are to each other",
-        d1: "grain", clue_d1: "The wheat fields visible from the farm on a clear September day",
-        d2: "ember", clue_d2: "The quiet warmth that never left — even in the years apart",
-        d3: "mirth", clue_d3: "Pure joy and laughter — the reception's defining sound",
-    },
-    // ACROSS: lived/raise/cream  |  DOWN: lyric/voice/dream
-    {
-        id: "p17",
-        a1: "lived", clue_a1: "They have truly ____ their story — not just told it",
-        a2: "raise", clue_a2: "What you do with a glass when the best man speaks",
-        a3: "cream", clue_a3: "The warm neutral woven through the tablecloths and florals",
-        d1: "lyric", clue_d1: "The words to the first dance song that Ashlyn memorized first",
-        d2: "voice", clue_d2: "What wavered, just slightly, when Jeffrey read his vows",
-        d3: "dream", clue_d3: "What Ashlyn said it felt like — the whole day",
-    },
-    // ACROSS: loved/raise/cream  |  DOWN: lyric/voice/dream
-    {
-        id: "p18",
-        a1: "loved", clue_a1: "What they have been, and always will be, to each other",
-        a2: "raise", clue_a2: "What everyone did when the best man called the room to attention",
-        a3: "cream", clue_a3: "The soft neutral threading through the florals and linens",
-        d1: "lyric", clue_d1: "The first dance song has one — Ashlyn cried at the preview",
-        d2: "voice", clue_d2: "Jeffrey's, when he said I do — steady, except for one breath",
-        d3: "dream", clue_d3: "What the whole day felt like — and what it will always be",
-    },
-    // ACROSS: magic/share/cheer  |  DOWN: music/grace/clear
-    {
-        id: "p19",
-        a1: "magic", clue_a1: "What the evening at Davis & Grey Farms genuinely had",
-        a2: "share", clue_a2: "What marriage is — one long, beautiful act of ____",
-        a3: "cheer", clue_a3: "The sound that rose when they were finally announced as husband and wife",
-        d1: "music", clue_d1: "The soundtrack of their relationship — picked carefully",
-        d2: "grace", clue_d2: "Said before the feast, embodied throughout the evening",
-        d3: "clear", clue_d3: "The September sky over Celeste on the night they married",
-    },
-    // ACROSS: magic/shine/cheer  |  DOWN: music/guide/clear
-    {
-        id: "p20",
-        a1: "magic", clue_a1: "The atmosphere at Davis & Grey Farms as the sun went down",
-        a2: "shine", clue_a2: "What the rings did — and what Ashlyn did — and what the night did",
-        a3: "cheer", clue_a3: "What erupted when they were pronounced husband and wife",
-        d1: "music", clue_d1: "The first dance song: chosen carefully, danced to perfectly",
-        d2: "guide", clue_d2: "What faith does — and what they've been for each other",
-        d3: "clear", clue_d3: "The Texas sky above Celeste on September 26, 2026",
-    },
-    // ACROSS: magic/trace/honor  |  DOWN: match/grain/clear
-    {
-        id: "p21",
-        a1: "magic", clue_a1: "What the evening had — undeniable, from start to finish",
-        a2: "trace", clue_a2: "What remained between them through three years of silence",
-        a3: "honor", clue_a3: "What guests did by showing up — and what the couple did for each other",
-        d1: "match", clue_d1: "What everyone knew they were, even in 2021",
-        d2: "grain", clue_d2: "Texas wheat fields stretching out beyond the farm on wedding night",
-        d3: "clear", clue_d3: "How the September night sky looked — and how their path finally felt",
-    },
-    // ACROSS: magic/trail/honor  |  DOWN: match/grain/color
-    {
-        id: "p22",
-        a1: "magic", clue_a1: "The undeniable quality of the evening at Davis & Grey Farms",
-        a2: "trail", clue_a2: "The path at Arbor Hills where Ashlyn found Jeffrey waiting",
-        a3: "honor", clue_a3: "What the guests brought by coming — and what the vows declared",
-        d1: "match", clue_d1: "What they are — everyone said it first, they took a while longer",
-        d2: "grain", clue_d2: "The texture of the wooden beams in the farm's ceremony barn",
-        d3: "color", clue_d3: "Warm autumn palette: amber, cream, cedar, rust",
-    },
-    // ACROSS: merit/grace/thyme  |  DOWN: might/ready/theme
-    {
-        id: "p23",
-        a1: "merit", clue_a1: "What their love has earned — through patience, distance, return",
-        a2: "grace", clue_a2: "Said before the meal — embodied in every moment after",
-        a3: "thyme", clue_a3: "The herbal garnish on the charcuterie board at cocktail hour",
-        d1: "might", clue_d1: "The strength it takes to drive 4.5 hours for a first date",
-        d2: "ready", clue_d2: "What Jeffrey was — when he got on one knee at Arbor Hills",
-        d3: "theme", clue_d3: "Rustic, warm, Texan — the aesthetic of the entire evening",
-    },
-    // ACROSS: might/spark/clean  |  DOWN: music/grape/token
-    {
-        id: "p24",
-        a1: "might", clue_a1: "The quiet strength that drove Jeffrey back to Ashlyn in 2024",
-        a2: "spark", clue_a2: "What ignited at that ice cream social in Commerce, 2021",
-        a3: "clean", clue_a3: "The fresh slate they gave each other when they reunited",
-        d1: "music", clue_d1: "The first dance song: chosen carefully, heard only once before the wedding",
-        d2: "grape", clue_d2: "The wine at the reception — because this is a celebration",
-        d3: "token", clue_d3: "A small gesture carrying big meaning — like a 4.5-hour drive",
-    },
-    // ACROSS: plant/ivory/theme  |  DOWN: point/adore/thyme
-    {
-        id: "p25",
-        a1: "plant", clue_a1: "What Davis & Grey Farms has in abundance — and what they did their roots",
-        a2: "ivory", clue_a2: "The shade of Ashlyn's gown",
-        a3: "theme", clue_a3: "Rustic autumn elegance — the look and feel of the entire evening",
-        d1: "point", clue_d1: "The purpose of the day — to commit, for real, in front of everyone",
-        d2: "adore", clue_d2: "What Jeffrey does, every day, without reservation",
-        d3: "thyme", clue_d3: "Fragrant herb tucked into the farm's centerpieces",
-    },
-    // ACROSS: power/ocean/dates  |  DOWN: proud/wheat/rings
-    {
-        id: "p26",
-        a1: "power", clue_a1: "What vows carry — spoken out loud, binding, real",
-        a2: "ocean", clue_a2: "What distance felt like — vast, and still crossable",
-        a3: "dates", clue_a3: "Sonic drives, Houston dinners, Arbor Hills walks — all of these",
-        d1: "proud", clue_d1: "How Jeffrey looked when Ashlyn appeared at the end of the aisle",
-        d2: "wheat", clue_d2: "Golden fields stretching beyond the farm on the wedding evening",
-        d3: "rings", clue_d3: "Two circles. One promise. September 26, 2026.",
-    },
-    // ACROSS: rings/amber/theme  |  DOWN: roast/noble/serve
-    {
-        id: "p27",
-        a1: "rings", clue_a1: "Circular symbols exchanged at the altar",
-        a2: "amber", clue_a2: "The golden color the farm takes on as Texas sunset settles in",
-        a3: "theme", clue_a3: "Found, lost, found — the running theme of their whole story",
-        d1: "roast", clue_d1: "The affectionate speech that made everyone laugh and tear up",
-        d2: "noble", clue_d2: "The quality both families brought to the evening",
-        d3: "serve", clue_d3: "What they pledged to do — for each other, every day",
-    },
-    // ACROSS: spark/image/great  |  DOWN: swing/agape/knelt
-    {
-        id: "p28",
-        a1: "spark", clue_a1: "What started it all — Commerce, 2021, an ice cream social",
-        a2: "image", clue_a2: "The photo from the A&M game: 100,000 people, five rows apart",
-        a3: "great", clue_a3: "The only word for what September 26th turned out to be",
-        d1: "swing", clue_d1: "What the porch at the farm has, and what they did on it after",
-        d2: "agape", clue_d2: "Wide-open, unconditional love — the Greek word for what this is",
-        d3: "knelt", clue_d3: "What Jeffrey did at Arbor Hills Nature Preserve with ring in hand",
-    },
-    // ACROSS: saint/glory/rhyme  |  DOWN: sugar/ivory/thyme
-    {
-        id: "p29",
-        a1: "saint", clue_a1: "What patience makes of a person — Jeffrey earned the title",
-        a2: "glory", clue_a2: "The radiance of a September Texas sunset over the farm",
-        a3: "rhyme", clue_a3: "Their story has one — it all comes around in the end",
-        d1: "sugar", clue_d1: "The sweet staple in Ashlyn's Sunday baking lineup",
-        d2: "ivory", clue_d2: "The shade of Ashlyn's gown — classic, timeless, perfect",
-        d3: "thyme", clue_d3: "The fragrant herb tucked into the ceremony centerpieces",
-    },
-    // ACROSS: waltz/rings/honey  |  DOWN: worth/linen/zesty
-    {
-        id: "p30",
-        a1: "waltz", clue_a1: "The tempo of their first dance — slow and sweeping",
-        a2: "rings", clue_a2: "Two circles. One promise. Forever.",
-        a3: "honey", clue_a3: "What September tastes like when you marry your person",
-        d1: "worth", clue_d1: "What every mile of the drive was — and every year of waiting",
-        d2: "linen", clue_d2: "The fabric draped across every reception table",
-        d3: "zesty", clue_d3: "The lemon-herb vinaigrette on the salad course — an unexpected hit",
-    },
+  // p001 — 2026-03-17 — How They Met — template A
+  { id: "p001", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "Completely", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p002 — 2026-03-18 — How They Met — template B
+  { id: "p002", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 1, dir: "A" },
+    { word: "STORE", clue: "Keep safe", row: 1, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 2, col: 0, dir: "A" },
+    { word: "AGENT", clue: "Representative", row: 3, col: 0, dir: "A" },
+    { word: "META", clue: "Self-referential", row: 4, col: 0, dir: "A" },
+    { word: "SHAM", clue: "Fake thing", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where the band sets up", row: 0, col: 1, dir: "D" },
+    { word: "COVET", clue: "Want badly", row: 0, col: 2, dir: "D" },
+    { word: "ARENA", clue: "Stadium", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p003 — 2026-03-19 — How They Met — template C
+  { id: "p003", rows: 5, cols: 5, words: [
+    { word: "TUB", clue: "Bathing vessel", row: 0, col: 1, dir: "A" },
+    { word: "RISEN", clue: "Come up", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "BEGAT", clue: "Fathered, biblically", row: 3, col: 0, dir: "A" },
+    { word: "DEN", clue: "Private room", row: 4, col: 1, dir: "A" },
+    { word: "RIB", clue: "Tease", row: 1, col: 0, dir: "D" },
+    { word: "TIMED", clue: "Measured duration", row: 0, col: 1, dir: "D" },
+    { word: "USAGE", clue: "How it's used", row: 0, col: 2, dir: "D" },
+    { word: "BEGAN", clue: "Started", row: 0, col: 3, dir: "D" },
+    { word: "NET", clue: "After deductions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p004 — 2026-03-20 — How They Met — template D
+  { id: "p004", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Engagement dinner spot, minus \"60\"", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "Makes equal or level", row: 3, col: 0, dir: "A" },
+    { word: "NEWT", clue: "Pond creature", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "A ___ for two", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Earthy green", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "ESS", clue: "The letter S", row: 1, col: 4, dir: "D" },
+  ] },
+  // p005 — 2026-03-21 — How They Met — template A
+  { id: "p005", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "___ joy", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p006 — 2026-03-22 — How They Met — template B
+  { id: "p006", rows: 5, cols: 5, words: [
+    { word: "EGAD", clue: "Old-school exclamation", row: 0, col: 1, dir: "A" },
+    { word: "LARGE", clue: "Big", row: 1, col: 0, dir: "A" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 2, col: 0, dir: "A" },
+    { word: "SEVEN", clue: "Lucky number", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Rooted growth", row: 4, col: 0, dir: "A" },
+    { word: "LAST", clue: "Final", row: 1, col: 0, dir: "D" },
+    { word: "EAGER", clue: "Enthusiastic", row: 0, col: 1, dir: "D" },
+    { word: "GROVE", clue: "Small forest", row: 0, col: 2, dir: "D" },
+    { word: "AGREE", clue: "Come to terms", row: 0, col: 3, dir: "D" },
+    { word: "DEAN", clue: "School head", row: 0, col: 4, dir: "D" },
+  ] },
+  // p007 — 2026-03-23 — How They Met — template C
+  { id: "p007", rows: 5, cols: 5, words: [
+    { word: "CAR", clue: "Vehicle", row: 0, col: 1, dir: "A" },
+    { word: "VALID", clue: "Real", row: 1, col: 0, dir: "A" },
+    { word: "ARISE", clue: "Come up", row: 2, col: 0, dir: "A" },
+    { word: "NOVEL", clue: "New and exciting", row: 3, col: 0, dir: "A" },
+    { word: "LEN", clue: "___ Goodman, longtime TV judge", row: 4, col: 1, dir: "A" },
+    { word: "VAN", clue: "Vehicle", row: 1, col: 0, dir: "D" },
+    { word: "CAROL", clue: "Joyful song", row: 0, col: 1, dir: "D" },
+    { word: "ALIVE", clue: "Never more ___", row: 0, col: 2, dir: "D" },
+    { word: "RISEN", clue: "The sun has ___", row: 0, col: 3, dir: "D" },
+    { word: "DEL", clue: "Delete key", row: 1, col: 4, dir: "D" },
+  ] },
+  // p008 — 2026-03-24 — How They Met — template D
+  { id: "p008", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "Be bold", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p009 — 2026-03-25 — How They Met — template A
+  { id: "p009", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Country setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Ceremonial gateway", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "Reception floor mission", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p010 — 2026-03-26 — How They Met — template B
+  { id: "p010", rows: 5, cols: 5, words: [
+    { word: "EGAD", clue: "Old-school exclamation", row: 0, col: 1, dir: "A" },
+    { word: "LARGE", clue: "Texas-sized love", row: 1, col: 0, dir: "A" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 2, col: 0, dir: "A" },
+    { word: "SEVEN", clue: "Lucky ___", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Family ___", row: 4, col: 0, dir: "A" },
+    { word: "LAST", clue: "Final", row: 1, col: 0, dir: "D" },
+    { word: "EAGER", clue: "Enthusiastic", row: 0, col: 1, dir: "D" },
+    { word: "GROVE", clue: "Arbor ___", row: 0, col: 2, dir: "D" },
+    { word: "AGREE", clue: "They ___", row: 0, col: 3, dir: "D" },
+    { word: "DEAN", clue: "School head", row: 0, col: 4, dir: "D" },
+  ] },
+  // p011 — 2026-03-27 — How They Met — template C
+  { id: "p011", rows: 5, cols: 5, words: [
+    { word: "CAP", clue: "Top it off", row: 0, col: 1, dir: "A" },
+    { word: "RALLY", clue: "Come together", row: 1, col: 0, dir: "A" },
+    { word: "ARGUE", clue: "Disagree", row: 2, col: 0, dir: "A" },
+    { word: "DRAMA", clue: "Play or theatrical piece", row: 3, col: 0, dir: "A" },
+    { word: "YEP", clue: "Yes", row: 4, col: 1, dir: "A" },
+    { word: "RAD", clue: "Awesome, slangily", row: 1, col: 0, dir: "D" },
+    { word: "CARRY", clue: "Bear forward", row: 0, col: 1, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 2, dir: "D" },
+    { word: "PLUMP", clue: "Round and full", row: 0, col: 3, dir: "D" },
+    { word: "YEA", clue: "Aye", row: 1, col: 4, dir: "D" },
+  ] },
+  // p012 — 2026-03-28 — How They Met — template D
+  { id: "p012", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Bouquet ___", row: 1, col: 0, dir: "A" },
+    { word: "RIDGE", clue: "Long crest", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "WIRE", clue: "Connect", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "CHILI", clue: "Spicy dish", row: 0, col: 1, dir: "D" },
+    { word: "ARDOR", clue: "Passion", row: 0, col: 2, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 3, dir: "D" },
+    { word: "WED", clue: "Marry", row: 1, col: 4, dir: "D" },
+  ] },
+  // p013 — 2026-03-29 — How They Met — template A
+  { id: "p013", rows: 5, cols: 5, words: [
+    { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "A" },
+    { word: "ALTAR", clue: "End of the aisle", row: 1, col: 0, dir: "A" },
+    { word: "PLAZA", clue: "Public square", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Symbol", row: 3, col: 0, dir: "A" },
+    { word: "WELT", clue: "Raised skin mark", row: 4, col: 1, dir: "A" },
+    { word: "RAPT", clue: "Absorbed", row: 0, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "STAKE", clue: "Pointed post", row: 0, col: 2, dir: "D" },
+    { word: "HAZEL", clue: "Light brown", row: 0, col: 3, dir: "D" },
+    { word: "RANT", clue: "Speak loudly", row: 1, col: 4, dir: "D" },
+  ] },
+  // p014 — 2026-03-30 — How They Met — template B
+  { id: "p014", rows: 5, cols: 5, words: [
+    { word: "ALAR", clue: "Wing-shaped", row: 0, col: 1, dir: "A" },
+    { word: "SMILE", clue: "Proposal photo requirement", row: 1, col: 0, dir: "A" },
+    { word: "TUTTI", clue: "All together in music", row: 2, col: 0, dir: "A" },
+    { word: "ASHEN", clue: "Pale", row: 3, col: 0, dir: "A" },
+    { word: "BEER", clue: "Malt drink", row: 4, col: 0, dir: "A" },
+    { word: "STAB", clue: "Pierce", row: 1, col: 0, dir: "D" },
+    { word: "AMUSE", clue: "Entertain", row: 0, col: 1, dir: "D" },
+    { word: "LITHE", clue: "Flexible", row: 0, col: 2, dir: "D" },
+    { word: "ALTER", clue: "Change", row: 0, col: 3, dir: "D" },
+    { word: "REIN", clue: "Control strap", row: 0, col: 4, dir: "D" },
+  ] },
+  // p015 — 2026-03-31 — How They Met — template C
+  { id: "p015", rows: 5, cols: 5, words: [
+    { word: "SOP", clue: "Appease", row: 0, col: 1, dir: "A" },
+    { word: "VAULT", clue: "Jump over", row: 1, col: 0, dir: "A" },
+    { word: "ALTER", clue: "Change", row: 2, col: 0, dir: "A" },
+    { word: "TODAY", clue: "This day", row: 3, col: 0, dir: "A" },
+    { word: "NOT", clue: "Negation", row: 4, col: 1, dir: "A" },
+    { word: "VAT", clue: "Large tank", row: 1, col: 0, dir: "D" },
+    { word: "SALON", clue: "Style place", row: 0, col: 1, dir: "D" },
+    { word: "OUTDO", clue: "Surpass", row: 0, col: 2, dir: "D" },
+    { word: "PLEAT", clue: "Fabric fold", row: 0, col: 3, dir: "D" },
+    { word: "TRY", clue: "Attempt", row: 1, col: 4, dir: "D" },
+  ] },
+  // p016 — 2026-04-01 — Long Distance Era — template D
+  { id: "p016", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "What it took to love again", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p017 — 2026-04-02 — Long Distance Era — template A
+  { id: "p017", rows: 5, cols: 5, words: [
+    { word: "EASE", clue: "Comfort", row: 0, col: 0, dir: "A" },
+    { word: "ALTAR", clue: "Where the vows happen", row: 1, col: 0, dir: "A" },
+    { word: "SLATE", clue: "Dark stone", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Symbol", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "Traveled", row: 4, col: 1, dir: "A" },
+    { word: "EAST", clue: "Direction", row: 0, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "STAKE", clue: "Pointed post", row: 0, col: 2, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 1, col: 4, dir: "D" },
+  ] },
+  // p018 — 2026-04-03 — Long Distance Era — template B
+  { id: "p018", rows: 5, cols: 5, words: [
+    { word: "SHED", clue: "Let go", row: 0, col: 1, dir: "A" },
+    { word: "STONE", clue: "Hard mineral", row: 1, col: 0, dir: "A" },
+    { word: "TENSE", clue: "Tight feeling", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "RARE", clue: "Uncommon", row: 4, col: 0, dir: "A" },
+    { word: "STAR", clue: "Shining one", row: 1, col: 0, dir: "D" },
+    { word: "STELA", clue: "Upright carved stone slab", row: 0, col: 1, dir: "D" },
+    { word: "HONOR", clue: "Cherish", row: 0, col: 2, dir: "D" },
+    { word: "ENSUE", clue: "Follow from", row: 0, col: 3, dir: "D" },
+    { word: "DEED", clue: "Action or document", row: 0, col: 4, dir: "D" },
+  ] },
+  // p019 — 2026-04-04 — Long Distance Era — template C
+  { id: "p019", rows: 5, cols: 5, words: [
+    { word: "VEE", clue: "Letter V", row: 0, col: 1, dir: "A" },
+    { word: "REACH", clue: "Extend toward", row: 1, col: 0, dir: "A" },
+    { word: "ANGLE", clue: "Corner", row: 2, col: 0, dir: "A" },
+    { word: "POLAR", clue: "Near a pole", row: 3, col: 0, dir: "A" },
+    { word: "MET", clue: "Encountered", row: 4, col: 1, dir: "A" },
+    { word: "RAP", clue: "Knock", row: 1, col: 0, dir: "D" },
+    { word: "VENOM", clue: "Poison", row: 0, col: 1, dir: "D" },
+    { word: "EAGLE", clue: "Soaring bird", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "HER", clue: "She or her", row: 1, col: 4, dir: "D" },
+  ] },
+  // p020 — 2026-04-05 — Long Distance Era — template D
+  { id: "p020", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Post-proposal restaurant", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "Makes equal or level", row: 3, col: 0, dir: "A" },
+    { word: "NEWT", clue: "Pond creature", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Branch of peace", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "ESS", clue: "The letter S", row: 1, col: 4, dir: "D" },
+  ] },
+  // p021 — 2026-04-06 — Long Distance Era — template A
+  { id: "p021", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Celeste, Texas — the setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Wedding structure", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "First ___ as newlyweds", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p022 — 2026-04-07 — Long Distance Era — template B
+  { id: "p022", rows: 5, cols: 5, words: [
+    { word: "SILL", clue: "Window base", row: 0, col: 1, dir: "A" },
+    { word: "SPREE", clue: "Shopping trip", row: 1, col: 0, dir: "A" },
+    { word: "WEAVE", clue: "Intertwine", row: 2, col: 0, dir: "A" },
+    { word: "ALTER", clue: "Change", row: 3, col: 0, dir: "A" },
+    { word: "GLEE", clue: "Delight", row: 4, col: 0, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 1, col: 0, dir: "D" },
+    { word: "SPELL", clue: "Cast a ___", row: 0, col: 1, dir: "D" },
+    { word: "IRATE", clue: "Angry", row: 0, col: 2, dir: "D" },
+    { word: "LEVEE", clue: "Flood embankment", row: 0, col: 3, dir: "D" },
+    { word: "LEER", clue: "Suggestive look", row: 0, col: 4, dir: "D" },
+  ] },
+  // p023 — 2026-04-08 — Long Distance Era — template C
+  { id: "p023", rows: 5, cols: 5, words: [
+    { word: "WAD", clue: "Bundle", row: 0, col: 1, dir: "A" },
+    { word: "SOLAR", clue: "Sun-powered", row: 1, col: 0, dir: "A" },
+    { word: "PRIZE", clue: "Reward", row: 2, col: 0, dir: "A" },
+    { word: "ASKED", clue: "Inquired", row: 3, col: 0, dir: "A" },
+    { word: "TED", clue: "Spread out to dry", row: 4, col: 1, dir: "A" },
+    { word: "SPA", clue: "Wellness place", row: 1, col: 0, dir: "D" },
+    { word: "WORST", clue: "Most bad", row: 0, col: 1, dir: "D" },
+    { word: "ALIKE", clue: "Similar", row: 0, col: 2, dir: "D" },
+    { word: "DAZED", clue: "Confused", row: 0, col: 3, dir: "D" },
+    { word: "RED", clue: "Warm color", row: 1, col: 4, dir: "D" },
+  ] },
+  // p024 — 2026-04-09 — Long Distance Era — template D
+  { id: "p024", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Travel page staple", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Majestic", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p025 — 2026-04-10 — Long Distance Era — template A
+  { id: "p025", rows: 5, cols: 5, words: [
+    { word: "AVER", clue: "Say firmly", row: 0, col: 0, dir: "A" },
+    { word: "LIVED", clue: "Experienced", row: 1, col: 0, dir: "A" },
+    { word: "SCOPE", clue: "Extent", row: 2, col: 0, dir: "A" },
+    { word: "OAKEN", clue: "Made of oak", row: 3, col: 0, dir: "A" },
+    { word: "RELY", clue: "Depend on", row: 4, col: 1, dir: "A" },
+    { word: "ALSO", clue: "As well", row: 0, col: 0, dir: "D" },
+    { word: "VICAR", clue: "Parish minister", row: 0, col: 1, dir: "D" },
+    { word: "EVOKE", clue: "Call up", row: 0, col: 2, dir: "D" },
+    { word: "REPEL", clue: "Drive back", row: 0, col: 3, dir: "D" },
+    { word: "DENY", clue: "Refuse", row: 1, col: 4, dir: "D" },
+  ] },
+  // p026 — 2026-04-11 — Long Distance Era — template B
+  { id: "p026", rows: 5, cols: 5, words: [
+    { word: "STAR", clue: "They're the ___s tonight", row: 0, col: 1, dir: "A" },
+    { word: "SCENE", clue: "Farm at golden hour", row: 1, col: 0, dir: "A" },
+    { word: "TONGS", clue: "Salad grabbers", row: 2, col: 0, dir: "A" },
+    { word: "UPSET", clue: "Troubled", row: 3, col: 0, dir: "A" },
+    { word: "DEER", clue: "Forest animal", row: 4, col: 0, dir: "A" },
+    { word: "STUD", clue: "Fastener", row: 1, col: 0, dir: "D" },
+    { word: "SCOPE", clue: "Extent", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "REST", clue: "Take a break", row: 0, col: 4, dir: "D" },
+  ] },
+  // p027 — 2026-04-12 — Long Distance Era — template C
+  { id: "p027", rows: 5, cols: 5, words: [
+    { word: "HAS", clue: "Possesses", row: 0, col: 1, dir: "A" },
+    { word: "MIGHT", clue: "Strength", row: 1, col: 0, dir: "A" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 2, col: 0, dir: "A" },
+    { word: "GLIDE", clue: "Smooth move", row: 3, col: 0, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 4, col: 1, dir: "A" },
+    { word: "MAG", clue: "Magazine", row: 1, col: 0, dir: "D" },
+    { word: "HILLS", clue: "Arbor ___, proposal site", row: 0, col: 1, dir: "D" },
+    { word: "AGGIE", clue: "School connection", row: 0, col: 2, dir: "D" },
+    { word: "SHADE", clue: "Partial darkness", row: 0, col: 3, dir: "D" },
+    { word: "TEE", clue: "Golf stand", row: 1, col: 4, dir: "D" },
+  ] },
+  // p028 — 2026-04-13 — Long Distance Era — template D
+  { id: "p028", rows: 5, cols: 5, words: [
+    { word: "REST", clue: "Take a break", row: 0, col: 0, dir: "A" },
+    { word: "EXCEL", clue: "Do very well", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "CRUST", clue: "Outer layer", row: 3, col: 0, dir: "A" },
+    { word: "HATE", clue: "Strong dislike", row: 4, col: 0, dir: "A" },
+    { word: "REACH", clue: "Finally within ___", row: 0, col: 0, dir: "D" },
+    { word: "EXTRA", clue: "Bonus", row: 0, col: 1, dir: "D" },
+    { word: "SCOUT", clue: "Explore", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p029 — 2026-04-14 — Long Distance Era — template A
+  { id: "p029", rows: 5, cols: 5, words: [
+    { word: "PAST", clue: "History", row: 0, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "Extreme", row: 1, col: 0, dir: "A" },
+    { word: "FERAL", clue: "Wild", row: 2, col: 0, dir: "A" },
+    { word: "FRAME", clue: "Structure", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 1, dir: "A" },
+    { word: "PUFF", clue: "Breath of air", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "STRAY", clue: "Wander", row: 0, col: 2, dir: "D" },
+    { word: "TRAMP", clue: "Wander", row: 0, col: 3, dir: "D" },
+    { word: "ALEE", clue: "Sheltered side", row: 1, col: 4, dir: "D" },
+  ] },
+  // p030 — 2026-04-15 — Long Distance Era — template B
+  { id: "p030", rows: 5, cols: 5, words: [
+    { word: "STIR", clue: "Excite", row: 0, col: 1, dir: "A" },
+    { word: "SHADE", clue: "Golden ___", row: 1, col: 0, dir: "A" },
+    { word: "CABIN", clue: "Small house", row: 2, col: 0, dir: "A" },
+    { word: "ALLOT", clue: "Assign", row: 3, col: 0, dir: "A" },
+    { word: "MEET", clue: "Encounter", row: 4, col: 0, dir: "A" },
+    { word: "SCAM", clue: "Fraud", row: 1, col: 0, dir: "D" },
+    { word: "SHALE", clue: "Layered rock", row: 0, col: 1, dir: "D" },
+    { word: "TABLE", clue: "Reception ___s", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p031 — 2026-04-16 — Long Distance Era — template C
+  { id: "p031", rows: 5, cols: 5, words: [
+    { word: "SAG", clue: "Droop", row: 0, col: 1, dir: "A" },
+    { word: "HILLS", clue: "Where she said yes", row: 1, col: 0, dir: "A" },
+    { word: "AGGIE", clue: "Texas A&M vibe word", row: 2, col: 0, dir: "A" },
+    { word: "SHADE", clue: "Partial darkness", row: 3, col: 0, dir: "A" },
+    { word: "TEE", clue: "Golf stand", row: 4, col: 1, dir: "A" },
+    { word: "HAS", clue: "Possesses", row: 1, col: 0, dir: "D" },
+    { word: "SIGHT", clue: "Vision", row: 0, col: 1, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 2, dir: "D" },
+    { word: "GLIDE", clue: "___ into forever", row: 0, col: 3, dir: "D" },
+    { word: "SEE", clue: "Lay eyes on", row: 1, col: 4, dir: "D" },
+  ] },
+  // p032 — 2026-04-17 — Long Distance Era — template D
+  { id: "p032", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Never more ___", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Engagement dinner spot, minus \"60\"", row: 2, col: 0, dir: "A" },
+    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
+    { word: "NEWS", clue: "Information", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "A ___ for two", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Earthy green", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENS", clue: "Makes equal or level", row: 0, col: 3, dir: "D" },
+    { word: "EST", clue: "Established", row: 1, col: 4, dir: "D" },
+  ] },
+  // p033 — 2026-04-18 — Long Distance Era — template A
+  { id: "p033", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Life-giving", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p034 — 2026-04-19 — Long Distance Era — template B
+  { id: "p034", rows: 5, cols: 5, words: [
+    { word: "SALT", clue: "Seasoning", row: 0, col: 1, dir: "A" },
+    { word: "SUGAR", clue: "Sweet", row: 1, col: 0, dir: "A" },
+    { word: "WROTE", clue: "Past of write", row: 2, col: 0, dir: "A" },
+    { word: "AGREE", clue: "Come to terms", row: 3, col: 0, dir: "A" },
+    { word: "TEAR", clue: "Drop of emotion", row: 4, col: 0, dir: "A" },
+    { word: "SWAT", clue: "Strike", row: 1, col: 0, dir: "D" },
+    { word: "SURGE", clue: "Rush forward", row: 0, col: 1, dir: "D" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 0, col: 2, dir: "D" },
+    { word: "LATER", clue: "After some time", row: 0, col: 3, dir: "D" },
+    { word: "TREE", clue: "Rooted growth", row: 0, col: 4, dir: "D" },
+  ] },
+  // p035 — 2026-04-20 — Long Distance Era — template C
+  { id: "p035", rows: 5, cols: 5, words: [
+    { word: "CHA", clue: "Tea, in Hindi", row: 0, col: 1, dir: "A" },
+    { word: "BLUSH", clue: "Soft pink", row: 1, col: 0, dir: "A" },
+    { word: "EERIE", clue: "Spooky", row: 2, col: 0, dir: "A" },
+    { word: "TARDY", clue: "Late", row: 3, col: 0, dir: "A" },
+    { word: "RYE", clue: "Seeded bread grain", row: 4, col: 1, dir: "A" },
+    { word: "BET", clue: "Wager", row: 1, col: 0, dir: "D" },
+    { word: "CLEAR", clue: "September Texas sky", row: 0, col: 1, dir: "D" },
+    { word: "HURRY", clue: "Move fast", row: 0, col: 2, dir: "D" },
+    { word: "ASIDE", clue: "Off to the side", row: 0, col: 3, dir: "D" },
+    { word: "HEY", clue: "Greeting exclamation", row: 1, col: 4, dir: "D" },
+  ] },
+  // p036 — 2026-04-21 — Long Distance Era — template D
+  { id: "p036", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "Be bold", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p037 — 2026-04-22 — Long Distance Era — template A
+  { id: "p037", rows: 5, cols: 5, words: [
+    { word: "ATTA", clue: "Whole wheat flour", row: 0, col: 0, dir: "A" },
+    { word: "TREND", clue: "Movement", row: 1, col: 0, dir: "A" },
+    { word: "MANGO", clue: "Tropical fruit", row: 2, col: 0, dir: "A" },
+    { word: "ASSET", clue: "Resource", row: 3, col: 0, dir: "A" },
+    { word: "HERE", clue: "Present", row: 4, col: 1, dir: "A" },
+    { word: "ATMA", clue: "Soul (Hindu)", row: 0, col: 0, dir: "D" },
+    { word: "TRASH", clue: "Waste", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "DOTE", clue: "Adore", row: 1, col: 4, dir: "D" },
+  ] },
+  // p038 — 2026-04-23 — Long Distance Era — template B
+  { id: "p038", rows: 5, cols: 5, words: [
+    { word: "TWIN", clue: "Two as one", row: 0, col: 1, dir: "A" },
+    { word: "PRIDE", clue: "Joyful satisfaction", row: 1, col: 0, dir: "A" },
+    { word: "RADIO", clue: "Broadcast", row: 2, col: 0, dir: "A" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "He ___ the distance", row: 4, col: 0, dir: "A" },
+    { word: "PROW", clue: "Ship front", row: 1, col: 0, dir: "D" },
+    { word: "TRADE", clue: "Exchange", row: 0, col: 1, dir: "D" },
+    { word: "WIDEN", clue: "Make broader", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "NEON", clue: "Bright sign gas", row: 0, col: 4, dir: "D" },
+  ] },
+  // p039 — 2026-04-24 — Long Distance Era — template C
+  { id: "p039", rows: 5, cols: 5, words: [
+    { word: "ALT", clue: "Alternate", row: 0, col: 1, dir: "A" },
+    { word: "CHARM", clue: "Jeff's secret weapon at the social", row: 1, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Eagle nest", row: 2, col: 0, dir: "A" },
+    { word: "RAVEN", clue: "Black bird", row: 3, col: 0, dir: "A" },
+    { word: "DAD", clue: "Father", row: 4, col: 1, dir: "A" },
+    { word: "CAR", clue: "Vehicle", row: 1, col: 0, dir: "D" },
+    { word: "AHEAD", clue: "In front", row: 0, col: 1, dir: "D" },
+    { word: "LARVA", clue: "Insect stage", row: 0, col: 2, dir: "D" },
+    { word: "TRIED", clue: "Attempted", row: 0, col: 3, dir: "D" },
+    { word: "MEN", clue: "Males", row: 1, col: 4, dir: "D" },
+  ] },
+  // p040 — 2026-04-25 — Long Distance Era — template D
+  { id: "p040", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "Location", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Perfect", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "Smooth move", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p041 — 2026-04-26 — Long Distance Era — template A
+  { id: "p041", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Country setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Ceremonial gateway", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "Reception floor mission", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p042 — 2026-04-27 — Long Distance Era — template B
+  { id: "p042", rows: 5, cols: 5, words: [
+    { word: "APES", clue: "Mimics", row: 0, col: 1, dir: "A" },
+    { word: "PLANT", clue: "Grow something", row: 1, col: 0, dir: "A" },
+    { word: "ROUTE", clue: "What the drive requires", row: 2, col: 0, dir: "A" },
+    { word: "ONSET", clue: "Start", row: 3, col: 0, dir: "A" },
+    { word: "DEER", clue: "Forest animal", row: 4, col: 0, dir: "A" },
+    { word: "PROD", clue: "Push", row: 1, col: 0, dir: "D" },
+    { word: "ALONE", clue: "Never again ___", row: 0, col: 1, dir: "D" },
+    { word: "PAUSE", clue: "Brief stop", row: 0, col: 2, dir: "D" },
+    { word: "ENTER", clue: "Go in", row: 0, col: 3, dir: "D" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 4, dir: "D" },
+  ] },
+  // p043 — 2026-04-28 — Long Distance Era — template C
+  { id: "p043", rows: 5, cols: 5, words: [
+    { word: "TAB", clue: "Small bill", row: 0, col: 1, dir: "A" },
+    { word: "PROUD", clue: "With satisfaction", row: 1, col: 0, dir: "A" },
+    { word: "EARLY", clue: "Ahead of schedule", row: 2, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 3, col: 0, dir: "A" },
+    { word: "LAY", clue: "Place down", row: 4, col: 1, dir: "A" },
+    { word: "PET", clue: "Cherished animal", row: 1, col: 0, dir: "D" },
+    { word: "TRAIL", clue: "Path", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "BULLY", clue: "Tormentor", row: 0, col: 3, dir: "D" },
+    { word: "DYE", clue: "Add color", row: 1, col: 4, dir: "D" },
+  ] },
+  // p044 — 2026-04-29 — Long Distance Era — template D
+  { id: "p044", rows: 5, cols: 5, words: [
+    { word: "GEAR", clue: "Equipment", row: 0, col: 0, dir: "A" },
+    { word: "UNDER", clue: "Beneath", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Go against", row: 3, col: 0, dir: "A" },
+    { word: "DREW", clue: "Past of draw", row: 4, col: 0, dir: "A" },
+    { word: "GUARD", clue: "Protect", row: 0, col: 0, dir: "D" },
+    { word: "ENTER", clue: "___ the next chapter", row: 0, col: 1, dir: "D" },
+    { word: "ADOBE", clue: "Sun-dried clay brick", row: 0, col: 2, dir: "D" },
+    { word: "RENEW", clue: "Start fresh", row: 0, col: 3, dir: "D" },
+    { word: "REL", clue: "Kinsman, casually", row: 1, col: 4, dir: "D" },
+  ] },
+  // p045 — 2026-04-30 — Long Distance Era — template A
+  { id: "p045", rows: 5, cols: 5, words: [
+    { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "A" },
+    { word: "ALTAR", clue: "Sacred meeting point", row: 1, col: 0, dir: "A" },
+    { word: "PLAZA", clue: "Public square", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Symbol", row: 3, col: 0, dir: "A" },
+    { word: "WELT", clue: "Raised skin mark", row: 4, col: 1, dir: "A" },
+    { word: "RAPT", clue: "Absorbed", row: 0, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "STAKE", clue: "Pointed post", row: 0, col: 2, dir: "D" },
+    { word: "HAZEL", clue: "Light brown", row: 0, col: 3, dir: "D" },
+    { word: "RANT", clue: "Speak loudly", row: 1, col: 4, dir: "D" },
+  ] },
+  // p046 — 2026-05-01 — Proposal Season — template B
+  { id: "p046", rows: 5, cols: 5, words: [
+    { word: "VEST", clue: "Garment", row: 0, col: 1, dir: "A" },
+    { word: "SIXTH", clue: "After fifth", row: 1, col: 0, dir: "A" },
+    { word: "COCOA", clue: "Chocolate base", row: 2, col: 0, dir: "A" },
+    { word: "ALERT", clue: "On guard", row: 3, col: 0, dir: "A" },
+    { word: "MALE", clue: "Masculine", row: 4, col: 0, dir: "A" },
+    { word: "SCAM", clue: "Fraud", row: 1, col: 0, dir: "D" },
+    { word: "VIOLA", clue: "String instrument", row: 0, col: 1, dir: "D" },
+    { word: "EXCEL", clue: "They ___ together", row: 0, col: 2, dir: "D" },
+    { word: "STORE", clue: "Memories they'll ___", row: 0, col: 3, dir: "D" },
+    { word: "THAT", clue: "Indicated thing", row: 0, col: 4, dir: "D" },
+  ] },
+  // p047 — 2026-05-02 — Proposal Season — template C
+  { id: "p047", rows: 5, cols: 5, words: [
+    { word: "ETA", clue: "Greek letter", row: 0, col: 1, dir: "A" },
+    { word: "BRAVE", clue: "Courageous", row: 1, col: 0, dir: "A" },
+    { word: "URBAN", clue: "City-based", row: 2, col: 0, dir: "A" },
+    { word: "SOLID", clue: "Firm", row: 3, col: 0, dir: "A" },
+    { word: "REL", clue: "Kinsman, casually", row: 4, col: 1, dir: "A" },
+    { word: "BUS", clue: "Transit", row: 1, col: 0, dir: "D" },
+    { word: "ERROR", clue: "Mistake", row: 0, col: 1, dir: "D" },
+    { word: "TABLE", clue: "Seating", row: 0, col: 2, dir: "D" },
+    { word: "AVAIL", clue: "Use or benefit", row: 0, col: 3, dir: "D" },
+    { word: "END", clue: "Beginning of forever", row: 1, col: 4, dir: "D" },
+  ] },
+  // p048 — 2026-05-03 — Proposal Season — template D
+  { id: "p048", rows: 5, cols: 5, words: [
+    { word: "APSE", clue: "Church recess", row: 0, col: 0, dir: "A" },
+    { word: "READY", clue: "Wedding planning goal by September", row: 1, col: 0, dir: "A" },
+    { word: "GAUGE", clue: "Measure", row: 2, col: 0, dir: "A" },
+    { word: "OCTET", clue: "Group of eight", row: 3, col: 0, dir: "A" },
+    { word: "NEED", clue: "Require", row: 4, col: 0, dir: "A" },
+    { word: "ARGON", clue: "Noble gas", row: 0, col: 0, dir: "D" },
+    { word: "PEACE", clue: "Tranquility", row: 0, col: 1, dir: "D" },
+    { word: "SAUTE", clue: "Fry quickly in oil", row: 0, col: 2, dir: "D" },
+    { word: "EDGED", clue: "Bordered", row: 0, col: 3, dir: "D" },
+    { word: "YET", clue: "Nevertheless", row: 1, col: 4, dir: "D" },
+  ] },
+  // p049 — 2026-05-04 — Proposal Season — template A
+  { id: "p049", rows: 5, cols: 5, words: [
+    { word: "ATTA", clue: "Whole wheat flour", row: 0, col: 0, dir: "A" },
+    { word: "TREND", clue: "Love never goes out of ___", row: 1, col: 0, dir: "A" },
+    { word: "MANGO", clue: "Tropical fruit", row: 2, col: 0, dir: "A" },
+    { word: "ASSET", clue: "Resource", row: 3, col: 0, dir: "A" },
+    { word: "HERE", clue: "We are all ___ for this", row: 4, col: 1, dir: "A" },
+    { word: "ATMA", clue: "Soul (Hindu)", row: 0, col: 0, dir: "D" },
+    { word: "TRASH", clue: "Waste", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "DOTE", clue: "Adore", row: 1, col: 4, dir: "D" },
+  ] },
+  // p050 — 2026-05-05 — Proposal Season — template B
+  { id: "p050", rows: 5, cols: 5, words: [
+    { word: "SLAY", clue: "Kill or wow", row: 0, col: 1, dir: "A" },
+    { word: "STAGE", clue: "Where toasts happen", row: 1, col: 0, dir: "A" },
+    { word: "CORAL", clue: "Warm pink tone", row: 2, col: 0, dir: "A" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 3, col: 0, dir: "A" },
+    { word: "DEAN", clue: "School head", row: 4, col: 0, dir: "A" },
+    { word: "SCAD", clue: "A bunch", row: 1, col: 0, dir: "D" },
+    { word: "STONE", clue: "Rolling ___s — they've settled", row: 0, col: 1, dir: "D" },
+    { word: "LARVA", clue: "Insect stage", row: 0, col: 2, dir: "D" },
+    { word: "AGAIN", clue: "Once more", row: 0, col: 3, dir: "D" },
+    { word: "YELL", clue: "Shout for joy", row: 0, col: 4, dir: "D" },
+  ] },
+  // p051 — 2026-05-06 — Proposal Season — template C
+  { id: "p051", rows: 5, cols: 5, words: [
+    { word: "ERE", clue: "Before (poetic)", row: 0, col: 1, dir: "A" },
+    { word: "SLANT", clue: "Angle", row: 1, col: 0, dir: "A" },
+    { word: "ABIDE", clue: "Stay with", row: 2, col: 0, dir: "A" },
+    { word: "POSED", clue: "Positioned", row: 3, col: 0, dir: "A" },
+    { word: "WED", clue: "What they'll do September 26", row: 4, col: 1, dir: "A" },
+    { word: "SAP", clue: "Tree fluid", row: 1, col: 0, dir: "D" },
+    { word: "ELBOW", clue: "Arm joint", row: 0, col: 1, dir: "D" },
+    { word: "RAISE", clue: "Lift a glass", row: 0, col: 2, dir: "D" },
+    { word: "ENDED", clue: "Finished", row: 0, col: 3, dir: "D" },
+    { word: "TED", clue: "Spread out to dry", row: 1, col: 4, dir: "D" },
+  ] },
+  // p052 — 2026-05-07 — Proposal Season — template D
+  { id: "p052", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Post-proposal restaurant", row: 2, col: 0, dir: "A" },
+    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
+    { word: "NEWS", clue: "Information", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Branch of peace", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENS", clue: "Makes equal or level", row: 0, col: 3, dir: "D" },
+    { word: "EST", clue: "Established", row: 1, col: 4, dir: "D" },
+  ] },
+  // p053 — 2026-05-08 — Proposal Season — template A
+  { id: "p053", rows: 5, cols: 5, words: [
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "A" },
+    { word: "REMIT", clue: "Send back", row: 1, col: 0, dir: "A" },
+    { word: "OVATE", clue: "Egg-shaped", row: 2, col: 0, dir: "A" },
+    { word: "MEGAN", clue: "Proposal day co-conspirator", row: 3, col: 0, dir: "A" },
+    { word: "LEND", clue: "Loan out", row: 4, col: 1, dir: "A" },
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "D" },
+    { word: "LEVEL", clue: "Equal", row: 0, col: 1, dir: "D" },
+    { word: "IMAGE", clue: "Picture", row: 0, col: 2, dir: "D" },
+    { word: "TITAN", clue: "Giant or powerful", row: 0, col: 3, dir: "D" },
+    { word: "TEND", clue: "Care for", row: 1, col: 4, dir: "D" },
+  ] },
+  // p054 — 2026-05-09 — Proposal Season — template B
+  { id: "p054", rows: 5, cols: 5, words: [
+    { word: "OBOE", clue: "Double-reed woodwind", row: 0, col: 1, dir: "A" },
+    { word: "SPELL", clue: "She had him under her ___", row: 1, col: 0, dir: "A" },
+    { word: "AEGIS", clue: "Protective backing", row: 2, col: 0, dir: "A" },
+    { word: "GRAVE", clue: "Burial site", row: 3, col: 0, dir: "A" },
+    { word: "SATE", clue: "Fully satisfy", row: 4, col: 0, dir: "A" },
+    { word: "SAGS", clue: "Droops", row: 1, col: 0, dir: "D" },
+    { word: "OPERA", clue: "Sung drama", row: 0, col: 1, dir: "D" },
+    { word: "BEGAT", clue: "Fathered, biblically", row: 0, col: 2, dir: "D" },
+    { word: "OLIVE", clue: "Earthy green", row: 0, col: 3, dir: "D" },
+    { word: "ELSE", clue: "Otherwise", row: 0, col: 4, dir: "D" },
+  ] },
+  // p055 — 2026-05-10 — Proposal Season — template C
+  { id: "p055", rows: 5, cols: 5, words: [
+    { word: "HAS", clue: "Possesses", row: 0, col: 1, dir: "A" },
+    { word: "NIGHT", clue: "The proposal ___", row: 1, col: 0, dir: "A" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 2, col: 0, dir: "A" },
+    { word: "GLIDE", clue: "___ into forever", row: 3, col: 0, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 4, col: 1, dir: "A" },
+    { word: "NAG", clue: "Pester", row: 1, col: 0, dir: "D" },
+    { word: "HILLS", clue: "Arbor ___, proposal site", row: 0, col: 1, dir: "D" },
+    { word: "AGGIE", clue: "School connection", row: 0, col: 2, dir: "D" },
+    { word: "SHADE", clue: "Golden ___", row: 0, col: 3, dir: "D" },
+    { word: "TEE", clue: "Golf stand", row: 1, col: 4, dir: "D" },
+  ] },
+  // p056 — 2026-05-11 — Proposal Season — template D
+  { id: "p056", rows: 5, cols: 5, words: [
+    { word: "SWAP", clue: "Trade", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Cast out", row: 1, col: 0, dir: "A" },
+    { word: "ROGUE", clue: "Dishonest person", row: 2, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 3, col: 0, dir: "A" },
+    { word: "WEND", clue: "Travel", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "WHOLE", clue: "What they make each other", row: 0, col: 1, dir: "D" },
+    { word: "ARGON", clue: "Noble gas", row: 0, col: 2, dir: "D" },
+    { word: "POUND", clue: "Strike hard", row: 0, col: 3, dir: "D" },
+    { word: "WEE", clue: "Tiny", row: 1, col: 4, dir: "D" },
+  ] },
+  // p057 — 2026-05-12 — Proposal Season — template A
+  { id: "p057", rows: 5, cols: 5, words: [
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "A" },
+    { word: "REMIT", clue: "No ___", row: 1, col: 0, dir: "A" },
+    { word: "OVATE", clue: "Egg-shaped", row: 2, col: 0, dir: "A" },
+    { word: "MEGAN", clue: "Friend who kept the secret", row: 3, col: 0, dir: "A" },
+    { word: "LEND", clue: "Loan out", row: 4, col: 1, dir: "A" },
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "D" },
+    { word: "LEVEL", clue: "On the same ___", row: 0, col: 1, dir: "D" },
+    { word: "IMAGE", clue: "Picture", row: 0, col: 2, dir: "D" },
+    { word: "TITAN", clue: "Giant or powerful", row: 0, col: 3, dir: "D" },
+    { word: "TEND", clue: "What they do for each other", row: 1, col: 4, dir: "D" },
+  ] },
+  // p058 — 2026-05-13 — Proposal Season — template B
+  { id: "p058", rows: 5, cols: 5, words: [
+    { word: "BROW", clue: "Forehead", row: 0, col: 1, dir: "A" },
+    { word: "TRADE", clue: "___ vows", row: 1, col: 0, dir: "A" },
+    { word: "WIDEN", clue: "Make broader", row: 2, col: 0, dir: "A" },
+    { word: "IDIOT", clue: "Total fool", row: 3, col: 0, dir: "A" },
+    { word: "NEON", clue: "Bright sign gas", row: 4, col: 0, dir: "A" },
+    { word: "TWIN", clue: "Mirror image connection", row: 1, col: 0, dir: "D" },
+    { word: "BRIDE", clue: "One in white", row: 0, col: 1, dir: "D" },
+    { word: "RADIO", clue: "Broadcast", row: 0, col: 2, dir: "D" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 0, col: 3, dir: "D" },
+    { word: "WENT", clue: "Traveled", row: 0, col: 4, dir: "D" },
+  ] },
+  // p059 — 2026-05-14 — Proposal Season — template C
+  { id: "p059", rows: 5, cols: 5, words: [
+    { word: "AGE", clue: "Era", row: 0, col: 1, dir: "A" },
+    { word: "GRANT", clue: "Bestow", row: 1, col: 0, dir: "A" },
+    { word: "ABUSE", clue: "Mistreat", row: 2, col: 0, dir: "A" },
+    { word: "ROGUE", clue: "Dishonest person", row: 3, col: 0, dir: "A" },
+    { word: "REE", clue: "Cry to a horse", row: 4, col: 1, dir: "A" },
+    { word: "GAR", clue: "Pike-like fish", row: 1, col: 0, dir: "D" },
+    { word: "ARBOR", clue: "Where he got on one knee", row: 0, col: 1, dir: "D" },
+    { word: "GAUGE", clue: "No need to ___ this love", row: 0, col: 2, dir: "D" },
+    { word: "ENSUE", clue: "Follow from", row: 0, col: 3, dir: "D" },
+    { word: "TEE", clue: "Golf stand", row: 1, col: 4, dir: "D" },
+  ] },
+  // p060 — 2026-05-15 — Proposal Season — template D
+  { id: "p060", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Never more ___", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Engagement dinner spot, minus \"60\"", row: 2, col: 0, dir: "A" },
+    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
+    { word: "NEWS", clue: "Information", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "A ___ for two", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Branch of peace", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENS", clue: "Makes equal or level", row: 0, col: 3, dir: "D" },
+    { word: "EST", clue: "Established", row: 1, col: 4, dir: "D" },
+  ] },
+  // p061 — 2026-05-16 — Proposal Season — template A
+  { id: "p061", rows: 5, cols: 5, words: [
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "A" },
+    { word: "LEVEL", clue: "Equal", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "TEND", clue: "Care for", row: 4, col: 1, dir: "A" },
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "D" },
+    { word: "REMIT", clue: "Send back", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "MEGAN", clue: "Proposal day co-conspirator", row: 0, col: 3, dir: "D" },
+    { word: "LEND", clue: "Loan out", row: 1, col: 4, dir: "D" },
+  ] },
+  // p062 — 2026-05-17 — Proposal Season — template B
+  { id: "p062", rows: 5, cols: 5, words: [
+    { word: "PROD", clue: "Push", row: 0, col: 1, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 1, col: 0, dir: "A" },
+    { word: "PAUSE", clue: "___ and breathe it in", row: 2, col: 0, dir: "A" },
+    { word: "ENTER", clue: "Go in", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "APES", clue: "Mimics", row: 1, col: 0, dir: "D" },
+    { word: "PLANT", clue: "What they did in each other's hearts", row: 0, col: 1, dir: "D" },
+    { word: "ROUTE", clue: "The way there", row: 0, col: 2, dir: "D" },
+    { word: "ONSET", clue: "Start", row: 0, col: 3, dir: "D" },
+    { word: "DEER", clue: "Forest animal", row: 0, col: 4, dir: "D" },
+  ] },
+  // p063 — 2026-05-18 — Proposal Season — template C
+  { id: "p063", rows: 5, cols: 5, words: [
+    { word: "DEE", clue: "Letter D", row: 0, col: 1, dir: "A" },
+    { word: "WEAVE", clue: "How their lives came together", row: 1, col: 0, dir: "A" },
+    { word: "ELVES", clue: "Pointy-eared fantasy folk", row: 2, col: 0, dir: "A" },
+    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
+    { word: "ESS", clue: "The letter S", row: 4, col: 1, dir: "A" },
+    { word: "WEE", clue: "Tiny", row: 1, col: 0, dir: "D" },
+    { word: "DELVE", clue: "Dig deep", row: 0, col: 1, dir: "D" },
+    { word: "EAVES", clue: "Roof overhangs", row: 0, col: 2, dir: "D" },
+    { word: "EVENS", clue: "Makes equal or level", row: 0, col: 3, dir: "D" },
+    { word: "EST", clue: "Established", row: 1, col: 4, dir: "D" },
+  ] },
+  // p064 — 2026-05-19 — Proposal Season — template D
+  { id: "p064", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "This ___", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "The ___ partner", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "Smooth move", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p065 — 2026-05-20 — Proposal Season — template A
+  { id: "p065", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Celeste, Texas — the setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Wedding structure", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "First ___ as newlyweds", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p066 — 2026-05-21 — Proposal Season — template B
+  { id: "p066", rows: 5, cols: 5, words: [
+    { word: "SLAW", clue: "Picnic side", row: 0, col: 1, dir: "A" },
+    { word: "WEAVE", clue: "Intertwine", row: 1, col: 0, dir: "A" },
+    { word: "ERROR", clue: "Mistake", row: 2, col: 0, dir: "A" },
+    { word: "AGGIE", clue: "Texas A&M vibe word", row: 3, col: 0, dir: "A" },
+    { word: "NEED", clue: "What they do — each other", row: 4, col: 0, dir: "A" },
+    { word: "WEAN", clue: "Move away", row: 1, col: 0, dir: "D" },
+    { word: "SERGE", clue: "Twill fabric", row: 0, col: 1, dir: "D" },
+    { word: "LARGE", clue: "Big", row: 0, col: 2, dir: "D" },
+    { word: "AVOID", clue: "Stay away", row: 0, col: 3, dir: "D" },
+    { word: "WERE", clue: "Past plural be", row: 0, col: 4, dir: "D" },
+  ] },
+  // p067 — 2026-05-22 — Proposal Season — template C
+  { id: "p067", rows: 5, cols: 5, words: [
+    { word: "DAM", clue: "Water barrier", row: 0, col: 1, dir: "A" },
+    { word: "GREET", clue: "Welcome", row: 1, col: 0, dir: "A" },
+    { word: "NURSE", clue: "Care giver", row: 2, col: 0, dir: "A" },
+    { word: "UNION", clue: "Joining", row: 3, col: 0, dir: "A" },
+    { word: "KEN", clue: "Range of knowledge", row: 4, col: 1, dir: "A" },
+    { word: "GNU", clue: "African animal", row: 1, col: 0, dir: "D" },
+    { word: "DRUNK", clue: "Intoxicated", row: 0, col: 1, dir: "D" },
+    { word: "AERIE", clue: "Eagle nest", row: 0, col: 2, dir: "D" },
+    { word: "MESON", clue: "Subatomic particle", row: 0, col: 3, dir: "D" },
+    { word: "TEN", clue: "Number", row: 1, col: 4, dir: "D" },
+  ] },
+  // p068 — 2026-05-23 — Proposal Season — template D
+  { id: "p068", rows: 5, cols: 5, words: [
+    { word: "GEAR", clue: "Equipment", row: 0, col: 0, dir: "A" },
+    { word: "UNDER", clue: "___ the same sky", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Go against", row: 3, col: 0, dir: "A" },
+    { word: "DREW", clue: "Past of draw", row: 4, col: 0, dir: "A" },
+    { word: "GUARD", clue: "What they do for each other", row: 0, col: 0, dir: "D" },
+    { word: "ENTER", clue: "___ the next chapter", row: 0, col: 1, dir: "D" },
+    { word: "ADOBE", clue: "Sun-dried clay brick", row: 0, col: 2, dir: "D" },
+    { word: "RENEW", clue: "Start fresh", row: 0, col: 3, dir: "D" },
+    { word: "REL", clue: "Kinsman, casually", row: 1, col: 4, dir: "D" },
+  ] },
+  // p069 — 2026-05-24 — Proposal Season — template A
+  { id: "p069", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Rivers they crossed together", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p070 — 2026-05-25 — Proposal Season — template B
+  { id: "p070", rows: 5, cols: 5, words: [
+    { word: "SCAD", clue: "A bunch", row: 0, col: 1, dir: "A" },
+    { word: "STONE", clue: "Hard mineral", row: 1, col: 0, dir: "A" },
+    { word: "LARVA", clue: "Insect stage", row: 2, col: 0, dir: "A" },
+    { word: "AGAIN", clue: "Once more", row: 3, col: 0, dir: "A" },
+    { word: "WELL", clue: "Healthy and happy", row: 4, col: 0, dir: "A" },
+    { word: "SLAW", clue: "Picnic side", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where the band sets up", row: 0, col: 1, dir: "D" },
+    { word: "CORAL", clue: "Wedding color note", row: 0, col: 2, dir: "D" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 0, col: 3, dir: "D" },
+    { word: "DEAN", clue: "School head", row: 0, col: 4, dir: "D" },
+  ] },
+  // p071 — 2026-05-26 — Proposal Season — template C
+  { id: "p071", rows: 5, cols: 5, words: [
+    { word: "BAT", clue: "Swing", row: 0, col: 1, dir: "A" },
+    { word: "DEBUT", clue: "First appearance", row: 1, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 2, col: 0, dir: "A" },
+    { word: "MOVED", clue: "Deeply affected", row: 3, col: 0, dir: "A" },
+    { word: "WED", clue: "Marry", row: 4, col: 1, dir: "A" },
+    { word: "DAM", clue: "Water barrier", row: 1, col: 0, dir: "D" },
+    { word: "BELOW", clue: "Under", row: 0, col: 1, dir: "D" },
+    { word: "ABOVE", clue: "Higher up", row: 0, col: 2, dir: "D" },
+    { word: "TUNED", clue: "Adjusted", row: 0, col: 3, dir: "D" },
+    { word: "TED", clue: "Spread out to dry", row: 1, col: 4, dir: "D" },
+  ] },
+  // p072 — 2026-05-27 — Proposal Season — template D
+  { id: "p072", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Bouquet ___", row: 1, col: 0, dir: "A" },
+    { word: "RIDGE", clue: "Long crest", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "WIRE", clue: "Connect", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "CHILI", clue: "Spicy dish", row: 0, col: 1, dir: "D" },
+    { word: "ARDOR", clue: "Passion", row: 0, col: 2, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 3, dir: "D" },
+    { word: "WED", clue: "What they'll do September 26", row: 1, col: 4, dir: "D" },
+  ] },
+  // p073 — 2026-05-28 — Proposal Season — template A
+  { id: "p073", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Country setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Ceremonial gateway", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "Reception floor mission", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p074 — 2026-05-29 — Proposal Season — template B
+  { id: "p074", rows: 5, cols: 5, words: [
+    { word: "SOAR", clue: "Rise high", row: 0, col: 1, dir: "A" },
+    { word: "STATE", clue: "Texas — always", row: 1, col: 0, dir: "A" },
+    { word: "ARSON", clue: "Deliberate fire-setting", row: 2, col: 0, dir: "A" },
+    { word: "PAINT", clue: "Color with brush", row: 3, col: 0, dir: "A" },
+    { word: "APSE", clue: "Church recess", row: 4, col: 0, dir: "A" },
+    { word: "SAPA", clue: "Reduced wine syrup", row: 1, col: 0, dir: "D" },
+    { word: "STRAP", clue: "Bind", row: 0, col: 1, dir: "D" },
+    { word: "OASIS", clue: "Desert water source", row: 0, col: 2, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p075 — 2026-05-30 — Proposal Season — template C
+  { id: "p075", rows: 5, cols: 5, words: [
+    { word: "ERS", clue: "Bitter vetch", row: 0, col: 1, dir: "A" },
+    { word: "TRACE", clue: "Follow the path", row: 1, col: 0, dir: "A" },
+    { word: "ARDOR", clue: "Passion", row: 2, col: 0, dir: "A" },
+    { word: "GOING", clue: "Departing", row: 3, col: 0, dir: "A" },
+    { word: "ROE", clue: "Fish eggs", row: 4, col: 1, dir: "A" },
+    { word: "TAG", clue: "Label", row: 1, col: 0, dir: "D" },
+    { word: "ERROR", clue: "Mistake", row: 0, col: 1, dir: "D" },
+    { word: "RADIO", clue: "Broadcast", row: 0, col: 2, dir: "D" },
+    { word: "SCONE", clue: "Baked treat", row: 0, col: 3, dir: "D" },
+    { word: "ERG", clue: "Work unit", row: 1, col: 4, dir: "D" },
+  ] },
+  // p076 — 2026-05-31 — Proposal Season — template D
+  { id: "p076", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "Location", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Perfect", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "___ into forever", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p077 — 2026-06-01 — Engagement — template A
+  { id: "p077", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Life-giving", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p078 — 2026-06-02 — Engagement — template B
+  { id: "p078", rows: 5, cols: 5, words: [
+    { word: "TWIN", clue: "Two as one", row: 0, col: 1, dir: "A" },
+    { word: "BRIDE", clue: "Ash on September 26", row: 1, col: 0, dir: "A" },
+    { word: "RADIO", clue: "Broadcast", row: 2, col: 0, dir: "A" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "He ___ the distance", row: 4, col: 0, dir: "A" },
+    { word: "BROW", clue: "Forehead", row: 1, col: 0, dir: "D" },
+    { word: "TRADE", clue: "Exchange", row: 0, col: 1, dir: "D" },
+    { word: "WIDEN", clue: "Make broader", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "NEON", clue: "Bright sign gas", row: 0, col: 4, dir: "D" },
+  ] },
+  // p079 — 2026-06-03 — Engagement — template C
+  { id: "p079", rows: 5, cols: 5, words: [
+    { word: "SAT", clue: "Rested", row: 0, col: 1, dir: "A" },
+    { word: "STORM", clue: "Wild weather", row: 1, col: 0, dir: "A" },
+    { word: "EERIE", clue: "Spooky", row: 2, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 3, col: 0, dir: "A" },
+    { word: "DAD", clue: "Father", row: 4, col: 1, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 1, col: 0, dir: "D" },
+    { word: "STEAD", clue: "Place of another", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "TRIED", clue: "Love ___ and true", row: 0, col: 3, dir: "D" },
+    { word: "MEN", clue: "Males", row: 1, col: 4, dir: "D" },
+  ] },
+  // p080 — 2026-06-04 — Engagement — template D
+  { id: "p080", rows: 5, cols: 5, words: [
+    { word: "GEAR", clue: "Equipment", row: 0, col: 0, dir: "A" },
+    { word: "UNDER", clue: "Beneath", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Go against", row: 3, col: 0, dir: "A" },
+    { word: "DREW", clue: "Past of draw", row: 4, col: 0, dir: "A" },
+    { word: "GUARD", clue: "Protect", row: 0, col: 0, dir: "D" },
+    { word: "ENTER", clue: "Go in", row: 0, col: 1, dir: "D" },
+    { word: "ADOBE", clue: "Sun-dried clay brick", row: 0, col: 2, dir: "D" },
+    { word: "RENEW", clue: "Start fresh", row: 0, col: 3, dir: "D" },
+    { word: "REL", clue: "Kinsman, casually", row: 1, col: 4, dir: "D" },
+  ] },
+  // p081 — 2026-06-05 — Engagement — template A
+  { id: "p081", rows: 5, cols: 5, words: [
+    { word: "ATTA", clue: "Whole wheat flour", row: 0, col: 0, dir: "A" },
+    { word: "TREND", clue: "Movement", row: 1, col: 0, dir: "A" },
+    { word: "MANGO", clue: "Tropical fruit", row: 2, col: 0, dir: "A" },
+    { word: "ASSET", clue: "Resource", row: 3, col: 0, dir: "A" },
+    { word: "HERE", clue: "Present", row: 4, col: 1, dir: "A" },
+    { word: "ATMA", clue: "Soul (Hindu)", row: 0, col: 0, dir: "D" },
+    { word: "TRASH", clue: "Waste", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "DOTE", clue: "Adore", row: 1, col: 4, dir: "D" },
+  ] },
+  // p082 — 2026-06-06 — Engagement — template B
+  { id: "p082", rows: 5, cols: 5, words: [
+    { word: "STIR", clue: "What the ceremony will ___", row: 0, col: 1, dir: "A" },
+    { word: "SHADE", clue: "Partial darkness", row: 1, col: 0, dir: "A" },
+    { word: "CABIN", clue: "Small house", row: 2, col: 0, dir: "A" },
+    { word: "ALLOT", clue: "Assign", row: 3, col: 0, dir: "A" },
+    { word: "MEET", clue: "Encounter", row: 4, col: 0, dir: "A" },
+    { word: "SCAM", clue: "Fraud", row: 1, col: 0, dir: "D" },
+    { word: "SHALE", clue: "Layered rock", row: 0, col: 1, dir: "D" },
+    { word: "TABLE", clue: "Reception ___s", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p083 — 2026-06-07 — Engagement — template C
+  { id: "p083", rows: 5, cols: 5, words: [
+    { word: "ABS", clue: "Stomach muscles", row: 0, col: 1, dir: "A" },
+    { word: "TRUTH", clue: "Honesty", row: 1, col: 0, dir: "A" },
+    { word: "AGGIE", clue: "School connection", row: 2, col: 0, dir: "A" },
+    { word: "BULLY", clue: "Tormentor", row: 3, col: 0, dir: "A" },
+    { word: "EEL", clue: "Slippery fish", row: 4, col: 1, dir: "A" },
+    { word: "TAB", clue: "Small bill", row: 1, col: 0, dir: "D" },
+    { word: "ARGUE", clue: "Disagree", row: 0, col: 1, dir: "D" },
+    { word: "BUGLE", clue: "Military horn", row: 0, col: 2, dir: "D" },
+    { word: "STILL", clue: "Even now", row: 0, col: 3, dir: "D" },
+    { word: "HEY", clue: "Greeting exclamation", row: 1, col: 4, dir: "D" },
+  ] },
+  // p084 — 2026-06-08 — Engagement — template D
+  { id: "p084", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Where out-of-towners land", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Treated like ___ty", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p085 — 2026-06-09 — Engagement — template A
+  { id: "p085", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "Completely", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p086 — 2026-06-10 — Engagement — template B
+  { id: "p086", rows: 5, cols: 5, words: [
+    { word: "TSAR", clue: "Russian ruler", row: 0, col: 1, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "LEGAL", clue: "Lawful", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Family ___", row: 4, col: 0, dir: "A" },
+    { word: "TILT", clue: "Lean", row: 1, col: 0, dir: "D" },
+    { word: "TIMER", clue: "Counting device", row: 0, col: 1, dir: "D" },
+    { word: "STAGE", clue: "Where toasts happen", row: 0, col: 2, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 3, dir: "D" },
+    { word: "REEL", clue: "Spin", row: 0, col: 4, dir: "D" },
+  ] },
+  // p087 — 2026-06-11 — Engagement — template C
+  { id: "p087", rows: 5, cols: 5, words: [
+    { word: "SAG", clue: "Droop", row: 0, col: 1, dir: "A" },
+    { word: "HILLS", clue: "Where she said yes", row: 1, col: 0, dir: "A" },
+    { word: "AGGIE", clue: "Texas A&M vibe word", row: 2, col: 0, dir: "A" },
+    { word: "SHADE", clue: "Golden ___", row: 3, col: 0, dir: "A" },
+    { word: "TEE", clue: "Golf stand", row: 4, col: 1, dir: "A" },
+    { word: "HAS", clue: "Possesses", row: 1, col: 0, dir: "D" },
+    { word: "SIGHT", clue: "Love at first ___", row: 0, col: 1, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 2, dir: "D" },
+    { word: "GLIDE", clue: "Smooth move", row: 0, col: 3, dir: "D" },
+    { word: "SEE", clue: "Lay eyes on", row: 1, col: 4, dir: "D" },
+  ] },
+  // p088 — 2026-06-12 — Engagement — template D
+  { id: "p088", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Post-proposal restaurant", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "Makes equal or level", row: 3, col: 0, dir: "A" },
+    { word: "NEWT", clue: "Pond creature", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Earthy green", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "ESS", clue: "The letter S", row: 1, col: 4, dir: "D" },
+  ] },
+  // p089 — 2026-06-13 — Engagement — template A
+  { id: "p089", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "LATER", clue: "Better ___ than never", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p090 — 2026-06-14 — Engagement — template B
+  { id: "p090", rows: 5, cols: 5, words: [
+    { word: "TWIN", clue: "Mirror image connection", row: 0, col: 1, dir: "A" },
+    { word: "BRIDE", clue: "One in white", row: 1, col: 0, dir: "A" },
+    { word: "RADIO", clue: "Broadcast", row: 2, col: 0, dir: "A" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "Traveled", row: 4, col: 0, dir: "A" },
+    { word: "BROW", clue: "Forehead", row: 1, col: 0, dir: "D" },
+    { word: "TRADE", clue: "___ vows", row: 0, col: 1, dir: "D" },
+    { word: "WIDEN", clue: "Make broader", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "NEON", clue: "Bright sign gas", row: 0, col: 4, dir: "D" },
+  ] },
+  // p091 — 2026-06-15 — Engagement — template C
+  { id: "p091", rows: 5, cols: 5, words: [
+    { word: "ARS", clue: "Plural of ar", row: 0, col: 1, dir: "A" },
+    { word: "WRITE", clue: "Record", row: 1, col: 0, dir: "A" },
+    { word: "ORDER", clue: "Arrange", row: 2, col: 0, dir: "A" },
+    { word: "EAGER", clue: "Enthusiastic", row: 3, col: 0, dir: "A" },
+    { word: "YEP", clue: "Yes", row: 4, col: 1, dir: "A" },
+    { word: "WOE", clue: "Great sorrow", row: 1, col: 0, dir: "D" },
+    { word: "ARRAY", clue: "Beautiful spread", row: 0, col: 1, dir: "D" },
+    { word: "RIDGE", clue: "Long crest", row: 0, col: 2, dir: "D" },
+    { word: "STEEP", clue: "Sharp incline", row: 0, col: 3, dir: "D" },
+    { word: "ERR", clue: "Make mistake", row: 1, col: 4, dir: "D" },
+  ] },
+  // p092 — 2026-06-16 — Engagement — template D
+  { id: "p092", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "This ___", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "The ___ partner", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "___ into forever", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p093 — 2026-06-17 — Engagement — template A
+  { id: "p093", rows: 5, cols: 5, words: [
+    { word: "PAST", clue: "Their ___ brought them here", row: 0, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "___ happy", row: 1, col: 0, dir: "A" },
+    { word: "FERAL", clue: "Wild", row: 2, col: 0, dir: "A" },
+    { word: "FRAME", clue: "___ the moment", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 1, dir: "A" },
+    { word: "PUFF", clue: "Breath of air", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "STRAY", clue: "Wander", row: 0, col: 2, dir: "D" },
+    { word: "TRAMP", clue: "Wander", row: 0, col: 3, dir: "D" },
+    { word: "ALEE", clue: "Sheltered side", row: 1, col: 4, dir: "D" },
+  ] },
+  // p094 — 2026-06-18 — Engagement — template B
+  { id: "p094", rows: 5, cols: 5, words: [
+    { word: "SLED", clue: "Snow slider", row: 0, col: 1, dir: "A" },
+    { word: "SHAME", clue: "Embarrassment", row: 1, col: 0, dir: "A" },
+    { word: "CORAL", clue: "Warm pink tone", row: 2, col: 0, dir: "A" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 3, col: 0, dir: "A" },
+    { word: "REAL", clue: "Genuine", row: 4, col: 0, dir: "A" },
+    { word: "SCAR", clue: "Mark left behind", row: 1, col: 0, dir: "D" },
+    { word: "SHONE", clue: "Past of shine", row: 0, col: 1, dir: "D" },
+    { word: "LARVA", clue: "Insect stage", row: 0, col: 2, dir: "D" },
+    { word: "EMAIL", clue: "Digital message", row: 0, col: 3, dir: "D" },
+    { word: "DELL", clue: "Small valley", row: 0, col: 4, dir: "D" },
+  ] },
+  // p095 — 2026-06-19 — Engagement — template C
+  { id: "p095", rows: 5, cols: 5, words: [
+    { word: "SEE", clue: "Lay eyes on", row: 0, col: 1, dir: "A" },
+    { word: "SPEND", clue: "Invest time", row: 1, col: 0, dir: "A" },
+    { word: "AORTA", clue: "Main artery", row: 2, col: 0, dir: "A" },
+    { word: "TRIED", clue: "Attempted", row: 3, col: 0, dir: "A" },
+    { word: "EER", clue: "Always (poetic)", row: 4, col: 1, dir: "A" },
+    { word: "SAT", clue: "Rested", row: 1, col: 0, dir: "D" },
+    { word: "SPORE", clue: "Plant seed", row: 0, col: 1, dir: "D" },
+    { word: "EERIE", clue: "Spooky", row: 0, col: 2, dir: "D" },
+    { word: "ENTER", clue: "___ the next chapter", row: 0, col: 3, dir: "D" },
+    { word: "DAD", clue: "Father", row: 1, col: 4, dir: "D" },
+  ] },
+  // p096 — 2026-06-20 — Engagement — template D
+  { id: "p096", rows: 5, cols: 5, words: [
+    { word: "GEAR", clue: "Equipment", row: 0, col: 0, dir: "A" },
+    { word: "UNDER", clue: "___ the same sky", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Go against", row: 3, col: 0, dir: "A" },
+    { word: "DREW", clue: "Past of draw", row: 4, col: 0, dir: "A" },
+    { word: "GUARD", clue: "What they do for each other", row: 0, col: 0, dir: "D" },
+    { word: "ENTER", clue: "Go in", row: 0, col: 1, dir: "D" },
+    { word: "ADOBE", clue: "Sun-dried clay brick", row: 0, col: 2, dir: "D" },
+    { word: "RENEW", clue: "Start fresh", row: 0, col: 3, dir: "D" },
+    { word: "REL", clue: "Kinsman, casually", row: 1, col: 4, dir: "D" },
+  ] },
+  // p097 — 2026-06-21 — Engagement — template A
+  { id: "p097", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Rivers they crossed together", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p098 — 2026-06-22 — Engagement — template B
+  { id: "p098", rows: 5, cols: 5, words: [
+    { word: "DASH", clue: "Sprint", row: 0, col: 1, dir: "A" },
+    { word: "ROUTE", clue: "What the drive requires", row: 1, col: 0, dir: "A" },
+    { word: "ODDER", clue: "More strange", row: 2, col: 0, dir: "A" },
+    { word: "AGILE", clue: "Nimble", row: 3, col: 0, dir: "A" },
+    { word: "META", clue: "Self-referential", row: 4, col: 0, dir: "A" },
+    { word: "ROAM", clue: "Wander", row: 1, col: 0, dir: "D" },
+    { word: "DODGE", clue: "Move aside", row: 0, col: 1, dir: "D" },
+    { word: "AUDIT", clue: "Check over", row: 0, col: 2, dir: "D" },
+    { word: "STELA", clue: "Upright carved stone slab", row: 0, col: 3, dir: "D" },
+    { word: "HERE", clue: "We are all ___ for this", row: 0, col: 4, dir: "D" },
+  ] },
+  // p099 — 2026-06-23 — Engagement — template C
+  { id: "p099", rows: 5, cols: 5, words: [
+    { word: "SPA", clue: "Wellness place", row: 0, col: 1, dir: "A" },
+    { word: "SURGE", clue: "Love ___s", row: 1, col: 0, dir: "A" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 2, col: 0, dir: "A" },
+    { word: "WAVER", clue: "Hesitate", row: 3, col: 0, dir: "A" },
+    { word: "REE", clue: "Cry to a horse", row: 4, col: 1, dir: "A" },
+    { word: "SAW", clue: "Cutting tool", row: 1, col: 0, dir: "D" },
+    { word: "SUGAR", clue: "Oh ___!", row: 0, col: 1, dir: "D" },
+    { word: "PROVE", clue: "Show true", row: 0, col: 2, dir: "D" },
+    { word: "AGREE", clue: "They ___", row: 0, col: 3, dir: "D" },
+    { word: "EAR", clue: "Listen well", row: 1, col: 4, dir: "D" },
+  ] },
+  // p100 — 2026-06-24 — Engagement — template D
+  { id: "p100", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Travel page staple", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Majestic", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p101 — 2026-06-25 — Engagement — template A
+  { id: "p101", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "___ joy", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p102 — 2026-06-26 — Engagement — template B
+  { id: "p102", rows: 5, cols: 5, words: [
+    { word: "SARI", clue: "Wrapped garment", row: 0, col: 1, dir: "A" },
+    { word: "SUPER", clue: "Beyond great", row: 1, col: 0, dir: "A" },
+    { word: "CARGO", clue: "Freight", row: 2, col: 0, dir: "A" },
+    { word: "AVIAN", clue: "Bird-related", row: 3, col: 0, dir: "A" },
+    { word: "DELL", clue: "Small valley", row: 4, col: 0, dir: "A" },
+    { word: "SCAD", clue: "A bunch", row: 1, col: 0, dir: "D" },
+    { word: "SUAVE", clue: "Smoothly charming", row: 0, col: 1, dir: "D" },
+    { word: "APRIL", clue: "Spring month", row: 0, col: 2, dir: "D" },
+    { word: "REGAL", clue: "Royal", row: 0, col: 3, dir: "D" },
+    { word: "IRON", clue: "Press flat", row: 0, col: 4, dir: "D" },
+  ] },
+  // p103 — 2026-06-27 — Engagement — template C
+  { id: "p103", rows: 5, cols: 5, words: [
+    { word: "HAM", clue: "Cured meat", row: 0, col: 1, dir: "A" },
+    { word: "WATER", clue: "Life-giving", row: 1, col: 0, dir: "A" },
+    { word: "IVORY", clue: "White shade", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "NET", clue: "After deductions", row: 4, col: 1, dir: "A" },
+    { word: "WIG", clue: "Hairpiece", row: 1, col: 0, dir: "D" },
+    { word: "HAVEN", clue: "A ___ for two", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MERIT", clue: "Deserved recognition", row: 0, col: 3, dir: "D" },
+    { word: "RYE", clue: "Seeded bread grain", row: 1, col: 4, dir: "D" },
+  ] },
+  // p104 — 2026-06-28 — Engagement — template D
+  { id: "p104", rows: 5, cols: 5, words: [
+    { word: "GEAR", clue: "Equipment", row: 0, col: 0, dir: "A" },
+    { word: "UNDER", clue: "Beneath", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Go against", row: 3, col: 0, dir: "A" },
+    { word: "DREW", clue: "Past of draw", row: 4, col: 0, dir: "A" },
+    { word: "GUARD", clue: "Protect", row: 0, col: 0, dir: "D" },
+    { word: "ENTER", clue: "___ the next chapter", row: 0, col: 1, dir: "D" },
+    { word: "ADOBE", clue: "Sun-dried clay brick", row: 0, col: 2, dir: "D" },
+    { word: "RENEW", clue: "Start fresh", row: 0, col: 3, dir: "D" },
+    { word: "REL", clue: "Kinsman, casually", row: 1, col: 4, dir: "D" },
+  ] },
+  // p105 — 2026-06-29 — Engagement — template A
+  { id: "p105", rows: 5, cols: 5, words: [
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "A" },
+    { word: "LEVEL", clue: "On the same ___", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "TEND", clue: "What they do for each other", row: 4, col: 1, dir: "A" },
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "D" },
+    { word: "REMIT", clue: "No ___", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "MEGAN", clue: "Friend who kept the secret", row: 0, col: 3, dir: "D" },
+    { word: "LEND", clue: "Loan out", row: 1, col: 4, dir: "D" },
+  ] },
+  // p106 — 2026-06-30 — Engagement — template B
+  { id: "p106", rows: 5, cols: 5, words: [
+    { word: "SLEW", clue: "Great number", row: 0, col: 1, dir: "A" },
+    { word: "SHAME", clue: "No ___", row: 1, col: 0, dir: "A" },
+    { word: "CORAL", clue: "Wedding color note", row: 2, col: 0, dir: "A" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 3, col: 0, dir: "A" },
+    { word: "REAL", clue: "As ___ as it gets", row: 4, col: 0, dir: "A" },
+    { word: "SCAR", clue: "Mark left behind", row: 1, col: 0, dir: "D" },
+    { word: "SHONE", clue: "Past of shine", row: 0, col: 1, dir: "D" },
+    { word: "LARVA", clue: "Insect stage", row: 0, col: 2, dir: "D" },
+    { word: "EMAIL", clue: "Digital message", row: 0, col: 3, dir: "D" },
+    { word: "WELL", clue: "All is ___", row: 0, col: 4, dir: "D" },
+  ] },
+  // p107 — 2026-07-01 — Wedding Party — template C
+  { id: "p107", rows: 5, cols: 5, words: [
+    { word: "SAT", clue: "Rested", row: 0, col: 1, dir: "A" },
+    { word: "STORM", clue: "Weathered every ___", row: 1, col: 0, dir: "A" },
+    { word: "EERIE", clue: "Spooky", row: 2, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 3, col: 0, dir: "A" },
+    { word: "LAD", clue: "Young boy", row: 4, col: 1, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 1, col: 0, dir: "D" },
+    { word: "STEAL", clue: "Take wrongly", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "TRIED", clue: "Love ___ and true", row: 0, col: 3, dir: "D" },
+    { word: "MEN", clue: "Males", row: 1, col: 4, dir: "D" },
+  ] },
+  // p108 — 2026-07-02 — Wedding Party — template D
+  { id: "p108", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "Location", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Perfect", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "Smooth move", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p109 — 2026-07-03 — Wedding Party — template A
+  { id: "p109", rows: 5, cols: 5, words: [
+    { word: "EASE", clue: "Put at ___", row: 0, col: 0, dir: "A" },
+    { word: "ALTAR", clue: "End of the aisle", row: 1, col: 0, dir: "A" },
+    { word: "SLATE", clue: "Dark stone", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Symbol", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "He ___ the distance", row: 4, col: 1, dir: "A" },
+    { word: "EAST", clue: "Direction", row: 0, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "STAKE", clue: "Pointed post", row: 0, col: 2, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 1, col: 4, dir: "D" },
+  ] },
+  // p110 — 2026-07-04 — Wedding Party — template B
+  { id: "p110", rows: 5, cols: 5, words: [
+    { word: "SCAD", clue: "A bunch", row: 0, col: 1, dir: "A" },
+    { word: "STONE", clue: "Rolling ___s — they've settled", row: 1, col: 0, dir: "A" },
+    { word: "LARVA", clue: "Insect stage", row: 2, col: 0, dir: "A" },
+    { word: "AGAIN", clue: "Once more", row: 3, col: 0, dir: "A" },
+    { word: "WELL", clue: "Healthy and happy", row: 4, col: 0, dir: "A" },
+    { word: "SLAW", clue: "Picnic side", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where the band sets up", row: 0, col: 1, dir: "D" },
+    { word: "CORAL", clue: "Warm pink tone", row: 0, col: 2, dir: "D" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 0, col: 3, dir: "D" },
+    { word: "DEAN", clue: "School head", row: 0, col: 4, dir: "D" },
+  ] },
+  // p111 — 2026-07-05 — Wedding Party — template C
+  { id: "p111", rows: 5, cols: 5, words: [
+    { word: "ESS", clue: "The letter S", row: 0, col: 1, dir: "A" },
+    { word: "CATCH", clue: "Bouquet ___", row: 1, col: 0, dir: "A" },
+    { word: "AGREE", clue: "Come to terms", row: 2, col: 0, dir: "A" },
+    { word: "PLANT", clue: "Grow something", row: 3, col: 0, dir: "A" },
+    { word: "EWE", clue: "Woolly mom", row: 4, col: 1, dir: "A" },
+    { word: "CAP", clue: "Top it off", row: 1, col: 0, dir: "D" },
+    { word: "EAGLE", clue: "Soaring bird", row: 0, col: 1, dir: "D" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 2, dir: "D" },
+    { word: "SCENE", clue: "The ___ was perfect", row: 0, col: 3, dir: "D" },
+    { word: "HET", clue: "Worked up", row: 1, col: 4, dir: "D" },
+  ] },
+  // p112 — 2026-07-06 — Wedding Party — template D
+  { id: "p112", rows: 5, cols: 5, words: [
+    { word: "FUSE", clue: "Blend or safety device", row: 0, col: 0, dir: "A" },
+    { word: "ENTER", clue: "Go in", row: 1, col: 0, dir: "A" },
+    { word: "ADORE", clue: "Love deeply", row: 2, col: 0, dir: "A" },
+    { word: "SERIF", clue: "Font flourish", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Rooted growth", row: 4, col: 0, dir: "A" },
+    { word: "FEAST", clue: "Big meal", row: 0, col: 0, dir: "D" },
+    { word: "UNDER", clue: "___ the same sky", row: 0, col: 1, dir: "D" },
+    { word: "STORE", clue: "Keep safe", row: 0, col: 2, dir: "D" },
+    { word: "EERIE", clue: "Spooky", row: 0, col: 3, dir: "D" },
+    { word: "REF", clue: "Official", row: 1, col: 4, dir: "D" },
+  ] },
+  // p113 — 2026-07-07 — Wedding Party — template A
+  { id: "p113", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "LATER", clue: "After some time", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p114 — 2026-07-08 — Wedding Party — template B
+  { id: "p114", rows: 5, cols: 5, words: [
+    { word: "SAGE", clue: "Wise", row: 0, col: 1, dir: "A" },
+    { word: "ROMAN", clue: "Groomsman name", row: 1, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 2, col: 0, dir: "A" },
+    { word: "RINGS", clue: "Two circles, one commitment", row: 3, col: 0, dir: "A" },
+    { word: "EDGE", clue: "Boundary", row: 4, col: 0, dir: "A" },
+    { word: "RARE", clue: "What this love is", row: 1, col: 0, dir: "D" },
+    { word: "SOLID", clue: "Firm", row: 0, col: 1, dir: "D" },
+    { word: "AMONG", clue: "In the middle", row: 0, col: 2, dir: "D" },
+    { word: "GAUGE", clue: "Measure", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 0, col: 4, dir: "D" },
+  ] },
+  // p115 — 2026-07-09 — Wedding Party — template C
+  { id: "p115", rows: 5, cols: 5, words: [
+    { word: "ROB", clue: "Take from", row: 0, col: 1, dir: "A" },
+    { word: "NOVEL", clue: "Their story is a great ___", row: 1, col: 0, dir: "A" },
+    { word: "USAGE", clue: "How it's used", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "NET", clue: "After deductions", row: 4, col: 1, dir: "A" },
+    { word: "NUT", clue: "Crunchy snack", row: 1, col: 0, dir: "D" },
+    { word: "ROSIN", clue: "Bow-rubbed resin", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "BEGAT", clue: "Fathered, biblically", row: 0, col: 3, dir: "D" },
+    { word: "LEN", clue: "___ Goodman, longtime TV judge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p116 — 2026-07-10 — Wedding Party — template D
+  { id: "p116", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Cast out", row: 1, col: 0, dir: "A" },
+    { word: "RIDGE", clue: "Long crest", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "WIRE", clue: "Connect", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "CHILI", clue: "Spicy dish", row: 0, col: 1, dir: "D" },
+    { word: "ARDOR", clue: "Passion", row: 0, col: 2, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 3, dir: "D" },
+    { word: "WED", clue: "Marry", row: 1, col: 4, dir: "D" },
+  ] },
+  // p117 — 2026-07-11 — Wedding Party — template A
+  { id: "p117", rows: 5, cols: 5, words: [
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "A" },
+    { word: "REMIT", clue: "Send back", row: 1, col: 0, dir: "A" },
+    { word: "OVATE", clue: "Egg-shaped", row: 2, col: 0, dir: "A" },
+    { word: "MEGAN", clue: "Proposal day co-conspirator", row: 3, col: 0, dir: "A" },
+    { word: "LEND", clue: "Loan out", row: 4, col: 1, dir: "A" },
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "D" },
+    { word: "LEVEL", clue: "Equal", row: 0, col: 1, dir: "D" },
+    { word: "IMAGE", clue: "Picture", row: 0, col: 2, dir: "D" },
+    { word: "TITAN", clue: "Giant or powerful", row: 0, col: 3, dir: "D" },
+    { word: "TEND", clue: "Care for", row: 1, col: 4, dir: "D" },
+  ] },
+  // p118 — 2026-07-12 — Wedding Party — template B
+  { id: "p118", rows: 5, cols: 5, words: [
+    { word: "SARI", clue: "Wrapped garment", row: 0, col: 1, dir: "A" },
+    { word: "SUPER", clue: "___ couple", row: 1, col: 0, dir: "A" },
+    { word: "CARGO", clue: "Freight", row: 2, col: 0, dir: "A" },
+    { word: "AVIAN", clue: "Bird-related", row: 3, col: 0, dir: "A" },
+    { word: "DELL", clue: "Small valley", row: 4, col: 0, dir: "A" },
+    { word: "SCAD", clue: "A bunch", row: 1, col: 0, dir: "D" },
+    { word: "SUAVE", clue: "Smoothly charming", row: 0, col: 1, dir: "D" },
+    { word: "APRIL", clue: "Spring month", row: 0, col: 2, dir: "D" },
+    { word: "REGAL", clue: "Royal", row: 0, col: 3, dir: "D" },
+    { word: "IRON", clue: "Press flat", row: 0, col: 4, dir: "D" },
+  ] },
+  // p119 — 2026-07-13 — Wedding Party — template C
+  { id: "p119", rows: 5, cols: 5, words: [
+    { word: "HAS", clue: "Possesses", row: 0, col: 1, dir: "A" },
+    { word: "FULLY", clue: "Completely", row: 1, col: 0, dir: "A" },
+    { word: "ARGUE", clue: "Disagree", row: 2, col: 0, dir: "A" },
+    { word: "DRAMA", clue: "Play or theatrical piece", row: 3, col: 0, dir: "A" },
+    { word: "YEP", clue: "Yes", row: 4, col: 1, dir: "A" },
+    { word: "FAD", clue: "Brief craze", row: 1, col: 0, dir: "D" },
+    { word: "HURRY", clue: "No need to ___", row: 0, col: 1, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 2, dir: "D" },
+    { word: "SLUMP", clue: "Decline", row: 0, col: 3, dir: "D" },
+    { word: "YEA", clue: "Aye", row: 1, col: 4, dir: "D" },
+  ] },
+  // p120 — 2026-07-14 — Wedding Party — template D
+  { id: "p120", rows: 5, cols: 5, words: [
+    { word: "APSE", clue: "Church recess", row: 0, col: 0, dir: "A" },
+    { word: "READY", clue: "Let's go", row: 1, col: 0, dir: "A" },
+    { word: "GAUGE", clue: "No need to ___ this love", row: 2, col: 0, dir: "A" },
+    { word: "OCTET", clue: "Group of eight", row: 3, col: 0, dir: "A" },
+    { word: "NEED", clue: "Require", row: 4, col: 0, dir: "A" },
+    { word: "ARGON", clue: "Noble gas", row: 0, col: 0, dir: "D" },
+    { word: "PEACE", clue: "What they give each other", row: 0, col: 1, dir: "D" },
+    { word: "SAUTE", clue: "Fry quickly in oil", row: 0, col: 2, dir: "D" },
+    { word: "EDGED", clue: "Bordered", row: 0, col: 3, dir: "D" },
+    { word: "YET", clue: "Nevertheless", row: 1, col: 4, dir: "D" },
+  ] },
+  // p121 — 2026-07-15 — Wedding Party — template A
+  { id: "p121", rows: 5, cols: 5, words: [
+    { word: "ARID", clue: "Very dry", row: 0, col: 0, dir: "A" },
+    { word: "RURAL", clue: "Celeste, Texas — the setting", row: 1, col: 0, dir: "A" },
+    { word: "CLONE", clue: "Exact copy", row: 2, col: 0, dir: "A" },
+    { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
+    { word: "RYES", clue: "Grain plural", row: 4, col: 1, dir: "A" },
+    { word: "ARCH", clue: "Wedding structure", row: 0, col: 0, dir: "D" },
+    { word: "RULER", clue: "Measuring stick", row: 0, col: 1, dir: "D" },
+    { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "First ___ as newlyweds", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p122 — 2026-07-16 — Wedding Party — template B
+  { id: "p122", rows: 5, cols: 5, words: [
+    { word: "SEAR", clue: "Brown quickly", row: 0, col: 1, dir: "A" },
+    { word: "STARE", clue: "Look intently", row: 1, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 2, col: 0, dir: "A" },
+    { word: "AGENT", clue: "Representative", row: 3, col: 0, dir: "A" },
+    { word: "MESA", clue: "Flat-topped hill", row: 4, col: 0, dir: "A" },
+    { word: "SHAM", clue: "Fake thing", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where toasts happen", row: 0, col: 1, dir: "D" },
+    { word: "EAVES", clue: "Roof overhangs", row: 0, col: 2, dir: "D" },
+    { word: "ARENA", clue: "Stadium", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p123 — 2026-07-17 — Wedding Party — template C
+  { id: "p123", rows: 5, cols: 5, words: [
+    { word: "LAY", clue: "Place down", row: 0, col: 1, dir: "A" },
+    { word: "SATIN", clue: "Smooth fabric", row: 1, col: 0, dir: "A" },
+    { word: "PUREE", clue: "Smooth blended food", row: 2, col: 0, dir: "A" },
+    { word: "AGILE", clue: "Nimble", row: 3, col: 0, dir: "A" },
+    { word: "HAD", clue: "Possessed", row: 4, col: 1, dir: "A" },
+    { word: "SPA", clue: "Wellness place", row: 1, col: 0, dir: "D" },
+    { word: "LAUGH", clue: "Express joy", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "YIELD", clue: "Give in to love", row: 0, col: 3, dir: "D" },
+    { word: "NEE", clue: "Born as", row: 1, col: 4, dir: "D" },
+  ] },
+  // p124 — 2026-07-18 — Wedding Party — template D
+  { id: "p124", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Where out-of-towners land", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Treated like ___ty", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p125 — 2026-07-19 — Wedding Party — template A
+  { id: "p125", rows: 5, cols: 5, words: [
+    { word: "ATTA", clue: "Whole wheat flour", row: 0, col: 0, dir: "A" },
+    { word: "TREND", clue: "Love never goes out of ___", row: 1, col: 0, dir: "A" },
+    { word: "MANGO", clue: "Tropical fruit", row: 2, col: 0, dir: "A" },
+    { word: "ASSET", clue: "Resource", row: 3, col: 0, dir: "A" },
+    { word: "HERE", clue: "Present", row: 4, col: 1, dir: "A" },
+    { word: "ATMA", clue: "Soul (Hindu)", row: 0, col: 0, dir: "D" },
+    { word: "TRASH", clue: "Waste", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "DOTE", clue: "Adore", row: 1, col: 4, dir: "D" },
+  ] },
+  // p126 — 2026-07-20 — Wedding Party — template B
+  { id: "p126", rows: 5, cols: 5, words: [
+    { word: "SEAR", clue: "Brown quickly", row: 0, col: 1, dir: "A" },
+    { word: "STARE", clue: "___ into each other's eyes", row: 1, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "A ___ for two", row: 2, col: 0, dir: "A" },
+    { word: "AGENT", clue: "Representative", row: 3, col: 0, dir: "A" },
+    { word: "MESA", clue: "Flat-topped hill", row: 4, col: 0, dir: "A" },
+    { word: "SHAM", clue: "Fake thing", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where the band sets up", row: 0, col: 1, dir: "D" },
+    { word: "EAVES", clue: "Roof overhangs", row: 0, col: 2, dir: "D" },
+    { word: "ARENA", clue: "Stadium", row: 0, col: 3, dir: "D" },
+    { word: "RENT", clue: "Pay to use", row: 0, col: 4, dir: "D" },
+  ] },
+  // p127 — 2026-07-21 — Wedding Party — template C
+  { id: "p127", rows: 5, cols: 5, words: [
+    { word: "ABS", clue: "Stomach muscles", row: 0, col: 1, dir: "A" },
+    { word: "PRIME", clue: "At their best", row: 1, col: 0, dir: "A" },
+    { word: "ARBOR", clue: "Nature park, proposal setting", row: 2, col: 0, dir: "A" },
+    { word: "POLKA", clue: "Dance style", row: 3, col: 0, dir: "A" },
+    { word: "WEE", clue: "Tiny", row: 4, col: 1, dir: "A" },
+    { word: "PAP", clue: "Soft food", row: 1, col: 0, dir: "D" },
+    { word: "ARROW", clue: "Pointed shaft", row: 0, col: 1, dir: "D" },
+    { word: "BIBLE", clue: "Holy text", row: 0, col: 2, dir: "D" },
+    { word: "SMOKE", clue: "Fire output", row: 0, col: 3, dir: "D" },
+    { word: "ERA", clue: "Chapter", row: 1, col: 4, dir: "D" },
+  ] },
+  // p128 — 2026-07-22 — Wedding Party — template D
+  { id: "p128", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Never more ___", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Engagement dinner spot, minus \"60\"", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "Makes equal or level", row: 3, col: 0, dir: "A" },
+    { word: "NEWT", clue: "Pond creature", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Branch of peace", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "ESS", clue: "The letter S", row: 1, col: 4, dir: "D" },
+  ] },
+  // p129 — 2026-07-23 — Wedding Party — template A
+  { id: "p129", rows: 5, cols: 5, words: [
+    { word: "PAST", clue: "History", row: 0, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "Extreme", row: 1, col: 0, dir: "A" },
+    { word: "FERAL", clue: "Wild", row: 2, col: 0, dir: "A" },
+    { word: "FRAME", clue: "Structure", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 1, dir: "A" },
+    { word: "PUFF", clue: "Breath of air", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "STRAY", clue: "Wander", row: 0, col: 2, dir: "D" },
+    { word: "TRAMP", clue: "Wander", row: 0, col: 3, dir: "D" },
+    { word: "ALEE", clue: "Sheltered side", row: 1, col: 4, dir: "D" },
+  ] },
+  // p130 — 2026-07-24 — Wedding Party — template B
+  { id: "p130", rows: 5, cols: 5, words: [
+    { word: "SPAR", clue: "Practice", row: 0, col: 1, dir: "A" },
+    { word: "SURGE", clue: "Rush forward", row: 1, col: 0, dir: "A" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 2, col: 0, dir: "A" },
+    { word: "LABEL", clue: "Identify", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Family ___", row: 4, col: 0, dir: "A" },
+    { word: "SALT", clue: "Worth their ___", row: 1, col: 0, dir: "D" },
+    { word: "SUGAR", clue: "Sweet", row: 0, col: 1, dir: "D" },
+    { word: "PROBE", clue: "Investigate", row: 0, col: 2, dir: "D" },
+    { word: "AGREE", clue: "They ___", row: 0, col: 3, dir: "D" },
+    { word: "REAL", clue: "Genuine", row: 0, col: 4, dir: "D" },
+  ] },
+  // p131 — 2026-07-25 — Wedding Party — template C
+  { id: "p131", rows: 5, cols: 5, words: [
+    { word: "TAB", clue: "Small bill", row: 0, col: 1, dir: "A" },
+    { word: "PROUD", clue: "So ___ of each other", row: 1, col: 0, dir: "A" },
+    { word: "EARLY", clue: "Not too late — just right", row: 2, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 3, col: 0, dir: "A" },
+    { word: "LAY", clue: "Place down", row: 4, col: 1, dir: "A" },
+    { word: "PET", clue: "Cherished animal", row: 1, col: 0, dir: "D" },
+    { word: "TRAIL", clue: "The ___ that led to yes", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "BULLY", clue: "Tormentor", row: 0, col: 3, dir: "D" },
+    { word: "DYE", clue: "Add color", row: 1, col: 4, dir: "D" },
+  ] },
+  // p132 — 2026-07-26 — Wedding Party — template D
+  { id: "p132", rows: 5, cols: 5, words: [
+    { word: "HOSE", clue: "Spray device", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "VINES", clue: "Post-proposal restaurant", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "Makes equal or level", row: 3, col: 0, dir: "A" },
+    { word: "NEWT", clue: "Pond creature", row: 4, col: 0, dir: "A" },
+    { word: "HAVEN", clue: "A ___ for two", row: 0, col: 0, dir: "D" },
+    { word: "OLIVE", clue: "Earthy green", row: 0, col: 1, dir: "D" },
+    { word: "SINEW", clue: "Tough cord", row: 0, col: 2, dir: "D" },
+    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "ESS", clue: "The letter S", row: 1, col: 4, dir: "D" },
+  ] },
+  // p133 — 2026-07-27 — Wedding Party — template A
+  { id: "p133", rows: 5, cols: 5, words: [
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "A" },
+    { word: "REMIT", clue: "No ___", row: 1, col: 0, dir: "A" },
+    { word: "OVATE", clue: "Egg-shaped", row: 2, col: 0, dir: "A" },
+    { word: "MEGAN", clue: "Friend who kept the secret", row: 3, col: 0, dir: "A" },
+    { word: "LEND", clue: "Loan out", row: 4, col: 1, dir: "A" },
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "D" },
+    { word: "LEVEL", clue: "On the same ___", row: 0, col: 1, dir: "D" },
+    { word: "IMAGE", clue: "Picture", row: 0, col: 2, dir: "D" },
+    { word: "TITAN", clue: "Giant or powerful", row: 0, col: 3, dir: "D" },
+    { word: "TEND", clue: "What they do for each other", row: 1, col: 4, dir: "D" },
+  ] },
+  // p134 — 2026-07-28 — Wedding Party — template B
+  { id: "p134", rows: 5, cols: 5, words: [
+    { word: "VEST", clue: "Groom's ___", row: 0, col: 1, dir: "A" },
+    { word: "SIXTH", clue: "The ___ sense — love", row: 1, col: 0, dir: "A" },
+    { word: "COCOA", clue: "Chocolate base", row: 2, col: 0, dir: "A" },
+    { word: "ALERT", clue: "On guard", row: 3, col: 0, dir: "A" },
+    { word: "MALE", clue: "Masculine", row: 4, col: 0, dir: "A" },
+    { word: "SCAM", clue: "Fraud", row: 1, col: 0, dir: "D" },
+    { word: "VIOLA", clue: "String instrument", row: 0, col: 1, dir: "D" },
+    { word: "EXCEL", clue: "Do very well", row: 0, col: 2, dir: "D" },
+    { word: "STORE", clue: "Memories they'll ___", row: 0, col: 3, dir: "D" },
+    { word: "THAT", clue: "Indicated thing", row: 0, col: 4, dir: "D" },
+  ] },
+  // p135 — 2026-07-29 — Wedding Party — template C
+  { id: "p135", rows: 5, cols: 5, words: [
+    { word: "TOR", clue: "Rocky hill", row: 0, col: 1, dir: "A" },
+    { word: "LIVED", clue: "They ___ every moment", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "DEL", clue: "Delete key", row: 4, col: 1, dir: "A" },
+    { word: "LIT", clue: "Illuminated", row: 1, col: 0, dir: "D" },
+    { word: "TIMID", clue: "Shy", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "REGAL", clue: "Royal", row: 0, col: 3, dir: "D" },
+    { word: "DEN", clue: "Private room", row: 1, col: 4, dir: "D" },
+  ] },
+  // p136 — 2026-07-30 — Wedding Party — template D
+  { id: "p136", rows: 5, cols: 5, words: [
+    { word: "SWAB", clue: "Clean with mop", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Bouquet ___", row: 1, col: 0, dir: "A" },
+    { word: "ROGUE", clue: "Dishonest person", row: 2, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 3, col: 0, dir: "A" },
+    { word: "WEND", clue: "Travel", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "WHOLE", clue: "Complete, in one word", row: 0, col: 1, dir: "D" },
+    { word: "ARGON", clue: "Noble gas", row: 0, col: 2, dir: "D" },
+    { word: "BOUND", clue: "Heading toward", row: 0, col: 3, dir: "D" },
+    { word: "WEE", clue: "Tiny", row: 1, col: 4, dir: "D" },
+  ] },
+  // p137 — 2026-07-31 — Wedding Party — template A
+  { id: "p137", rows: 5, cols: 5, words: [
+    { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "A" },
+    { word: "ALTAR", clue: "Where the vows happen", row: 1, col: 0, dir: "A" },
+    { word: "PLAZA", clue: "Public square", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Symbol", row: 3, col: 0, dir: "A" },
+    { word: "WELT", clue: "Raised skin mark", row: 4, col: 1, dir: "A" },
+    { word: "RAPT", clue: "Absorbed", row: 0, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "STAKE", clue: "Pointed post", row: 0, col: 2, dir: "D" },
+    { word: "HAZEL", clue: "Light brown", row: 0, col: 3, dir: "D" },
+    { word: "RANT", clue: "Speak loudly", row: 1, col: 4, dir: "D" },
+  ] },
+  // p138 — 2026-08-01 — Countdown & Faith — template B
+  { id: "p138", rows: 5, cols: 5, words: [
+    { word: "TWIN", clue: "Two as one", row: 0, col: 1, dir: "A" },
+    { word: "BRIDE", clue: "Ash on September 26", row: 1, col: 0, dir: "A" },
+    { word: "RADIO", clue: "Broadcast", row: 2, col: 0, dir: "A" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "Traveled", row: 4, col: 0, dir: "A" },
+    { word: "BROW", clue: "Forehead", row: 1, col: 0, dir: "D" },
+    { word: "TRADE", clue: "Exchange", row: 0, col: 1, dir: "D" },
+    { word: "WIDEN", clue: "Make broader", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "NEON", clue: "Bright sign gas", row: 0, col: 4, dir: "D" },
+  ] },
+  // p139 — 2026-08-02 — Countdown & Faith — template C
+  { id: "p139", rows: 5, cols: 5, words: [
+    { word: "AGE", clue: "How long they've loved", row: 0, col: 1, dir: "A" },
+    { word: "BRAND", clue: "Mark", row: 1, col: 0, dir: "A" },
+    { word: "ABUSE", clue: "Mistreat", row: 2, col: 0, dir: "A" },
+    { word: "ROGUE", clue: "Dishonest person", row: 3, col: 0, dir: "A" },
+    { word: "REE", clue: "Cry to a horse", row: 4, col: 1, dir: "A" },
+    { word: "BAR", clue: "Block", row: 1, col: 0, dir: "D" },
+    { word: "ARBOR", clue: "Where he got on one knee", row: 0, col: 1, dir: "D" },
+    { word: "GAUGE", clue: "Measure", row: 0, col: 2, dir: "D" },
+    { word: "ENSUE", clue: "Follow from", row: 0, col: 3, dir: "D" },
+    { word: "DEE", clue: "Letter D", row: 1, col: 4, dir: "D" },
+  ] },
+  // p140 — 2026-08-03 — Countdown & Faith — template D
+  { id: "p140", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "What it took to love again", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p141 — 2026-08-04 — Countdown & Faith — template A
+  { id: "p141", rows: 5, cols: 5, words: [
+    { word: "PAST", clue: "Their ___ brought them here", row: 0, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "___ happy", row: 1, col: 0, dir: "A" },
+    { word: "FERAL", clue: "Wild", row: 2, col: 0, dir: "A" },
+    { word: "FRAME", clue: "___ the moment", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 1, dir: "A" },
+    { word: "PUFF", clue: "Breath of air", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "STRAY", clue: "Wander", row: 0, col: 2, dir: "D" },
+    { word: "TRAMP", clue: "Wander", row: 0, col: 3, dir: "D" },
+    { word: "ALEE", clue: "Sheltered side", row: 1, col: 4, dir: "D" },
+  ] },
+  // p142 — 2026-08-05 — Countdown & Faith — template B
+  { id: "p142", rows: 5, cols: 5, words: [
+    { word: "PROW", clue: "Ship front", row: 0, col: 1, dir: "A" },
+    { word: "TRADE", clue: "___ vows", row: 1, col: 0, dir: "A" },
+    { word: "WIDEN", clue: "Make broader", row: 2, col: 0, dir: "A" },
+    { word: "IDIOT", clue: "Total fool", row: 3, col: 0, dir: "A" },
+    { word: "NEON", clue: "Bright sign gas", row: 4, col: 0, dir: "A" },
+    { word: "TWIN", clue: "Mirror image connection", row: 1, col: 0, dir: "D" },
+    { word: "PRIDE", clue: "What their families feel", row: 0, col: 1, dir: "D" },
+    { word: "RADIO", clue: "Broadcast", row: 0, col: 2, dir: "D" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 0, col: 3, dir: "D" },
+    { word: "WENT", clue: "He ___ the distance", row: 0, col: 4, dir: "D" },
+  ] },
+  // p143 — 2026-08-06 — Countdown & Faith — template C
+  { id: "p143", rows: 5, cols: 5, words: [
+    { word: "SAG", clue: "Droop", row: 0, col: 1, dir: "A" },
+    { word: "YIELD", clue: "Surrender", row: 1, col: 0, dir: "A" },
+    { word: "ATRIA", clue: "Heart chambers", row: 2, col: 0, dir: "A" },
+    { word: "RAINY", clue: "Wet weather", row: 3, col: 0, dir: "A" },
+    { word: "RET", clue: "Internet user, briefly", row: 4, col: 1, dir: "A" },
+    { word: "YAR", clue: "Nimble", row: 1, col: 0, dir: "D" },
+    { word: "SITAR", clue: "Indian lute", row: 0, col: 1, dir: "D" },
+    { word: "AERIE", clue: "Eagle nest", row: 0, col: 2, dir: "D" },
+    { word: "GLINT", clue: "Quick shine", row: 0, col: 3, dir: "D" },
+    { word: "DAY", clue: "September 26 is THE ___", row: 1, col: 4, dir: "D" },
+  ] },
+  // p144 — 2026-08-07 — Countdown & Faith — template D
+  { id: "p144", rows: 5, cols: 5, words: [
+    { word: "REST", clue: "Take a break", row: 0, col: 0, dir: "A" },
+    { word: "ENTER", clue: "___ the next chapter", row: 1, col: 0, dir: "A" },
+    { word: "STRAY", clue: "Wander", row: 2, col: 0, dir: "A" },
+    { word: "ERASE", clue: "Remove", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 0, dir: "A" },
+    { word: "RESET", clue: "Start over", row: 0, col: 0, dir: "D" },
+    { word: "ENTRY", clue: "Coming in", row: 0, col: 1, dir: "D" },
+    { word: "STRAP", clue: "Bind", row: 0, col: 2, dir: "D" },
+    { word: "TEASE", clue: "Playfully provoke", row: 0, col: 3, dir: "D" },
+    { word: "RYE", clue: "Seeded bread grain", row: 1, col: 4, dir: "D" },
+  ] },
+  // p145 — 2026-08-08 — Countdown & Faith — template A
+  { id: "p145", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Rivers they crossed together", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p146 — 2026-08-09 — Countdown & Faith — template B
+  { id: "p146", rows: 5, cols: 5, words: [
+    { word: "SCAM", clue: "Fraud", row: 0, col: 1, dir: "A" },
+    { word: "STONE", clue: "Hard mineral", row: 1, col: 0, dir: "A" },
+    { word: "LARVA", clue: "Insect stage", row: 2, col: 0, dir: "A" },
+    { word: "AGAIN", clue: "Once more", row: 3, col: 0, dir: "A" },
+    { word: "WELL", clue: "All is ___", row: 4, col: 0, dir: "A" },
+    { word: "SLAW", clue: "Picnic side", row: 1, col: 0, dir: "D" },
+    { word: "STAGE", clue: "Where toasts happen", row: 0, col: 1, dir: "D" },
+    { word: "CORAL", clue: "Wedding color note", row: 0, col: 2, dir: "D" },
+    { word: "ANVIL", clue: "Blacksmith block", row: 0, col: 3, dir: "D" },
+    { word: "MEAN", clue: "Average", row: 0, col: 4, dir: "D" },
+  ] },
+  // p147 — 2026-08-10 — Countdown & Faith — template C
+  { id: "p147", rows: 5, cols: 5, words: [
+    { word: "VIA", clue: "By way of", row: 0, col: 1, dir: "A" },
+    { word: "FIRST", clue: "What this whole journey was", row: 1, col: 0, dir: "A" },
+    { word: "ERASE", clue: "Remove", row: 2, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 3, col: 0, dir: "A" },
+    { word: "LET", clue: "Allow", row: 4, col: 1, dir: "A" },
+    { word: "FEE", clue: "Charge", row: 1, col: 0, dir: "D" },
+    { word: "VIRAL", clue: "Spreading", row: 0, col: 1, dir: "D" },
+    { word: "IRATE", clue: "Angry", row: 0, col: 2, dir: "D" },
+    { word: "ASSET", clue: "Resource", row: 0, col: 3, dir: "D" },
+    { word: "TEN", clue: "Number", row: 1, col: 4, dir: "D" },
+  ] },
+  // p148 — 2026-08-11 — Countdown & Faith — template D
+  { id: "p148", rows: 5, cols: 5, words: [
+    { word: "FUSE", clue: "Blend or safety device", row: 0, col: 0, dir: "A" },
+    { word: "ENTER", clue: "Go in", row: 1, col: 0, dir: "A" },
+    { word: "ADORE", clue: "What they do", row: 2, col: 0, dir: "A" },
+    { word: "SERIF", clue: "Font flourish", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Rooted growth", row: 4, col: 0, dir: "A" },
+    { word: "FEAST", clue: "Wedding ___", row: 0, col: 0, dir: "D" },
+    { word: "UNDER", clue: "Beneath", row: 0, col: 1, dir: "D" },
+    { word: "STORE", clue: "Keep safe", row: 0, col: 2, dir: "D" },
+    { word: "EERIE", clue: "Spooky", row: 0, col: 3, dir: "D" },
+    { word: "REF", clue: "Official", row: 1, col: 4, dir: "D" },
+  ] },
+  // p149 — 2026-08-12 — Countdown & Faith — template A
+  { id: "p149", rows: 5, cols: 5, words: [
+    { word: "LEST", clue: "For fear that", row: 0, col: 0, dir: "A" },
+    { word: "EXCEL", clue: "They ___ together", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "PROSE", clue: "Plain writing", row: 3, col: 0, dir: "A" },
+    { word: "APES", clue: "Mimics", row: 4, col: 1, dir: "A" },
+    { word: "LEAP", clue: "Jump with faith", row: 0, col: 0, dir: "D" },
+    { word: "EXTRA", clue: "Bonus", row: 0, col: 1, dir: "D" },
+    { word: "SCOOP", clue: "Gather up", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p150 — 2026-08-13 — Countdown & Faith — template B
+  { id: "p150", rows: 5, cols: 5, words: [
+    { word: "TWIN", clue: "Two as one", row: 0, col: 1, dir: "A" },
+    { word: "PRIDE", clue: "Joyful satisfaction", row: 1, col: 0, dir: "A" },
+    { word: "RADIO", clue: "Broadcast", row: 2, col: 0, dir: "A" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 3, col: 0, dir: "A" },
+    { word: "WENT", clue: "Traveled", row: 4, col: 0, dir: "A" },
+    { word: "PROW", clue: "Ship front", row: 1, col: 0, dir: "D" },
+    { word: "TRADE", clue: "Exchange", row: 0, col: 1, dir: "D" },
+    { word: "WIDEN", clue: "Make broader", row: 0, col: 2, dir: "D" },
+    { word: "IDIOT", clue: "Total fool", row: 0, col: 3, dir: "D" },
+    { word: "NEON", clue: "Bright sign gas", row: 0, col: 4, dir: "D" },
+  ] },
+  // p151 — 2026-08-14 — Countdown & Faith — template C
+  { id: "p151", rows: 5, cols: 5, words: [
+    { word: "PET", clue: "Cherished animal", row: 0, col: 1, dir: "A" },
+    { word: "TRAIN", clue: "Bridal ___", row: 1, col: 0, dir: "A" },
+    { word: "AORTA", clue: "Main artery", row: 2, col: 0, dir: "A" },
+    { word: "BULLY", clue: "Tormentor", row: 3, col: 0, dir: "A" },
+    { word: "DYE", clue: "Add color", row: 4, col: 1, dir: "A" },
+    { word: "TAB", clue: "Small bill", row: 1, col: 0, dir: "D" },
+    { word: "PROUD", clue: "With satisfaction", row: 0, col: 1, dir: "D" },
+    { word: "EARLY", clue: "Ahead of schedule", row: 0, col: 2, dir: "D" },
+    { word: "TITLE", clue: "Name given", row: 0, col: 3, dir: "D" },
+    { word: "NAY", clue: "No vote", row: 1, col: 4, dir: "D" },
+  ] },
+  // p152 — 2026-08-15 — Countdown & Faith — template D
+  { id: "p152", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "This ___", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "The ___ partner", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "___ into forever", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p153 — 2026-08-16 — Countdown & Faith — template A
+  { id: "p153", rows: 5, cols: 5, words: [
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "A" },
+    { word: "REMIT", clue: "Send back", row: 1, col: 0, dir: "A" },
+    { word: "OVATE", clue: "Egg-shaped", row: 2, col: 0, dir: "A" },
+    { word: "MEGAN", clue: "Proposal day co-conspirator", row: 3, col: 0, dir: "A" },
+    { word: "LEND", clue: "Loan out", row: 4, col: 1, dir: "A" },
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "D" },
+    { word: "LEVEL", clue: "Equal", row: 0, col: 1, dir: "D" },
+    { word: "IMAGE", clue: "Picture", row: 0, col: 2, dir: "D" },
+    { word: "TITAN", clue: "Giant or powerful", row: 0, col: 3, dir: "D" },
+    { word: "TEND", clue: "Care for", row: 1, col: 4, dir: "D" },
+  ] },
+  // p154 — 2026-08-17 — Countdown & Faith — template B
+  { id: "p154", rows: 5, cols: 5, words: [
+    { word: "PROD", clue: "Push", row: 0, col: 1, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 1, col: 0, dir: "A" },
+    { word: "PAUSE", clue: "Brief stop", row: 2, col: 0, dir: "A" },
+    { word: "ENTER", clue: "___ the next chapter", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "APES", clue: "Mimics", row: 1, col: 0, dir: "D" },
+    { word: "PLANT", clue: "What they did in each other's hearts", row: 0, col: 1, dir: "D" },
+    { word: "ROUTE", clue: "The way there", row: 0, col: 2, dir: "D" },
+    { word: "ONSET", clue: "Start", row: 0, col: 3, dir: "D" },
+    { word: "DEER", clue: "Forest animal", row: 0, col: 4, dir: "D" },
+  ] },
+  // p155 — 2026-08-18 — Countdown & Faith — template C
+  { id: "p155", rows: 5, cols: 5, words: [
+    { word: "JOT", clue: "Quick note", row: 0, col: 1, dir: "A" },
+    { word: "NEVER", clue: "Not ever", row: 1, col: 0, dir: "A" },
+    { word: "ASANA", clue: "Yoga pose", row: 2, col: 0, dir: "A" },
+    { word: "GUTSY", clue: "Brave", row: 3, col: 0, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 4, col: 1, dir: "A" },
+    { word: "NAG", clue: "Pester", row: 1, col: 0, dir: "D" },
+    { word: "JESUS", clue: "Center of it all", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 3, dir: "D" },
+    { word: "RAY", clue: "Beam of light", row: 1, col: 4, dir: "D" },
+  ] },
+  // p156 — 2026-08-19 — Countdown & Faith — template D
+  { id: "p156", rows: 5, cols: 5, words: [
+    { word: "REST", clue: "Take a break", row: 0, col: 0, dir: "A" },
+    { word: "EXCEL", clue: "Do very well", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "CRUST", clue: "Outer layer", row: 3, col: 0, dir: "A" },
+    { word: "HATE", clue: "Strong dislike", row: 4, col: 0, dir: "A" },
+    { word: "REACH", clue: "Extend toward", row: 0, col: 0, dir: "D" },
+    { word: "EXTRA", clue: "Bonus", row: 0, col: 1, dir: "D" },
+    { word: "SCOUT", clue: "Explore", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p157 — 2026-08-20 — Countdown & Faith — template A
+  { id: "p157", rows: 5, cols: 5, words: [
+    { word: "PAST", clue: "History", row: 0, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "Extreme", row: 1, col: 0, dir: "A" },
+    { word: "FERAL", clue: "Wild", row: 2, col: 0, dir: "A" },
+    { word: "FRAME", clue: "Structure", row: 3, col: 0, dir: "A" },
+    { word: "TYPE", clue: "Kind or print", row: 4, col: 1, dir: "A" },
+    { word: "PUFF", clue: "Breath of air", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "STRAY", clue: "Wander", row: 0, col: 2, dir: "D" },
+    { word: "TRAMP", clue: "Wander", row: 0, col: 3, dir: "D" },
+    { word: "ALEE", clue: "Sheltered side", row: 1, col: 4, dir: "D" },
+  ] },
+  // p158 — 2026-08-21 — Countdown & Faith — template B
+  { id: "p158", rows: 5, cols: 5, words: [
+    { word: "TSAR", clue: "Russian ruler", row: 0, col: 1, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "LEGAL", clue: "Legally ___", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Family ___", row: 4, col: 0, dir: "A" },
+    { word: "TILT", clue: "Lean", row: 1, col: 0, dir: "D" },
+    { word: "TIMER", clue: "Counting device", row: 0, col: 1, dir: "D" },
+    { word: "STAGE", clue: "Where the band sets up", row: 0, col: 2, dir: "D" },
+    { word: "ALGAE", clue: "Aquatic plants", row: 0, col: 3, dir: "D" },
+    { word: "REEL", clue: "Spin", row: 0, col: 4, dir: "D" },
+  ] },
+  // p159 — 2026-08-22 — Countdown & Faith — template C
+  { id: "p159", rows: 5, cols: 5, words: [
+    { word: "JOT", clue: "Quick note", row: 0, col: 1, dir: "A" },
+    { word: "NEVER", clue: "Said ___ to giving up", row: 1, col: 0, dir: "A" },
+    { word: "ASANA", clue: "Yoga pose", row: 2, col: 0, dir: "A" },
+    { word: "GUTSY", clue: "Brave", row: 3, col: 0, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 4, col: 1, dir: "A" },
+    { word: "NAG", clue: "Pester", row: 1, col: 0, dir: "D" },
+    { word: "JESUS", clue: "Name above every plan", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 3, dir: "D" },
+    { word: "RAY", clue: "Golden hour element", row: 1, col: 4, dir: "D" },
+  ] },
+  // p160 — 2026-08-23 — Countdown & Faith — template D
+  { id: "p160", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Cast out", row: 1, col: 0, dir: "A" },
+    { word: "RIDGE", clue: "Long crest", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "WIRE", clue: "Connect", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "CHILI", clue: "Spicy dish", row: 0, col: 1, dir: "D" },
+    { word: "ARDOR", clue: "Passion", row: 0, col: 2, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 3, dir: "D" },
+    { word: "WED", clue: "What they'll do September 26", row: 1, col: 4, dir: "D" },
+  ] },
+  // p161 — 2026-08-24 — Countdown & Faith — template A
+  { id: "p161", rows: 5, cols: 5, words: [
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "A" },
+    { word: "LEVEL", clue: "On the same ___", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "TEND", clue: "What they do for each other", row: 4, col: 1, dir: "A" },
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "D" },
+    { word: "REMIT", clue: "No ___", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "MEGAN", clue: "Friend who kept the secret", row: 0, col: 3, dir: "D" },
+    { word: "LEND", clue: "Loan out", row: 1, col: 4, dir: "D" },
+  ] },
+  // p162 — 2026-08-25 — Countdown & Faith — template B
+  { id: "p162", rows: 5, cols: 5, words: [
+    { word: "TRAM", clue: "(3-letter dupe skip)", row: 0, col: 1, dir: "A" },
+    { word: "WHOLE", clue: "What they make each other", row: 1, col: 0, dir: "A" },
+    { word: "ARGON", clue: "Noble gas", row: 2, col: 0, dir: "A" },
+    { word: "ROUND", clue: "Gather around", row: 3, col: 0, dir: "A" },
+    { word: "TWEE", clue: "Cutesy in style", row: 4, col: 0, dir: "A" },
+    { word: "WART", clue: "Small bump", row: 1, col: 0, dir: "D" },
+    { word: "THROW", clue: "Bouquet ___", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ALONE", clue: "By oneself", row: 0, col: 3, dir: "D" },
+    { word: "MEND", clue: "Repair", row: 0, col: 4, dir: "D" },
+  ] },
+  // p163 — 2026-08-26 — Countdown & Faith — template C
+  { id: "p163", rows: 5, cols: 5, words: [
+    { word: "ARS", clue: "Plural of ar", row: 0, col: 1, dir: "A" },
+    { word: "PLACE", clue: "Location", row: 1, col: 0, dir: "A" },
+    { word: "ELDER", clue: "Older person", row: 2, col: 0, dir: "A" },
+    { word: "GOING", clue: "Where are they ___? Forever", row: 3, col: 0, dir: "A" },
+    { word: "WOE", clue: "Great sorrow", row: 4, col: 1, dir: "A" },
+    { word: "PEG", clue: "Fastener", row: 1, col: 0, dir: "D" },
+    { word: "ALLOW", clue: "Permit", row: 0, col: 1, dir: "D" },
+    { word: "RADIO", clue: "Broadcast", row: 0, col: 2, dir: "D" },
+    { word: "SCENE", clue: "Farm at golden hour", row: 0, col: 3, dir: "D" },
+    { word: "ERG", clue: "Work unit", row: 1, col: 4, dir: "D" },
+  ] },
+  // p164 — 2026-08-27 — Countdown & Faith — template D
+  { id: "p164", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "Be bold", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p165 — 2026-08-28 — Countdown & Faith — template A
+  { id: "p165", rows: 5, cols: 5, words: [
+    { word: "ATTA", clue: "Whole wheat flour", row: 0, col: 0, dir: "A" },
+    { word: "TREND", clue: "Movement", row: 1, col: 0, dir: "A" },
+    { word: "MANGO", clue: "Tropical fruit", row: 2, col: 0, dir: "A" },
+    { word: "ASSET", clue: "Resource", row: 3, col: 0, dir: "A" },
+    { word: "HERE", clue: "We are all ___ for this", row: 4, col: 1, dir: "A" },
+    { word: "ATMA", clue: "Soul (Hindu)", row: 0, col: 0, dir: "D" },
+    { word: "TRASH", clue: "Waste", row: 0, col: 1, dir: "D" },
+    { word: "TENSE", clue: "No longer ___", row: 0, col: 2, dir: "D" },
+    { word: "ANGER", clue: "Fury", row: 0, col: 3, dir: "D" },
+    { word: "DOTE", clue: "Adore", row: 1, col: 4, dir: "D" },
+  ] },
+  // p166 — 2026-08-29 — Countdown & Faith — template B
+  { id: "p166", rows: 5, cols: 5, words: [
+    { word: "PROD", clue: "Push", row: 0, col: 1, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 1, col: 0, dir: "A" },
+    { word: "PAUSE", clue: "___ and breathe it in", row: 2, col: 0, dir: "A" },
+    { word: "ENTER", clue: "Go in", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "APES", clue: "Mimics", row: 1, col: 0, dir: "D" },
+    { word: "PLANT", clue: "Grow something", row: 0, col: 1, dir: "D" },
+    { word: "ROUTE", clue: "What the drive requires", row: 0, col: 2, dir: "D" },
+    { word: "ONSET", clue: "Start", row: 0, col: 3, dir: "D" },
+    { word: "DEER", clue: "Forest animal", row: 0, col: 4, dir: "D" },
+  ] },
+  // p167 — 2026-08-30 — Countdown & Faith — template C
+  { id: "p167", rows: 5, cols: 5, words: [
+    { word: "SAD", clue: "Feeling blue", row: 0, col: 1, dir: "A" },
+    { word: "THREE", clue: "Number", row: 1, col: 0, dir: "A" },
+    { word: "EARLY", clue: "Not too late — just right", row: 2, col: 0, dir: "A" },
+    { word: "DROVE", clue: "Past of drive", row: 3, col: 0, dir: "A" },
+    { word: "EWE", clue: "Woolly mom", row: 4, col: 1, dir: "A" },
+    { word: "TED", clue: "Spread out to dry", row: 1, col: 0, dir: "D" },
+    { word: "SHARE", clue: "What marriage is", row: 0, col: 1, dir: "D" },
+    { word: "ARROW", clue: "Pointed shaft", row: 0, col: 2, dir: "D" },
+    { word: "DELVE", clue: "Dig deep", row: 0, col: 3, dir: "D" },
+    { word: "EYE", clue: "Window to the soul", row: 1, col: 4, dir: "D" },
+  ] },
+  // p168 — 2026-08-31 — Countdown & Faith — template D
+  { id: "p168", rows: 5, cols: 5, words: [
+    { word: "APSE", clue: "Church recess", row: 0, col: 0, dir: "A" },
+    { word: "READY", clue: "Wedding planning goal by September", row: 1, col: 0, dir: "A" },
+    { word: "GAUGE", clue: "No need to ___ this love", row: 2, col: 0, dir: "A" },
+    { word: "OCTET", clue: "Group of eight", row: 3, col: 0, dir: "A" },
+    { word: "NEED", clue: "What they do — each other", row: 4, col: 0, dir: "A" },
+    { word: "ARGON", clue: "Noble gas", row: 0, col: 0, dir: "D" },
+    { word: "PEACE", clue: "Tranquility", row: 0, col: 1, dir: "D" },
+    { word: "SAUTE", clue: "Fry quickly in oil", row: 0, col: 2, dir: "D" },
+    { word: "EDGED", clue: "Bordered", row: 0, col: 3, dir: "D" },
+    { word: "YET", clue: "Nevertheless", row: 1, col: 4, dir: "D" },
+  ] },
+  // p169 — 2026-09-01 — Final Countdown — template A
+  { id: "p169", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "Completely", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p170 — 2026-09-02 — Final Countdown — template B
+  { id: "p170", rows: 5, cols: 5, words: [
+    { word: "SILL", clue: "Window base", row: 0, col: 1, dir: "A" },
+    { word: "SPREE", clue: "Bridal ___", row: 1, col: 0, dir: "A" },
+    { word: "WEAVE", clue: "How their lives came together", row: 2, col: 0, dir: "A" },
+    { word: "ALTER", clue: "Change", row: 3, col: 0, dir: "A" },
+    { word: "GLEE", clue: "Delight", row: 4, col: 0, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 1, col: 0, dir: "D" },
+    { word: "SPELL", clue: "Cast a ___", row: 0, col: 1, dir: "D" },
+    { word: "IRATE", clue: "Angry", row: 0, col: 2, dir: "D" },
+    { word: "LEVEE", clue: "Flood embankment", row: 0, col: 3, dir: "D" },
+    { word: "LEER", clue: "Suggestive look", row: 0, col: 4, dir: "D" },
+  ] },
+  // p171 — 2026-09-03 — Final Countdown — template C
+  { id: "p171", rows: 5, cols: 5, words: [
+    { word: "MOP", clue: "Floor tool", row: 0, col: 1, dir: "A" },
+    { word: "VAULT", clue: "___ into the future", row: 1, col: 0, dir: "A" },
+    { word: "ENTER", clue: "___ the next chapter", row: 2, col: 0, dir: "A" },
+    { word: "TODAY", clue: "This day", row: 3, col: 0, dir: "A" },
+    { word: "ROT", clue: "Decay", row: 4, col: 1, dir: "A" },
+    { word: "VET", clue: "Animal doctor", row: 1, col: 0, dir: "D" },
+    { word: "MANOR", clue: "Estate", row: 0, col: 1, dir: "D" },
+    { word: "OUTDO", clue: "Surpass", row: 0, col: 2, dir: "D" },
+    { word: "PLEAT", clue: "Fabric fold", row: 0, col: 3, dir: "D" },
+    { word: "TRY", clue: "Attempt", row: 1, col: 4, dir: "D" },
+  ] },
+  // p172 — 2026-09-04 — Final Countdown — template D
+  { id: "p172", rows: 5, cols: 5, words: [
+    { word: "SCAR", clue: "Mark left behind", row: 0, col: 0, dir: "A" },
+    { word: "THROW", clue: "Cast out", row: 1, col: 0, dir: "A" },
+    { word: "RIDGE", clue: "Long crest", row: 2, col: 0, dir: "A" },
+    { word: "ALOUD", clue: "Out loud", row: 3, col: 0, dir: "A" },
+    { word: "WIRE", clue: "Connect", row: 4, col: 0, dir: "A" },
+    { word: "STRAW", clue: "Drinking tube", row: 0, col: 0, dir: "D" },
+    { word: "CHILI", clue: "Spicy dish", row: 0, col: 1, dir: "D" },
+    { word: "ARDOR", clue: "Passion", row: 0, col: 2, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 3, dir: "D" },
+    { word: "WED", clue: "Marry", row: 1, col: 4, dir: "D" },
+  ] },
+  // p173 — 2026-09-05 — Final Countdown — template A
+  { id: "p173", rows: 5, cols: 5, words: [
+    { word: "AVER", clue: "Say firmly", row: 0, col: 0, dir: "A" },
+    { word: "LIVED", clue: "Experienced", row: 1, col: 0, dir: "A" },
+    { word: "SCOPE", clue: "Extent", row: 2, col: 0, dir: "A" },
+    { word: "OAKEN", clue: "Made of oak", row: 3, col: 0, dir: "A" },
+    { word: "RELY", clue: "What they do for each other", row: 4, col: 1, dir: "A" },
+    { word: "ALSO", clue: "As well", row: 0, col: 0, dir: "D" },
+    { word: "VICAR", clue: "Parish minister", row: 0, col: 1, dir: "D" },
+    { word: "EVOKE", clue: "Call up", row: 0, col: 2, dir: "D" },
+    { word: "REPEL", clue: "Drive back", row: 0, col: 3, dir: "D" },
+    { word: "DENY", clue: "Refuse", row: 1, col: 4, dir: "D" },
+  ] },
+  // p174 — 2026-09-06 — Final Countdown — template B
+  { id: "p174", rows: 5, cols: 5, words: [
+    { word: "SAGS", clue: "Droops", row: 0, col: 1, dir: "A" },
+    { word: "SHORE", clue: "Land by water", row: 1, col: 0, dir: "A" },
+    { word: "CORAL", clue: "Warm pink tone", row: 2, col: 0, dir: "A" },
+    { word: "UNTIL", clue: "Up to the moment", row: 3, col: 0, dir: "A" },
+    { word: "MEAN", clue: "Average", row: 4, col: 0, dir: "A" },
+    { word: "SCUM", clue: "Pond film", row: 1, col: 0, dir: "D" },
+    { word: "SHONE", clue: "Past of shine", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "GRAIN", clue: "Small seed", row: 0, col: 3, dir: "D" },
+    { word: "SELL", clue: "Exchange", row: 0, col: 4, dir: "D" },
+  ] },
+  // p175 — 2026-09-07 — Final Countdown — template C
+  { id: "p175", rows: 5, cols: 5, words: [
+    { word: "VAN", clue: "Vehicle", row: 0, col: 1, dir: "A" },
+    { word: "MILES", clue: "Long-distance tax", row: 1, col: 0, dir: "A" },
+    { word: "ABOVE", clue: "Higher up", row: 2, col: 0, dir: "A" },
+    { word: "RENEW", clue: "Start fresh", row: 3, col: 0, dir: "A" },
+    { word: "SER", clue: "Knightly title", row: 4, col: 1, dir: "A" },
+    { word: "MAR", clue: "Damage", row: 1, col: 0, dir: "D" },
+    { word: "VIBES", clue: "Feelings", row: 0, col: 1, dir: "D" },
+    { word: "ALONE", clue: "Never again ___", row: 0, col: 2, dir: "D" },
+    { word: "NEVER", clue: "Not ever", row: 0, col: 3, dir: "D" },
+    { word: "SEW", clue: "Stitch", row: 1, col: 4, dir: "D" },
+  ] },
+  // p176 — 2026-09-08 — Final Countdown — template D
+  { id: "p176", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Travel page staple", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Majestic", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p177 — 2026-09-09 — Final Countdown — template A
+  { id: "p177", rows: 5, cols: 5, words: [
+    { word: "FROM", clue: "Starting point", row: 0, col: 0, dir: "A" },
+    { word: "LEVEL", clue: "Equal", row: 1, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
+    { word: "TITAN", clue: "Giant or powerful", row: 3, col: 0, dir: "A" },
+    { word: "TEND", clue: "Care for", row: 4, col: 1, dir: "A" },
+    { word: "FLIT", clue: "Move quickly", row: 0, col: 0, dir: "D" },
+    { word: "REMIT", clue: "Send back", row: 0, col: 1, dir: "D" },
+    { word: "OVATE", clue: "Egg-shaped", row: 0, col: 2, dir: "D" },
+    { word: "MEGAN", clue: "Proposal day co-conspirator", row: 0, col: 3, dir: "D" },
+    { word: "LEND", clue: "Loan out", row: 1, col: 4, dir: "D" },
+  ] },
+  // p178 — 2026-09-10 — Final Countdown — template B
+  { id: "p178", rows: 5, cols: 5, words: [
+    { word: "SALT", clue: "Seasoning", row: 0, col: 1, dir: "A" },
+    { word: "SUGAR", clue: "Oh ___!", row: 1, col: 0, dir: "A" },
+    { word: "PROBE", clue: "Investigate", row: 2, col: 0, dir: "A" },
+    { word: "AGREE", clue: "Come to terms", row: 3, col: 0, dir: "A" },
+    { word: "REAL", clue: "As ___ as it gets", row: 4, col: 0, dir: "A" },
+    { word: "SPAR", clue: "Practice", row: 1, col: 0, dir: "D" },
+    { word: "SURGE", clue: "Love ___s", row: 0, col: 1, dir: "D" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 0, col: 2, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 3, dir: "D" },
+    { word: "TREE", clue: "Rooted growth", row: 0, col: 4, dir: "D" },
+  ] },
+  // p179 — 2026-09-11 — Final Countdown — template C
+  { id: "p179", rows: 5, cols: 5, words: [
+    { word: "CHA", clue: "Tea, in Hindi", row: 0, col: 1, dir: "A" },
+    { word: "BLUSH", clue: "Wedding color", row: 1, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Eagle nest", row: 2, col: 0, dir: "A" },
+    { word: "TARDY", clue: "Late", row: 3, col: 0, dir: "A" },
+    { word: "RYE", clue: "Seeded bread grain", row: 4, col: 1, dir: "A" },
+    { word: "BAT", clue: "Swing", row: 1, col: 0, dir: "D" },
+    { word: "CLEAR", clue: "The path became ___", row: 0, col: 1, dir: "D" },
+    { word: "HURRY", clue: "Move fast", row: 0, col: 2, dir: "D" },
+    { word: "ASIDE", clue: "Off to the side", row: 0, col: 3, dir: "D" },
+    { word: "HEY", clue: "Greeting exclamation", row: 1, col: 4, dir: "D" },
+  ] },
+  // p180 — 2026-09-12 — Final Countdown — template D
+  { id: "p180", rows: 5, cols: 5, words: [
+    { word: "CRAB", clue: "Pinchy crustacean", row: 0, col: 0, dir: "A" },
+    { word: "HOTEL", clue: "Where out-of-towners land", row: 1, col: 0, dir: "A" },
+    { word: "EYRIE", clue: "Clifftop nest", row: 2, col: 0, dir: "A" },
+    { word: "SAINT", clue: "Holy being", row: 3, col: 0, dir: "A" },
+    { word: "SLAG", clue: "Smelting waste", row: 4, col: 0, dir: "A" },
+    { word: "CHESS", clue: "Board game", row: 0, col: 0, dir: "D" },
+    { word: "ROYAL", clue: "Treated like ___ty", row: 0, col: 1, dir: "D" },
+    { word: "ATRIA", clue: "Heart chambers", row: 0, col: 2, dir: "D" },
+    { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
+    { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
+  ] },
+  // p181 — 2026-09-13 — Final Countdown — template A
+  { id: "p181", rows: 5, cols: 5, words: [
+    { word: "LEST", clue: "For fear that", row: 0, col: 0, dir: "A" },
+    { word: "EXCEL", clue: "They ___ together", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "PROSE", clue: "Plain writing", row: 3, col: 0, dir: "A" },
+    { word: "APES", clue: "Mimics", row: 4, col: 1, dir: "A" },
+    { word: "LEAP", clue: "What love requires", row: 0, col: 0, dir: "D" },
+    { word: "EXTRA", clue: "Bonus", row: 0, col: 1, dir: "D" },
+    { word: "SCOOP", clue: "Gather up", row: 0, col: 2, dir: "D" },
+    { word: "TENSE", clue: "Tight feeling", row: 0, col: 3, dir: "D" },
+    { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
+  ] },
+  // p182 — 2026-09-14 — Final Countdown — template B
+  { id: "p182", rows: 5, cols: 5, words: [
+    { word: "EGAD", clue: "Old-school exclamation", row: 0, col: 1, dir: "A" },
+    { word: "LARGE", clue: "Texas-sized love", row: 1, col: 0, dir: "A" },
+    { word: "AGORA", clue: "Ancient marketplace", row: 2, col: 0, dir: "A" },
+    { word: "SEVEN", clue: "Lucky number", row: 3, col: 0, dir: "A" },
+    { word: "TREE", clue: "Family ___", row: 4, col: 0, dir: "A" },
+    { word: "LAST", clue: "Final", row: 1, col: 0, dir: "D" },
+    { word: "EAGER", clue: "Enthusiastic", row: 0, col: 1, dir: "D" },
+    { word: "GROVE", clue: "Small forest", row: 0, col: 2, dir: "D" },
+    { word: "AGREE", clue: "They ___", row: 0, col: 3, dir: "D" },
+    { word: "DEAN", clue: "School head", row: 0, col: 4, dir: "D" },
+  ] },
+  // p183 — 2026-09-15 — Final Countdown — template C
+  { id: "p183", rows: 5, cols: 5, words: [
+    { word: "ALT", clue: "Alternate", row: 0, col: 1, dir: "A" },
+    { word: "CHARM", clue: "Winning quality", row: 1, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Eagle nest", row: 2, col: 0, dir: "A" },
+    { word: "RAVEN", clue: "Black bird", row: 3, col: 0, dir: "A" },
+    { word: "DAD", clue: "Father", row: 4, col: 1, dir: "A" },
+    { word: "CAR", clue: "Vehicle", row: 1, col: 0, dir: "D" },
+    { word: "AHEAD", clue: "In front", row: 0, col: 1, dir: "D" },
+    { word: "LARVA", clue: "Insect stage", row: 0, col: 2, dir: "D" },
+    { word: "TRIED", clue: "Attempted", row: 0, col: 3, dir: "D" },
+    { word: "MEN", clue: "Males", row: 1, col: 4, dir: "D" },
+  ] },
+  // p184 — 2026-09-16 — Final Countdown — template D
+  { id: "p184", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "What it took to love again", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "By oneself", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p185 — 2026-09-17 — Final Countdown — template A
+  { id: "p185", rows: 5, cols: 5, words: [
+    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "TITLE", clue: "Name given", row: 1, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 2, col: 0, dir: "A" },
+    { word: "TREAD", clue: "Step on", row: 3, col: 0, dir: "A" },
+    { word: "ARKS", clue: "Boats", row: 4, col: 1, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 0, col: 0, dir: "D" },
+    { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
+    { word: "UTTER", clue: "___ joy", row: 0, col: 2, dir: "D" },
+    { word: "BLEAK", clue: "Gloomy", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p186 — 2026-09-18 — Final Countdown — template B
+  { id: "p186", rows: 5, cols: 5, words: [
+    { word: "PROW", clue: "Ship front", row: 0, col: 1, dir: "A" },
+    { word: "TRADE", clue: "___ vows", row: 1, col: 0, dir: "A" },
+    { word: "WIDEN", clue: "Make broader", row: 2, col: 0, dir: "A" },
+    { word: "IDIOT", clue: "Total fool", row: 3, col: 0, dir: "A" },
+    { word: "NEON", clue: "Bright sign gas", row: 4, col: 0, dir: "A" },
+    { word: "TWIN", clue: "Mirror image connection", row: 1, col: 0, dir: "D" },
+    { word: "PRIDE", clue: "What their families feel", row: 0, col: 1, dir: "D" },
+    { word: "RADIO", clue: "Broadcast", row: 0, col: 2, dir: "D" },
+    { word: "ODEON", clue: "Ancient Greek theater", row: 0, col: 3, dir: "D" },
+    { word: "WENT", clue: "He ___ the distance", row: 0, col: 4, dir: "D" },
+  ] },
+  // p187 — 2026-09-19 — Final Countdown — template C
+  { id: "p187", rows: 5, cols: 5, words: [
+    { word: "SAT", clue: "Rested", row: 0, col: 1, dir: "A" },
+    { word: "STORM", clue: "Wild weather", row: 1, col: 0, dir: "A" },
+    { word: "EERIE", clue: "Spooky", row: 2, col: 0, dir: "A" },
+    { word: "EATEN", clue: "Consumed", row: 3, col: 0, dir: "A" },
+    { word: "DAD", clue: "Father", row: 4, col: 1, dir: "A" },
+    { word: "SEE", clue: "Lay eyes on", row: 1, col: 0, dir: "D" },
+    { word: "STEAD", clue: "Place of another", row: 0, col: 1, dir: "D" },
+    { word: "AORTA", clue: "Main artery", row: 0, col: 2, dir: "D" },
+    { word: "TRIED", clue: "Love ___ and true", row: 0, col: 3, dir: "D" },
+    { word: "MEN", clue: "Males", row: 1, col: 4, dir: "D" },
+  ] },
+  // p188 — 2026-09-20 — Final Countdown — template D
+  { id: "p188", rows: 5, cols: 5, words: [
+    { word: "DARE", clue: "Be bold", row: 0, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Never again ___", row: 1, col: 0, dir: "A" },
+    { word: "REGAL", clue: "Royal", row: 2, col: 0, dir: "A" },
+    { word: "TRUCK", clue: "Large vehicle", row: 3, col: 0, dir: "A" },
+    { word: "STET", clue: "Proofreader's keep-it mark", row: 4, col: 0, dir: "A" },
+    { word: "DARTS", clue: "Throwing game", row: 0, col: 0, dir: "D" },
+    { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ENACT", clue: "Put into law", row: 0, col: 3, dir: "D" },
+    { word: "ELK", clue: "Large deer", row: 1, col: 4, dir: "D" },
+  ] },
+  // p189 — 2026-09-21 — Final Countdown — template A
+  { id: "p189", rows: 5, cols: 5, words: [
+    { word: "AVER", clue: "Say firmly", row: 0, col: 0, dir: "A" },
+    { word: "LIVED", clue: "They ___ every moment", row: 1, col: 0, dir: "A" },
+    { word: "SCOPE", clue: "Extent", row: 2, col: 0, dir: "A" },
+    { word: "OAKEN", clue: "Made of oak", row: 3, col: 0, dir: "A" },
+    { word: "RELY", clue: "Depend on", row: 4, col: 1, dir: "A" },
+    { word: "ALSO", clue: "As well", row: 0, col: 0, dir: "D" },
+    { word: "VICAR", clue: "Parish minister", row: 0, col: 1, dir: "D" },
+    { word: "EVOKE", clue: "Call up", row: 0, col: 2, dir: "D" },
+    { word: "REPEL", clue: "Drive back", row: 0, col: 3, dir: "D" },
+    { word: "DENY", clue: "Refuse", row: 1, col: 4, dir: "D" },
+  ] },
+  // p190 — 2026-09-22 — Final Countdown — template B
+  { id: "p190", rows: 5, cols: 5, words: [
+    { word: "TRAM", clue: "(3-letter dupe skip)", row: 0, col: 1, dir: "A" },
+    { word: "WHOLE", clue: "Complete, in one word", row: 1, col: 0, dir: "A" },
+    { word: "ARGON", clue: "Noble gas", row: 2, col: 0, dir: "A" },
+    { word: "FOUND", clue: "He ___ her again", row: 3, col: 0, dir: "A" },
+    { word: "TWEE", clue: "Cutesy in style", row: 4, col: 0, dir: "A" },
+    { word: "WAFT", clue: "Drift through the air", row: 1, col: 0, dir: "D" },
+    { word: "THROW", clue: "Bouquet ___", row: 0, col: 1, dir: "D" },
+    { word: "ROGUE", clue: "Dishonest person", row: 0, col: 2, dir: "D" },
+    { word: "ALONE", clue: "By oneself", row: 0, col: 3, dir: "D" },
+    { word: "MEND", clue: "What time and love do", row: 0, col: 4, dir: "D" },
+  ] },
+  // p191 — 2026-09-23 — Final Countdown — template C
+  { id: "p191", rows: 5, cols: 5, words: [
+    { word: "WIG", clue: "Hairpiece", row: 0, col: 1, dir: "A" },
+    { word: "HAVEN", clue: "Safe place", row: 1, col: 0, dir: "A" },
+    { word: "ATONE", clue: "Make right", row: 2, col: 0, dir: "A" },
+    { word: "MERIT", clue: "Deserved recognition", row: 3, col: 0, dir: "A" },
+    { word: "RYE", clue: "Seeded bread grain", row: 4, col: 1, dir: "A" },
+    { word: "HAM", clue: "Cured meat", row: 1, col: 0, dir: "D" },
+    { word: "WATER", clue: "Life-giving", row: 0, col: 1, dir: "D" },
+    { word: "IVORY", clue: "White shade", row: 0, col: 2, dir: "D" },
+    { word: "GENIE", clue: "Wish granter", row: 0, col: 3, dir: "D" },
+    { word: "NET", clue: "After deductions", row: 1, col: 4, dir: "D" },
+  ] },
+  // p192 — 2026-09-24 — Final Countdown — template D
+  { id: "p192", rows: 5, cols: 5, words: [
+    { word: "OGEE", clue: "S-shaped arch", row: 0, col: 0, dir: "A" },
+    { word: "PLACE", clue: "This ___", row: 1, col: 0, dir: "A" },
+    { word: "TITLE", clue: "New ___: husband and wife", row: 2, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Perfect", row: 3, col: 0, dir: "A" },
+    { word: "CENT", clue: "Penny", row: 4, col: 0, dir: "A" },
+    { word: "OPTIC", clue: "Of vision", row: 0, col: 0, dir: "D" },
+    { word: "GLIDE", clue: "Smooth move", row: 0, col: 1, dir: "D" },
+    { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
+    { word: "ECLAT", clue: "Brilliant effect", row: 0, col: 3, dir: "D" },
+    { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
+  ] },
+  // p193 — 2026-09-25 — Final Countdown — template A
+  { id: "p193", rows: 5, cols: 5, words: [
+    { word: "SLAM", clue: "Hit hard", row: 0, col: 0, dir: "A" },
+    { word: "WATER", clue: "Rivers they crossed together", row: 1, col: 0, dir: "A" },
+    { word: "ABODE", clue: "Dwelling place", row: 2, col: 0, dir: "A" },
+    { word: "GENIE", clue: "Wish granter", row: 3, col: 0, dir: "A" },
+    { word: "LEAF", clue: "Tree part", row: 4, col: 1, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 0, col: 0, dir: "D" },
+    { word: "LABEL", clue: "Identify", row: 0, col: 1, dir: "D" },
+    { word: "ATONE", clue: "Make right", row: 0, col: 2, dir: "D" },
+    { word: "MEDIA", clue: "Communications", row: 0, col: 3, dir: "D" },
+    { word: "REEF", clue: "Coral ridge", row: 1, col: 4, dir: "D" },
+  ] },
+  // p194 — 2026-09-26 — Wedding Day — template B
+  { id: "p194", rows: 5, cols: 5, words: [
+    { word: "SILL", clue: "Window base", row: 0, col: 1, dir: "A" },
+    { word: "SPREE", clue: "Shopping trip", row: 1, col: 0, dir: "A" },
+    { word: "WEAVE", clue: "Intertwine", row: 2, col: 0, dir: "A" },
+    { word: "ALTER", clue: "Change", row: 3, col: 0, dir: "A" },
+    { word: "GLEE", clue: "Delight", row: 4, col: 0, dir: "A" },
+    { word: "SWAG", clue: "Loot or drape", row: 1, col: 0, dir: "D" },
+    { word: "SPELL", clue: "She had him under her ___", row: 0, col: 1, dir: "D" },
+    { word: "IRATE", clue: "Angry", row: 0, col: 2, dir: "D" },
+    { word: "LEVEE", clue: "Flood embankment", row: 0, col: 3, dir: "D" },
+    { word: "LEER", clue: "Suggestive look", row: 0, col: 4, dir: "D" },
+  ] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -497,16 +2776,136 @@ function buildCrossword(puzzle: CrosswordPuzzle): BuiltCrossword {
 // Daily rotation
 // ---------------------------------------------------------------------------
 
-export const PUZZLE_ROTATION_START = "2026-03-15";
+export const PUZZLE_ROTATION_START = "2026-03-17";
 const PUZZLE_POOL = RAW_PUZZLES.map((raw) => buildCrossword(buildPuzzle(raw)));
 
-export function getDailyCrosswordPuzzle(dateKey: string): BuiltCrossword {
-    const start = new Date(PUZZLE_ROTATION_START);
-    const target = new Date(dateKey);
-    const diffMs = target.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const index = ((diffDays % PUZZLE_POOL.length) + PUZZLE_POOL.length) % PUZZLE_POOL.length;
-    return PUZZLE_POOL[index];
+function parseDateKeyAsUtc(dateKey: string) {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    return Date.UTC(year, (month ?? 1) - 1, day ?? 1);
+}
+
+export function getCentralDateKey(date = new Date()) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Chicago",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+
+    return formatter.format(date);
+}
+
+function getPuzzleDateByIndex(index: number) {
+    const startUtc = parseDateKeyAsUtc(PUZZLE_ROTATION_START);
+    return new Date(startUtc + index * 86400000);
+}
+
+export function getCrosswordCatalog(overrides?: CrosswordOverrideMap): CrosswordCatalogItem[] {
+    return PUZZLE_POOL.map((puzzle, index) => {
+        const effective = applyCrosswordEntryOverrides(puzzle, overrides?.[puzzle.id]);
+        return {
+            id: effective.id,
+            dateKey: getCentralDateKey(getPuzzleDateByIndex(index)),
+            title: effective.title,
+            subtitle: effective.subtitle,
+            rows: effective.rows,
+            cols: effective.cols,
+            entryCount: effective.entries.length,
+        };
+    });
+}
+
+export function getCrosswordPuzzleById(puzzleId: string, overrides?: CrosswordOverrideMap): BuiltCrossword | null {
+    const puzzle = PUZZLE_POOL.find((entry) => entry.id === puzzleId);
+    if (!puzzle) return null;
+    return applyCrosswordEntryOverrides(puzzle, overrides?.[puzzleId]);
+}
+
+export function applyCrosswordEntryOverrides(
+    puzzle: CrosswordPuzzle | BuiltCrossword,
+    overrides?: CrosswordEntryOverride[]
+): BuiltCrossword {
+    if (!overrides || overrides.length === 0) {
+        return buildCrossword({
+            id: puzzle.id,
+            title: puzzle.title,
+            subtitle: puzzle.subtitle,
+            rows: puzzle.rows,
+            cols: puzzle.cols,
+            entries: puzzle.entries.map((entry) => ({
+                id: entry.id,
+                answer: entry.answer.toUpperCase(),
+                clue: entry.clue,
+                direction: entry.direction,
+                row: entry.row,
+                col: entry.col,
+            })),
+        });
+    }
+
+    const overrideLookup = new Map(overrides.map((entry) => [entry.id, entry]));
+
+    const nextEntries = puzzle.entries.map((entry) => {
+        const override = overrideLookup.get(entry.id);
+        if (!override) {
+            return {
+                id: entry.id,
+                answer: entry.answer.toUpperCase(),
+                clue: entry.clue,
+                direction: entry.direction,
+                row: entry.row,
+                col: entry.col,
+            };
+        }
+
+        return {
+            id: entry.id,
+            answer: normalizeCrosswordAnswer(override.answer),
+            clue: normalizeCrosswordClue(override.clue),
+            direction: entry.direction,
+            row: entry.row,
+            col: entry.col,
+        };
+    });
+
+    for (const entry of nextEntries) {
+        if (!entry.answer) {
+            throw new Error(`Crossword entry "${entry.id}" is missing an answer.`);
+        }
+
+        const original = puzzle.entries.find((item) => item.id === entry.id);
+        if (!original) {
+            throw new Error(`Crossword entry "${entry.id}" does not exist in puzzle "${puzzle.id}".`);
+        }
+
+        if (entry.answer.length !== original.answer.length) {
+            throw new Error(
+                `Crossword entry "${entry.id}" must stay ${original.answer.length} letters (received ${entry.answer.length}).`
+            );
+        }
+
+        if (!entry.clue) {
+            throw new Error(`Crossword entry "${entry.id}" is missing clue text.`);
+        }
+    }
+
+    return buildCrossword({
+        id: puzzle.id,
+        title: puzzle.title,
+        subtitle: puzzle.subtitle,
+        rows: puzzle.rows,
+        cols: puzzle.cols,
+        entries: nextEntries,
+    });
+}
+
+export function getDailyCrosswordPuzzle(dateKey: string, overrides?: CrosswordOverrideMap): BuiltCrossword {
+    const start = parseDateKeyAsUtc(PUZZLE_ROTATION_START);
+    const target = parseDateKeyAsUtc(dateKey);
+    const diffDays = Math.floor((target - start) / 86400000);
+    const index = Math.min(Math.max(0, diffDays), PUZZLE_POOL.length - 1);
+    const puzzle = PUZZLE_POOL[index];
+    return applyCrosswordEntryOverrides(puzzle, overrides?.[puzzle.id]);
 }
 
 export function getCrosswordStorageKey(puzzleId: string, dateKey: string): string {
@@ -517,7 +2916,7 @@ export function getCrosswordStorageKey(puzzleId: string, dateKey: string): strin
 // Legacy exports (kept for compatibility while MiniCrosswordGame is updated)
 // ---------------------------------------------------------------------------
 
-export const CROSSWORD_PUZZLE = PUZZLE_POOL[0];
+export const CROSSWORD_PUZZLE = applyCrosswordEntryOverrides(PUZZLE_POOL[0]);
 export const CROSSWORD_PUZZLE_KEY = CROSSWORD_PUZZLE.id;
 export const CROSSWORD_STORAGE_KEY = getCrosswordStorageKey(CROSSWORD_PUZZLE.id, PUZZLE_ROTATION_START);
 

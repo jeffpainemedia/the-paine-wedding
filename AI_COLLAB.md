@@ -661,6 +661,23 @@ Key top-level keys:
   - deployed to production with `vercel --prod --yes`
   - production alias updated to `https://www.thepainewedding.com`
 
+### Session 29 (Mar 22)
+- **Crossword redesigned to proper NYT-style 5×5 grid — deployed**
+- User feedback: the old 5×7 tic-tac-toe hash grid was fundamentally wrong; showed user screenshots of NYT Mini Crossword as the target layout
+- Files changed (main branch committed and deployed):
+  - `src/lib/games/crossword.ts` — new `RawWordEntry[]` flexible format, 194 puzzles in 5×5 with Templates A/B/C/D
+  - `src/components/games/MiniCrosswordGame.tsx` — 3-panel layout (grid | across | down), no border-column filter
+  - `src/components/admin/GamesAdminPanel.tsx` — admin board preview with crossword catalog (194 puzzles), save/restore, proper 5×5 preview
+  - `src/app/(main)/games/crossword/page.tsx` — passes `puzzle` prop correctly, "Ten clues" copy
+  - `src/app/api/admin/crossword-puzzles/route.ts` — admin save-overrides API (new)
+- Layout: header (title + timer + Pause/Autocheck/Reveal/Clear) → active clue bar → flex row (grid left | across+down right as 2-sub-cols)
+- Grid: proper 5×5, black corner squares, words 3–5 letters, 10 clues per puzzle
+- Admin catalog: sidebar lists all 194 puzzles by date; click to select; board preview shows solved board in dark blue with answers; Restore/Save buttons
+- "Six clues" updated to "Ten clues" in overlay and page header copy
+- Worktree synced: all files copied from main into `claude/dazzling-wozniak`
+- TypeScript: `npx tsc --noEmit` passes clean
+- Deployed: `vercel --prod --yes` → aliased to `https://www.thepainewedding.com`
+
 ### Session 27 (Mar 18)
 - **Crossword interaction + leaderboard reliability pass completed**
 - User-reported issues:
