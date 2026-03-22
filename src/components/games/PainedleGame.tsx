@@ -300,7 +300,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     function handleKeyInput(key: string) {
         if (status !== "playing") return;
 
-        if (key === "Enter") {
+        if (key === "Enter" || key === "ENTER") {
             handleSubmit();
             return;
         }

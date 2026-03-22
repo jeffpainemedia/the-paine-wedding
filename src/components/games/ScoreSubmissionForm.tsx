@@ -89,9 +89,9 @@ export default function ScoreSubmissionForm({
             setMessage(successMessage);
             window.dispatchEvent(new Event(GAME_LEADERBOARD_REFRESH_EVENT));
             onSubmitted?.();
-        } catch {
+        } catch (error) {
             setStatus("error");
-            setMessage("Could not submit score right now.");
+            setMessage(error instanceof Error ? error.message : "Could not submit score right now.");
         }
     }
 

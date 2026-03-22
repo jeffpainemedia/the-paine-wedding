@@ -3,17 +3,17 @@ import CrosswordGate from "@/components/games/CrosswordGate";
 import GameAccountPanel from "@/components/games/GameAccountPanel";
 import CollapsibleLeaderboard from "@/components/games/CollapsibleLeaderboard";
 import MiniCrosswordGame from "@/components/games/MiniCrosswordGame";
-import { getDailyCrosswordPuzzle } from "@/lib/games/crossword";
+import { getCentralDateKey, getDailyCrosswordPuzzle, parseCrosswordOverrides } from "@/lib/games/crossword";
 import GameSuggestions from "@/components/games/GameSuggestions";
+import { getSettingsMap } from "@/lib/site-settings";
 
-function getTodayKey(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+export const dynamic = "force-dynamic";
 
-export default function CrosswordPage() {
-    const todayKey = getTodayKey();
-    const todayPuzzle = getDailyCrosswordPuzzle(todayKey);
+export default async function CrosswordPage() {
+    const todayKey = getCentralDateKey();
+    const settingsMap = await getSettingsMap();
+    const overrides = parseCrosswordOverrides(settingsMap["games.crossword.overrides"]);
+    const todayPuzzle = getDailyCrosswordPuzzle(todayKey, overrides);
 
     return (
         <div className="bg-[linear-gradient(180deg,#f8f3ec_0%,#eff1f4_34%,#ffffff_100%)]">
@@ -34,7 +34,7 @@ export default function CrosswordPage() {
                 </div>
                 <div className="mb-10">
                     <CrosswordGate>
-                        <MiniCrosswordGame />
+                        <MiniCrosswordGame puzzle={todayPuzzle} dateKey={todayKey} />
                     </CrosswordGate>
                 </div>
                 <CollapsibleLeaderboard

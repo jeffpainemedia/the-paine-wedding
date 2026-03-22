@@ -5,119 +5,101 @@ import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
 import { useAdminSession } from "@/hooks/useAdminSession";
 import {
     computeCrosswordScore,
-    getDailyCrosswordPuzzle,
+    getCentralDateKey,
     getCrosswordStorageKey,
+    type BuiltCrossword,
     type CrosswordCell,
     type CrosswordDirection,
     type CrosswordMetadata,
     type CrosswordNumberedEntry,
 } from "@/lib/games/crossword";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function getTodayKey(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return getCentralDateKey();
 }
 
-const TODAY_KEY = getTodayKey();
-const PUZZLE = getDailyCrosswordPuzzle(TODAY_KEY);
-const STORAGE_KEY = getCrosswordStorageKey(PUZZLE.id, TODAY_KEY);
-
-// Proper 5×5 NYT-style grid — all cells rendered directly from PUZZLE.
-const GRID_COLS = PUZZLE.cols;
-const GRID_CELLS = PUZZLE.cells;
-
-// Build fast lookup maps once
-const ENTRY_MAP = new Map<string, CrosswordNumberedEntry>(
-    PUZZLE.entries.map((entry) => [entry.id, entry])
-);
-const ENTRY_IDS_BY_CELL = new Map<string, string[]>(
-    PUZZLE.cells.filter((c) => c.answer).map((c) => [c.key, c.entryIds])
-);
-const CELL_MAP = new Map<string, CrosswordCell>(PUZZLE.cells.map((c) => [c.key, c]));
-
-function cellKey(row: number, col: number) { return `${row}:${col}`; }
-
-// All entries in tab order (across by number, then down by number)
-const TAB_ORDER: string[] = [
-    ...PUZZLE.across.map((e) => e.id),
-    ...PUZZLE.down.map((e) => e.id),
-];
-
-// ── State shape ───────────────────────────────────────────────────────────────
-// Timer is NOT restored from storage — it resets every page load.
-// When the puzzle is completed, we store `durationSeconds` so the final time
-// is shown consistently on return visits.
+function cellKey(row: number, col: number) {
+    return `${row}:${col}`;
+}
 
 type SavedState = {
     letters: Record<string, string>;
     activeEntryId: string;
     revealedEntryIds: string[];
-    durationSeconds: number | null; // null = not yet completed
+    durationSeconds: number | null;
     scoreSubmitted: boolean;
 };
 
-function emptyLetters(): Record<string, string> {
-    return Object.fromEntries(
-        PUZZLE.cells.filter((c) => c.answer).map((c) => [c.key, ""])
-    );
+function emptyLetters(puzzle: BuiltCrossword): Record<string, string> {
+    return Object.fromEntries(puzzle.cells.filter((c) => c.answer).map((c) => [c.key, ""]));
 }
 
-function defaultState(): SavedState {
+function defaultState(puzzle: BuiltCrossword): SavedState {
     return {
-        letters: emptyLetters(),
-        activeEntryId: PUZZLE.entries[0]?.id ?? "",
+        letters: emptyLetters(puzzle),
+        activeEntryId: puzzle.entries[0]?.id ?? "",
         revealedEntryIds: [],
         durationSeconds: null,
         scoreSubmitted: false,
     };
 }
 
-function loadState(): SavedState {
-    if (typeof window === "undefined") return defaultState();
+function loadState(puzzle: BuiltCrossword, storageKey: string): SavedState {
+    if (typeof window === "undefined") return defaultState(puzzle);
+
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (!raw) return defaultState();
-        const p = JSON.parse(raw) as Partial<SavedState & { startedAt?: string; completedAt?: string }>;
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) return defaultState(puzzle);
+
+        const parsed = JSON.parse(raw) as Partial<SavedState & { startedAt?: string; completedAt?: string }>;
         return {
-            letters: p.letters ? { ...emptyLetters(), ...p.letters } : emptyLetters(),
-            activeEntryId: p.activeEntryId && ENTRY_MAP.has(p.activeEntryId)
-                ? p.activeEntryId
-                : (PUZZLE.entries[0]?.id ?? ""),
-            revealedEntryIds: Array.isArray(p.revealedEntryIds)
-                ? p.revealedEntryIds.filter((id) => ENTRY_MAP.has(id))
+            letters: parsed.letters ? { ...emptyLetters(puzzle), ...parsed.letters } : emptyLetters(puzzle),
+            activeEntryId:
+                parsed.activeEntryId && puzzle.entries.some((entry) => entry.id === parsed.activeEntryId)
+                    ? parsed.activeEntryId
+                    : (puzzle.entries[0]?.id ?? ""),
+            revealedEntryIds: Array.isArray(parsed.revealedEntryIds)
+                ? parsed.revealedEntryIds.filter((id) => puzzle.entries.some((entry) => entry.id === id))
                 : [],
-            // Support old format that stored startedAt/completedAt
-            durationSeconds: typeof p.durationSeconds === "number"
-                ? p.durationSeconds
-                : (p.startedAt && p.completedAt
-                    ? Math.round((new Date(p.completedAt).getTime() - new Date(p.startedAt).getTime()) / 1000)
-                    : null),
-            scoreSubmitted: typeof p.scoreSubmitted === "boolean" ? p.scoreSubmitted : false,
+            durationSeconds:
+                typeof parsed.durationSeconds === "number"
+                    ? parsed.durationSeconds
+                    : parsed.startedAt && parsed.completedAt
+                        ? Math.round((new Date(parsed.completedAt).getTime() - new Date(parsed.startedAt).getTime()) / 1000)
+                        : null,
+            scoreSubmitted: typeof parsed.scoreSubmitted === "boolean" ? parsed.scoreSubmitted : false,
         };
     } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
-        return defaultState();
+        window.localStorage.removeItem(storageKey);
+        return defaultState(puzzle);
     }
 }
 
-function isSolved(letters: Record<string, string>) {
-    return PUZZLE.cells.every((c) => !c.answer || letters[c.key] === c.answer);
+function isSolved(puzzle: BuiltCrossword, letters: Record<string, string>) {
+    return puzzle.cells.every((cell) => !cell.answer || letters[cell.key] === cell.answer);
 }
 
 function fmtTime(secs: number) {
     return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+type MiniCrosswordGameProps = {
+    puzzle: BuiltCrossword;
+    dateKey?: string;
+};
 
-export default function MiniCrosswordGame() {
-    const [init] = useState(loadState);
+export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: MiniCrosswordGameProps) {
+    const storageKey = useMemo(() => getCrosswordStorageKey(puzzle.id, dateKey), [puzzle.id, dateKey]);
+    const entryMap = useMemo(() => new Map<string, CrosswordNumberedEntry>(puzzle.entries.map((entry) => [entry.id, entry])), [puzzle.entries]);
+    const entryIdsByCell = useMemo(
+        () => new Map<string, string[]>(puzzle.cells.filter((cell) => cell.answer).map((cell) => [cell.key, cell.entryIds])),
+        [puzzle.cells]
+    );
+    const cellMap = useMemo(() => new Map<string, CrosswordCell>(puzzle.cells.map((cell) => [cell.key, cell])), [puzzle.cells]);
+    const tabOrder = useMemo(() => [...puzzle.across.map((entry) => entry.id), ...puzzle.down.map((entry) => entry.id)], [puzzle.across, puzzle.down]);
+    const [init] = useState(() => loadState(puzzle, storageKey));
     const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const clueRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-
-    // Timer: starts only when player clicks Start, not on page load.
     const startTimestamp = useRef<number>(0);
     const pausedSinceRef = useRef<number | null>(null);
 
@@ -129,14 +111,13 @@ export default function MiniCrosswordGame() {
     const [focusedKey, setFocusedKey] = useState<string | null>(null);
     const [autoCheck, setAutoCheck] = useState(false);
     const [elapsed, setElapsed] = useState(0);
-    const [solved, setSolved] = useState(() => isSolved(init.letters));
-    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null || isSolved(init.letters));
+    const [solved, setSolved] = useState(() => isSolved(puzzle, init.letters));
+    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null || isSolved(puzzle, init.letters));
     const [isPaused, setIsPaused] = useState(false);
     const [pausedMs, setPausedMs] = useState(0);
 
     const { isAdmin } = useAdminSession();
 
-    // Timer: count up from 0 only after Start is clicked. Stops when completed or paused.
     useEffect(() => {
         if (!gameStarted || durationSeconds !== null || isPaused) return;
         const id = window.setInterval(() => {
@@ -145,31 +126,32 @@ export default function MiniCrosswordGame() {
         return () => window.clearInterval(id);
     }, [gameStarted, durationSeconds, isPaused, pausedMs]);
 
-    // Display time: final stored time if completed, live elapsed if playing
     const displayTime = durationSeconds !== null ? durationSeconds : elapsed;
 
-    // Persist
     useEffect(() => {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted,
-        }));
-    }, [letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted]);
+        window.localStorage.setItem(
+            storageKey,
+            JSON.stringify({ letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted })
+        );
+    }, [letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted, storageKey]);
 
-    // Scroll active clue into view
     useEffect(() => {
         clueRefs.current[activeEntryId]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }, [activeEntryId]);
 
-    const activeEntry = ENTRY_MAP.get(activeEntryId) ?? null;
+    const activeEntry = entryMap.get(activeEntryId) ?? null;
     const activeWordKeys = new Set(activeEntry?.cells ?? []);
 
-    const incorrectKeys = useMemo(() =>
-        autoCheck
-            ? new Set(PUZZLE.cells
-                .filter((c) => c.answer && letters[c.key] && letters[c.key] !== c.answer)
-                .map((c) => c.key))
-            : new Set<string>(),
-        [letters, autoCheck]
+    const incorrectKeys = useMemo(
+        () =>
+            autoCheck
+                ? new Set(
+                    puzzle.cells
+                        .filter((cell) => cell.answer && letters[cell.key] && letters[cell.key] !== cell.answer)
+                        .map((cell) => cell.key)
+                )
+                : new Set<string>(),
+        [puzzle.cells, letters, autoCheck]
     );
 
     function handleStartGame() {
@@ -181,7 +163,8 @@ export default function MiniCrosswordGame() {
         if (isPaused) {
             const now = Date.now();
             if (pausedSinceRef.current !== null) {
-                setPausedMs((prev) => prev + (now - pausedSinceRef.current!));
+                const pausedSince = pausedSinceRef.current;
+                setPausedMs((prev) => prev + (now - pausedSince));
                 pausedSinceRef.current = null;
             }
             setIsPaused(false);
@@ -207,50 +190,102 @@ export default function MiniCrosswordGame() {
         completed_at: new Date().toISOString(),
     };
 
-    // ── Entry helpers ────────────────────────────────────────────────────────
-
     function entryForCell(key: string, prefer?: CrosswordDirection): CrosswordNumberedEntry | null {
-        const ids = ENTRY_IDS_BY_CELL.get(key) ?? [];
+        const ids = entryIdsByCell.get(key) ?? [];
         if (ids.length === 0) return null;
         if (prefer) {
-            const match = ids.find((id) => ENTRY_MAP.get(id)?.direction === prefer);
-            if (match) return ENTRY_MAP.get(match) ?? null;
+            const match = ids.find((id) => entryMap.get(id)?.direction === prefer);
+            if (match) return entryMap.get(match) ?? null;
         }
-        return ENTRY_MAP.get(ids[0]) ?? null;
+        return entryMap.get(ids[0]) ?? null;
     }
 
     function focusCell(key: string) {
         window.requestAnimationFrame(() => inputRefs.current[key]?.focus());
     }
 
+    function focusAndSelectCell(key: string) {
+        window.requestAnimationFrame(() => {
+            const input = inputRefs.current[key];
+            if (!input) return;
+            input.focus();
+            input.setSelectionRange(0, input.value.length);
+        });
+    }
+
     function selectEntry(entry: CrosswordNumberedEntry, focusFirst = true) {
         setActiveEntryId(entry.id);
         if (focusFirst) {
-            const target = entry.cells.find((k) => !letters[k]) ?? entry.cells[0];
+            const target = entry.cells.find((key) => !letters[key]) ?? entry.cells[0];
             if (target) focusCell(target);
         }
     }
 
     function nextEntry(currentId: string, reverse = false): CrosswordNumberedEntry | null {
-        const idx = TAB_ORDER.indexOf(currentId);
+        const idx = tabOrder.indexOf(currentId);
         if (idx === -1) return null;
         const next = reverse
-            ? TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length]
-            : TAB_ORDER[(idx + 1) % TAB_ORDER.length];
-        return ENTRY_MAP.get(next) ?? null;
+            ? tabOrder[(idx - 1 + tabOrder.length) % tabOrder.length]
+            : tabOrder[(idx + 1) % tabOrder.length];
+        return entryMap.get(next) ?? null;
     }
 
-    // ── Input handlers ───────────────────────────────────────────────────────
+    function nextEmptyCellInEntry(entry: CrosswordNumberedEntry, startIndex: number, nextLetters: Record<string, string>) {
+        for (let i = startIndex + 1; i < entry.cells.length; i += 1) {
+            const key = entry.cells[i];
+            if (!nextLetters[key]) return key;
+        }
+        return null;
+    }
+
+    function writeLetter(cell: CrosswordCell, rawLetter: string) {
+        if (durationSeconds !== null) return;
+
+        const letter = rawLetter.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
+        const entry = activeEntry && activeEntry.cells.includes(cell.key)
+            ? activeEntry
+            : entryForCell(cell.key, activeEntry?.direction);
+
+        const next = { ...letters, [cell.key]: letter };
+
+        if (isSolved(puzzle, next)) {
+            completePuzzle(next);
+            return;
+        }
+
+        setLetters(next);
+
+        if (!letter || !entry) return;
+
+        const idx = entry.cells.indexOf(cell.key);
+        const nextKey = nextEmptyCellInEntry(entry, idx, next);
+        if (nextKey) {
+            focusAndSelectCell(nextKey);
+            return;
+        }
+
+        const nextEntryItem = nextEntry(entry.id);
+        if (nextEntryItem) {
+            const target = nextEntryItem.cells.find((key) => !next[key]) ?? nextEntryItem.cells[0];
+            setActiveEntryId(nextEntryItem.id);
+            if (target) focusAndSelectCell(target);
+        }
+    }
 
     function handleCellFocus(cell: CrosswordCell) {
         const entry = entryForCell(cell.key, activeEntry?.direction);
         if (entry) setActiveEntryId(entry.id);
         setFocusedKey(cell.key);
+        window.requestAnimationFrame(() => {
+            const input = inputRefs.current[cell.key];
+            if (!input) return;
+            input.setSelectionRange(0, input.value.length);
+        });
     }
 
     function handleCellClick(cell: CrosswordCell) {
         if (!cell.answer) return;
-        const ids = ENTRY_IDS_BY_CELL.get(cell.key) ?? [];
+        const ids = entryIdsByCell.get(cell.key) ?? [];
         if (ids.length === 2 && focusedKey === cell.key) {
             const other = ids.find((id) => id !== activeEntryId);
             if (other) setActiveEntryId(other);
@@ -261,41 +296,27 @@ export default function MiniCrosswordGame() {
     }
 
     function handleType(cell: CrosswordCell, raw: string) {
-        if (durationSeconds !== null) return; // already solved
-        const letter = raw.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
-        const next = { ...letters, [cell.key]: letter };
-
-        if (isSolved(next)) {
-            completePuzzle(next);
+        if (!raw) {
+            setLetters((prev) => ({ ...prev, [cell.key]: "" }));
             return;
         }
 
-        setLetters(next);
-
-        // Auto-advance within word
-        if (letter && activeEntry) {
-            const idx = activeEntry.cells.indexOf(cell.key);
-            const nextKey = activeEntry.cells[idx + 1];
-            if (nextKey) {
-                focusCell(nextKey);
-            } else {
-                const ne = nextEntry(activeEntryId);
-                if (ne) {
-                    const target = ne.cells.find((k) => !next[k]) ?? ne.cells[0];
-                    setActiveEntryId(ne.id);
-                    if (target) focusCell(target);
-                }
-            }
-        }
+        writeLetter(cell, raw);
     }
 
     function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, cell: CrosswordCell) {
         if (!cell.answer) return;
 
+        if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
+            e.preventDefault();
+            writeLetter(cell, e.key);
+            return;
+        }
+
         if (e.key === "Tab") {
             e.preventDefault();
-            const ne = nextEntry(activeEntryId, e.shiftKey);
-            if (ne) selectEntry(ne);
+            const nextEntryItem = nextEntry(activeEntryId, e.shiftKey);
+            if (nextEntryItem) selectEntry(nextEntryItem);
             return;
         }
 
@@ -309,8 +330,8 @@ export default function MiniCrosswordGame() {
                 const idx = activeEntry.cells.indexOf(cell.key);
                 const prev = activeEntry.cells[idx - 1];
                 if (prev) {
-                    focusCell(prev);
-                    setLetters((l) => ({ ...l, [prev]: "" }));
+                    focusAndSelectCell(prev);
+                    setLetters((currentLetters) => ({ ...currentLetters, [prev]: "" }));
                 }
             }
             return;
@@ -318,7 +339,7 @@ export default function MiniCrosswordGame() {
 
         if (e.key === "ArrowRight") {
             e.preventDefault();
-            const target = CELL_MAP.get(cellKey(cell.row, cell.col + 1));
+            const target = cellMap.get(cellKey(cell.row, cell.col + 1));
             if (target?.answer) {
                 const entry = entryForCell(target.key, "across");
                 if (entry) setActiveEntryId(entry.id);
@@ -329,7 +350,7 @@ export default function MiniCrosswordGame() {
 
         if (e.key === "ArrowLeft") {
             e.preventDefault();
-            const target = CELL_MAP.get(cellKey(cell.row, cell.col - 1));
+            const target = cellMap.get(cellKey(cell.row, cell.col - 1));
             if (target?.answer) {
                 const entry = entryForCell(target.key, "across");
                 if (entry) setActiveEntryId(entry.id);
@@ -340,7 +361,7 @@ export default function MiniCrosswordGame() {
 
         if (e.key === "ArrowDown") {
             e.preventDefault();
-            const target = CELL_MAP.get(cellKey(cell.row + 1, cell.col));
+            const target = cellMap.get(cellKey(cell.row + 1, cell.col));
             if (target?.answer) {
                 const entry = entryForCell(target.key, "down");
                 if (entry) setActiveEntryId(entry.id);
@@ -351,7 +372,7 @@ export default function MiniCrosswordGame() {
 
         if (e.key === "ArrowUp") {
             e.preventDefault();
-            const target = CELL_MAP.get(cellKey(cell.row - 1, cell.col));
+            const target = cellMap.get(cellKey(cell.row - 1, cell.col));
             if (target?.answer) {
                 const entry = entryForCell(target.key, "down");
                 if (entry) setActiveEntryId(entry.id);
@@ -364,9 +385,11 @@ export default function MiniCrosswordGame() {
     function handleReveal() {
         if (!activeEntry || durationSeconds !== null) return;
         const next = { ...letters };
-        activeEntry.cells.forEach((k, i) => { next[k] = activeEntry.answer[i] ?? ""; });
-        setRevealedEntryIds((r) => r.includes(activeEntry.id) ? r : [...r, activeEntry.id]);
-        if (isSolved(next)) {
+        activeEntry.cells.forEach((key, index) => {
+            next[key] = activeEntry.answer[index] ?? "";
+        });
+        setRevealedEntryIds((current) => (current.includes(activeEntry.id) ? current : [...current, activeEntry.id]));
+        if (isSolved(puzzle, next)) {
             completePuzzle(next);
         } else {
             setLetters(next);
@@ -375,8 +398,8 @@ export default function MiniCrosswordGame() {
 
     function handleReset() {
         if (!window.confirm("Reset the puzzle and clear your progress?")) return;
-        setLetters(emptyLetters());
-        setActiveEntryId(PUZZLE.entries[0]?.id ?? "");
+        setLetters(emptyLetters(puzzle));
+        setActiveEntryId(puzzle.entries[0]?.id ?? "");
         setRevealedEntryIds([]);
         setDurationSeconds(null);
         setElapsed(0);
@@ -388,34 +411,23 @@ export default function MiniCrosswordGame() {
         setPausedMs(0);
         startTimestamp.current = 0;
         pausedSinceRef.current = null;
-        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(storageKey);
     }
-
-    // ── Render ────────────────────────────────────────────────────────────────
 
     return (
         <div className="overflow-hidden rounded-[2.2rem] border border-primary/12 bg-white shadow-[0_24px_80px_rgba(20,42,68,0.10)]">
-
-            {/* ── Header bar ── */}
             <div className="border-b border-primary/8 bg-[#fbf8f3] px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
-                    {/* Title */}
                     <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-[0.3em] text-text-secondary">Daily Puzzle</p>
                         <h2 className="font-heading text-2xl text-primary">Mini Crossword</h2>
                     </div>
 
-                    {/* Timer — center */}
                     <div className="flex flex-col items-center">
-                        <span className="font-mono text-3xl font-semibold tabular-nums text-primary">
-                            {fmtTime(displayTime)}
-                        </span>
-                        {solved && (
-                            <span className="text-[10px] uppercase tracking-widest text-accent">solved!</span>
-                        )}
+                        <span className="font-mono text-3xl font-semibold tabular-nums text-primary">{fmtTime(displayTime)}</span>
+                        {solved && <span className="text-[10px] uppercase tracking-widest text-accent">solved!</span>}
                     </div>
 
-                    {/* Controls */}
                     <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
                         {gameStarted && !solved && (
                             <button
@@ -427,7 +439,7 @@ export default function MiniCrosswordGame() {
                             </button>
                         )}
                         <button
-                            onClick={() => setAutoCheck((v) => !v)}
+                            onClick={() => setAutoCheck((value) => !value)}
                             className={`rounded-full border px-3 py-1.5 text-[10px] uppercase tracking-widest transition-colors ${
                                 autoCheck
                                     ? "border-primary bg-primary text-white"
@@ -455,13 +467,10 @@ export default function MiniCrosswordGame() {
                 </div>
             </div>
 
-            {/* ── Clue bar + Grid + Clues wrapper (overlays live here) ── */}
             <div className="relative">
-
-                {/* Start overlay — fades in, covers clue bar + grid + clues; header stays visible */}
                 <div
                     className={`absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-[rgba(23,55,86,0.52)] px-8 text-center backdrop-blur-sm transition-opacity duration-300 ${
-                        !gameStarted ? "opacity-100" : "opacity-0 pointer-events-none"
+                        !gameStarted ? "opacity-100" : "pointer-events-none opacity-0"
                     }`}
                 >
                     <p className="text-xs uppercase tracking-[0.35em] text-white/55">Ready to play?</p>
@@ -477,10 +486,9 @@ export default function MiniCrosswordGame() {
                     </button>
                 </div>
 
-                {/* Pause overlay — same style, covers same area */}
                 <div
                     className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[rgba(23,55,86,0.52)] backdrop-blur-sm transition-opacity duration-300 ${
-                        isPaused ? "opacity-100" : "opacity-0 pointer-events-none"
+                        isPaused ? "opacity-100" : "pointer-events-none opacity-0"
                     }`}
                 >
                     <p className="text-xs uppercase tracking-[0.3em] text-white/55">Paused</p>
@@ -493,12 +501,12 @@ export default function MiniCrosswordGame() {
                     </button>
                 </div>
 
-                {/* ── Active clue bar ── */}
                 <div className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
                     {activeEntry ? (
                         <p className="text-sm leading-snug text-primary">
                             <span className="mr-1.5 font-semibold">
-                                {activeEntry.number}{activeEntry.direction === "across" ? "A" : "D"}
+                                {activeEntry.number}
+                                {activeEntry.direction === "across" ? "A" : "D"}
                             </span>
                             {activeEntry.clue}
                             {revealedEntryIds.includes(activeEntry.id) && (
@@ -510,164 +518,142 @@ export default function MiniCrosswordGame() {
                     )}
                 </div>
 
-                {/* ── Grid + Clues ── */}
                 <div className="flex flex-col md:flex-row">
+                    <div className="flex items-center justify-center bg-[#fbf8f3] p-5 md:p-8">
+                        <div
+                            className="rounded-sm bg-gray-400"
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: `repeat(${puzzle.cols}, 1fr)`,
+                                gap: "1px",
+                                padding: "1px",
+                            }}
+                        >
+                            {puzzle.cells.map((cell) => {
+                                if (!cell.answer) {
+                                    return <div key={cell.key} className="bg-primary" style={{ width: 56, height: 56 }} />;
+                                }
 
-                {/* Grid */}
-                <div className="flex items-center justify-center bg-[#fbf8f3] p-5 md:p-8">
-                    {/*
-                        The puzzle is 5×7 but cols 0 and 6 are always black structural
-                        borders — we skip them so the rendered grid is a clean 5×5.
-                        Grid lines: 1px gap on a dark bg wrapper.
-                    */}
-                    <div
-                        className="rounded-sm bg-gray-400"
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-                            gap: "1px",
-                            padding: "1px",
-                        }}
-                    >
-                        {GRID_CELLS.map((cell) => {
-                            if (!cell.answer) {
+                                const isFocused = focusedKey === cell.key;
+                                const inWord = activeWordKeys.has(cell.key);
+                                const wrong = incorrectKeys.has(cell.key);
+
                                 return (
-                                    <div
+                                    <label
                                         key={cell.key}
-                                        className="bg-primary"
-                                        style={{ width: 56, height: 56 }}
-                                    />
-                                );
-                            }
-
-                            const isFocused = focusedKey === cell.key;
-                            const inWord = activeWordKeys.has(cell.key);
-                            const wrong = incorrectKeys.has(cell.key);
-
-                            return (
-                                <label
-                                    key={cell.key}
-                                    className={`relative cursor-pointer select-none transition-colors ${
-                                        wrong
-                                            ? "bg-red-100"
-                                            : isFocused
-                                                ? "bg-amber-200"
-                                                : inWord
-                                                    ? "bg-sky-100"
-                                                    : "bg-white"
-                                    }`}
-                                    style={{ width: 56, height: 56 }}
-                                >
-                                    {cell.number ? (
-                                        <span className="pointer-events-none absolute left-[3px] top-[2px] text-[10px] font-semibold leading-none text-primary/70">
-                                            {cell.number}
-                                        </span>
-                                    ) : null}
-                                    {wrong && (
-                                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                            <svg className="absolute inset-0 h-full w-full opacity-40" viewBox="0 0 56 56">
-                                                <line x1="4" y1="4" x2="52" y2="52" stroke="#991b1b" strokeWidth="2" />
-                                            </svg>
-                                        </span>
-                                    )}
-                                    <input
-                                        ref={(el) => { inputRefs.current[cell.key] = el; }}
-                                        value={letters[cell.key] ?? ""}
-                                        onChange={(e) => handleType(cell, e.target.value)}
-                                        onFocus={() => handleCellFocus(cell)}
-                                        onBlur={() => setFocusedKey(null)}
-                                        onClick={() => handleCellClick(cell)}
-                                        onKeyDown={(e) => handleKeyDown(e, cell)}
-                                        maxLength={1}
-                                        inputMode="text"
-                                        autoComplete="off"
-                                        autoCorrect="off"
-                                        autoCapitalize="characters"
-                                        spellCheck={false}
-                                        data-form-type="other"
-                                        aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
-                                        disabled={solved}
-                                        className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] selection:bg-transparent ${
-                                            wrong ? "text-red-700" : "text-primary"
+                                        className={`relative cursor-pointer select-none transition-colors ${
+                                            wrong ? "bg-red-100" : isFocused ? "bg-amber-200" : inWord ? "bg-sky-100" : "bg-white"
                                         }`}
-                                    />
-                                </label>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Clue lists */}
-                <div className="flex flex-1 flex-col border-t border-primary/8 md:border-l md:border-t-0">
-                    <div className="grid flex-1 grid-cols-2 divide-x divide-primary/8">
-                        {/* Across */}
-                        <div className="p-4">
-                            <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Across</p>
-                            <div className="space-y-0.5">
-                                {PUZZLE.across.map((entry) => {
-                                    const isActive = activeEntryId === entry.id;
-                                    const isRevealed = revealedEntryIds.includes(entry.id);
-                                    return (
-                                        <button
-                                            key={entry.id}
-                                            ref={(el) => { clueRefs.current[entry.id] = el; }}
-                                            onClick={() => selectEntry(entry)}
-                                            className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
-                                                isActive
-                                                    ? "bg-primary text-white"
-                                                    : "text-primary hover:bg-primary/5"
-                                            }`}
-                                        >
-                                            <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
-                                                {entry.number}
+                                        style={{ width: 56, height: 56 }}
+                                    >
+                                        {cell.number ? (
+                                            <span className="pointer-events-none absolute left-[3px] top-[2px] text-[10px] font-semibold leading-none text-primary/70">
+                                                {cell.number}
                                             </span>
-                                            {entry.clue}
-                                            {isRevealed && !isActive && (
-                                                <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                        ) : null}
+                                        {wrong && (
+                                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                <svg className="absolute inset-0 h-full w-full opacity-40" viewBox="0 0 56 56">
+                                                    <line x1="4" y1="4" x2="52" y2="52" stroke="#991b1b" strokeWidth="2" />
+                                                </svg>
+                                            </span>
+                                        )}
+                                        <input
+                                            ref={(el) => {
+                                                inputRefs.current[cell.key] = el;
+                                            }}
+                                            value={letters[cell.key] ?? ""}
+                                            onChange={(e) => handleType(cell, e.target.value)}
+                                            onFocus={() => handleCellFocus(cell)}
+                                            onBlur={() => setFocusedKey(null)}
+                                            onClick={() => handleCellClick(cell)}
+                                            onKeyDown={(e) => handleKeyDown(e, cell)}
+                                            onMouseUp={(e) => e.preventDefault()}
+                                            maxLength={1}
+                                            inputMode="text"
+                                            autoComplete="off"
+                                            autoCorrect="off"
+                                            autoCapitalize="characters"
+                                            spellCheck={false}
+                                            data-form-type="other"
+                                            aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
+                                            disabled={solved}
+                                            className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] selection:bg-transparent ${
+                                                wrong ? "text-red-700" : "text-primary"
+                                            }`}
+                                        />
+                                    </label>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        {/* Down */}
-                        <div className="p-4">
-                            <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Down</p>
-                            <div className="space-y-0.5">
-                                {PUZZLE.down.map((entry) => {
-                                    const isActive = activeEntryId === entry.id;
-                                    const isRevealed = revealedEntryIds.includes(entry.id);
-                                    return (
-                                        <button
-                                            key={entry.id}
-                                            ref={(el) => { clueRefs.current[entry.id] = el; }}
-                                            onClick={() => selectEntry(entry)}
-                                            className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
-                                                isActive
-                                                    ? "bg-primary text-white"
-                                                    : "text-primary hover:bg-primary/5"
-                                            }`}
-                                        >
-                                            <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
-                                                {entry.number}
-                                            </span>
-                                            {entry.clue}
-                                            {isRevealed && !isActive && (
-                                                <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                    <div className="flex flex-1 flex-col border-t border-primary/8 md:border-l md:border-t-0">
+                        <div className="grid flex-1 grid-cols-2 divide-x divide-primary/8">
+                            <div className="p-4">
+                                <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Across</p>
+                                <div className="space-y-0.5">
+                                    {puzzle.across.map((entry) => {
+                                        const isActive = activeEntryId === entry.id;
+                                        const isRevealed = revealedEntryIds.includes(entry.id);
+                                        return (
+                                            <button
+                                                key={entry.id}
+                                                ref={(el) => {
+                                                    clueRefs.current[entry.id] = el;
+                                                }}
+                                                onClick={() => selectEntry(entry)}
+                                                className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
+                                                    isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
+                                                }`}
+                                            >
+                                                <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
+                                                    {entry.number}
+                                                </span>
+                                                {entry.clue}
+                                                {isRevealed && !isActive && (
+                                                    <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="p-4">
+                                <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Down</p>
+                                <div className="space-y-0.5">
+                                    {puzzle.down.map((entry) => {
+                                        const isActive = activeEntryId === entry.id;
+                                        const isRevealed = revealedEntryIds.includes(entry.id);
+                                        return (
+                                            <button
+                                                key={entry.id}
+                                                ref={(el) => {
+                                                    clueRefs.current[entry.id] = el;
+                                                }}
+                                                onClick={() => selectEntry(entry)}
+                                                className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
+                                                    isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
+                                                }`}
+                                            >
+                                                <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
+                                                    {entry.number}
+                                                </span>
+                                                {entry.clue}
+                                                {isRevealed && !isActive && (
+                                                    <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            </div>{/* end clue bar + grid + clues wrapper */}
-
-            {/* ── Completion screen ── */}
             {solved && (
                 <div className="border-t border-primary/8">
                     <div className="bg-[linear-gradient(160deg,#173756_0%,#214467_100%)] px-6 py-8 text-center">
@@ -677,12 +663,8 @@ export default function MiniCrosswordGame() {
                             </svg>
                         </div>
                         <h3 className="font-heading text-3xl text-white">Congratulations!</h3>
-                        <p className="mt-2 text-base text-white/70">
-                            You solved the Mini Crossword
-                        </p>
-                        <p className="mt-4 font-mono text-5xl font-bold tabular-nums text-accent">
-                            {fmtTime(displayTime)}
-                        </p>
+                        <p className="mt-2 text-base text-white/70">You solved the Mini Crossword</p>
+                        <p className="mt-4 font-mono text-5xl font-bold tabular-nums text-accent">{fmtTime(displayTime)}</p>
                         {revealedEntryIds.length > 0 ? (
                             <p className="mt-2 text-sm text-white/50">
                                 {revealedEntryIds.length} reveal{revealedEntryIds.length > 1 ? "s" : ""} used
@@ -708,7 +690,7 @@ export default function MiniCrosswordGame() {
                                 maxScore={100}
                                 attempts={revealedEntryIds.length}
                                 solved={true}
-                                puzzleKey={PUZZLE.id}
+                                puzzleKey={puzzle.id}
                                 metadata={metadata}
                                 buttonLabel="Submit Score to Leaderboard"
                                 successMessage="Crossword score submitted."

@@ -95,9 +95,9 @@ export const WEDDING = {
     summary:
       'Both the ceremony and reception are indoors. Come dressed up and ready to celebrate — see the Attire page for full guidance.',
     ladies:
-      'The inspiration leans polished and feminine: satin slip dresses, soft florals, elevated midi lengths, sculptural necklines, and heels or refined flats. Color is welcome, especially warm neutrals, dusty blues, sage, and rich floral tones. Aim for dressy and tailored rather than casual.',
+      'Midi or floor-length dresses, polished jumpsuits, and refined separates are all welcome. We recommend elevated fabrics, a tailored silhouette, and heels or dressy flats for an overall look that feels polished rather than casual.',
     gentlemen:
-      'The gentlemen’s mood is clean and tailored: classic suits, navy or charcoal separates, crisp dress shirts, ties optional, and polished shoes or dress boots. Think sharp reception-ready dressing — elevated, fitted, and comfortable enough for a long night on the dance floor.',
+      'Suits or tailored separates in classic tones are ideal, paired with a dress shirt and polished shoes or boots. Ties are optional, but the overall look should feel clean, dressy, and evening-ready.',
   },
 
   bridalParty: {
@@ -455,8 +455,6 @@ export const IMAGES = {
       '/images/attire/Womens Outfit 8.jpg',
       '/images/attire/Womens Outfit 9.jpg',
       '/images/attire/Womens Outfit 10.jpg',
-      '/images/attire/Womens Outfit 11.png',
-      '/images/attire/Womens Outfit 12.png',
     ],
     gents: [
       '/images/attire/Mens Outfit 1.jpg',

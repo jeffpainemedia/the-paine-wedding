@@ -3,7 +3,12 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AdminGameScore, GamePlayerRecord } from "@/lib/games/admin-types";
-import { CROSSWORD_PUZZLE, CROSSWORD_PUZZLE_KEY } from "@/lib/games/crossword";
+import {
+    CROSSWORD_PUZZLE,
+    CROSSWORD_PUZZLE_KEY,
+    type BuiltCrossword,
+    type CrosswordCatalogItem,
+} from "@/lib/games/crossword";
 import { PAINEDLE_WORDS } from "@/lib/games/word-list";
 import { getDailyWord, getTodayKey } from "@/lib/games/painedle";
 import {
@@ -243,6 +248,14 @@ type TriviaFormState = {
     sort_order: string;
 };
 
+type CrosswordEntryFormState = {
+    id: string;
+    number: number;
+    direction: "across" | "down";
+    answer: string;
+    clue: string;
+};
+
 function emptyTriviaForm(sortHint = 0): TriviaFormState {
     return { prompt: "", answer_a: "", answer_b: "", answer_c: "", answer_d: "", correct_index: 0, fun_fact: "", sort_order: String(sortHint) };
 }
@@ -258,6 +271,16 @@ function questionToForm(q: DbTriviaQuestion): TriviaFormState {
         fun_fact: q.fun_fact ?? "",
         sort_order: String(q.sort_order),
     };
+}
+
+function crosswordToFormEntries(puzzle: BuiltCrossword): CrosswordEntryFormState[] {
+    return puzzle.entries.map((entry) => ({
+        id: entry.id,
+        number: entry.number,
+        direction: entry.direction,
+        answer: entry.answer,
+        clue: entry.clue,
+    }));
 }
 
 type TriviaFormProps = {
@@ -365,6 +388,15 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
     const [savingId, setSavingId] = useState<string | null>(null);
     const [triviaOpError, setTriviaOpError] = useState<string | null>(null);
     const hasFetchedTrivia = useRef(false);
+    const [crosswordCatalog, setCrosswordCatalog] = useState<CrosswordCatalogItem[]>([]);
+    const [selectedCrosswordId, setSelectedCrosswordId] = useState<string | null>(null);
+    const [selectedCrossword, setSelectedCrossword] = useState<BuiltCrossword | null>(null);
+    const [selectedCrosswordBase, setSelectedCrosswordBase] = useState<BuiltCrossword | null>(null);
+    const [crosswordFormEntries, setCrosswordFormEntries] = useState<CrosswordEntryFormState[]>([]);
+    const [crosswordLoadState, setCrosswordLoadState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+    const [crosswordOpError, setCrosswordOpError] = useState<string | null>(null);
+    const [crosswordSaving, setCrosswordSaving] = useState(false);
+    const hasFetchedCrossword = useRef(false);
     const [todayKey] = useState(() => getTodayKey());
     const todayWord = getDailyWord(todayKey);
 
@@ -403,12 +435,50 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
         }
     }, []);
 
+    const fetchCrosswordPuzzle = useCallback(async (puzzleId?: string | null) => {
+        setCrosswordLoadState("loading");
+        setCrosswordOpError(null);
+
+        try {
+            const search = puzzleId ? `?puzzleId=${encodeURIComponent(puzzleId)}` : "";
+            const res = await fetch(`/api/admin/crossword-puzzles${search}`);
+
+            if (!res.ok) {
+                throw new Error("Could not load crossword puzzles.");
+            }
+
+            const json = await res.json() as {
+                catalog: CrosswordCatalogItem[];
+                selectedPuzzleId: string | null;
+                puzzle: BuiltCrossword | null;
+                basePuzzle: BuiltCrossword | null;
+            };
+
+            setCrosswordCatalog(json.catalog);
+            setSelectedCrosswordId(json.selectedPuzzleId);
+            setSelectedCrossword(json.puzzle);
+            setSelectedCrosswordBase(json.basePuzzle);
+            setCrosswordFormEntries(json.puzzle ? crosswordToFormEntries(json.puzzle) : []);
+            setCrosswordLoadState("ready");
+        } catch (err) {
+            setCrosswordOpError(err instanceof Error ? err.message : "Could not load crossword puzzles.");
+            setCrosswordLoadState("error");
+        }
+    }, []);
+
     useEffect(() => {
         if (modalView !== "trivia-bank") return;
         if (hasFetchedTrivia.current) return;
         hasFetchedTrivia.current = true;
         void fetchTriviaQuestions();
     }, [modalView, fetchTriviaQuestions]);
+
+    useEffect(() => {
+        if (modalView !== "crossword") return;
+        if (hasFetchedCrossword.current) return;
+        hasFetchedCrossword.current = true;
+        void fetchCrosswordPuzzle();
+    }, [modalView, fetchCrosswordPuzzle]);
 
     async function handleSaveQuestion(id: string | null, form: TriviaFormState) {
         setSavingId(id ?? "new");
@@ -496,6 +566,50 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
         void fetchTriviaQuestions();
     }
 
+    async function handleSelectCrosswordPuzzle(puzzleId: string) {
+        await fetchCrosswordPuzzle(puzzleId);
+    }
+
+    async function handleSaveCrosswordPuzzle() {
+        if (!selectedCrosswordId) return;
+
+        setCrosswordSaving(true);
+        setCrosswordOpError(null);
+
+        try {
+            const res = await fetch("/api/admin/crossword-puzzles", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    puzzleId: selectedCrosswordId,
+                    entries: crosswordFormEntries.map((entry) => ({
+                        id: entry.id,
+                        answer: entry.answer,
+                        clue: entry.clue,
+                    })),
+                }),
+            });
+
+            const json = await res.json() as { error?: string };
+            if (!res.ok) {
+                throw new Error(json.error ?? "Could not save crossword puzzle.");
+            }
+        } catch (err) {
+            setCrosswordOpError(err instanceof Error ? err.message : "Could not save crossword puzzle.");
+            setCrosswordSaving(false);
+            return;
+        }
+
+        setCrosswordSaving(false);
+        await fetchCrosswordPuzzle(selectedCrosswordId);
+    }
+
+    function handleResetCrosswordToBase() {
+        if (!selectedCrosswordBase) return;
+        setCrosswordFormEntries(crosswordToFormEntries(selectedCrosswordBase));
+        setCrosswordOpError(null);
+    }
+
     const triviaScores = useMemo(
         () => gameScores.filter((score) => score.game === "trivia").sort(sortTriviaScores),
         [gameScores]
@@ -574,15 +688,9 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
             return b.totalSubmissions - a.totalSubmissions || a.username.localeCompare(b.username);
         });
     }, [gameScores]);
-    const leaderboardPreview = useMemo(
-        () => ({
-            trivia: triviaScores.slice(0, 5),
-            crossword: crosswordScores.slice(0, 5),
-            painedle: todaysPainedleScores.slice(0, 5),
-        }),
-        [crosswordScores, todaysPainedleScores, triviaScores]
-    );
     const upcomingSchedule = useMemo(() => buildUpcomingSchedule(21), []);
+    const uniqueWordBankCount = useMemo(() => new Set(PAINEDLE_WORDS).size, []);
+    const duplicateWordCount = PAINEDLE_WORDS.length - uniqueWordBankCount;
     const filteredWordBank = useMemo(() => {
         if (!wordSearch.trim()) return PAINEDLE_WORDS;
         return PAINEDLE_WORDS.filter((word) => word.includes(wordSearch.trim().toLowerCase()));
@@ -746,80 +854,190 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         <OverviewMetric
                             label="Unlock"
                             value={crosswordRemaining.isUnlocked ? "Live" : CROSSWORD_UNLOCK_LABEL}
-                            note="The mini crossword runs 200 daily puzzles starting March 15, 2026."
+                            note="The mini crossword is a single fill-in-the-blank board that opens the week before the wedding."
                         />
                         <OverviewMetric
-                            label="Puzzle Key"
-                            value={CROSSWORD_PUZZLE_KEY}
-                            note="Static leaderboard key for this one-board puzzle."
+                            label="Selected Puzzle"
+                            value={selectedCrossword?.id ?? CROSSWORD_PUZZLE_KEY}
+                            note="The current board loaded into the editor."
                         />
                         <OverviewMetric
                             label="Entries"
-                            value={CROSSWORD_PUZZLE.entries.length}
-                            note="Interlocking fill-in-the-blank clues built from their story."
+                            value={selectedCrossword?.entries.length ?? CROSSWORD_PUZZLE.entries.length}
+                            note="Interlocking clue entries built from Ashlyn and Jeffrey's story."
                         />
                     </div>
 
-                    <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                        <div className="rounded-[1.9rem] border border-primary/10 bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-5 text-white shadow-[0_18px_48px_rgba(20,42,68,0.14)]">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.24em] text-white/62">Board Preview</p>
-                                    <p className="mt-2 text-sm text-white/76">Answers are visible here for admin review only.</p>
-                                </div>
-                                <div className="rounded-full border border-white/14 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white/85">
-                                    {CROSSWORD_PUZZLE.rows} x {CROSSWORD_PUZZLE.cols}
-                                </div>
-                            </div>
-                            <div
-                                className="mt-5 grid gap-1.5"
-                                style={{ gridTemplateColumns: `repeat(${CROSSWORD_PUZZLE.cols}, minmax(0, 1fr))` }}
+                    {crosswordOpError ? (
+                        <div className="rounded-[1.2rem] border border-secondary/20 bg-secondary/5 px-5 py-4 text-sm text-secondary">
+                            {crosswordOpError}
+                        </div>
+                    ) : null}
+
+                    {crosswordLoadState === "loading" ? (
+                        <div className="py-8 text-center text-sm text-text-secondary">Loading crossword editor…</div>
+                    ) : crosswordLoadState === "error" ? (
+                        <div className="py-8 text-center text-sm text-secondary">
+                            Could not load crossword puzzles.{" "}
+                            <button
+                                type="button"
+                                onClick={() => { hasFetchedCrossword.current = false; void fetchCrosswordPuzzle(selectedCrosswordId); }}
+                                className="underline"
                             >
-                                {CROSSWORD_PUZZLE.cells.map((cell) => (
-                                    cell.answer ? (
-                                        <div key={cell.key} className="relative flex aspect-square items-center justify-center rounded-[0.82rem] border border-white/18 bg-white/88 text-base font-semibold uppercase text-primary">
-                                            {cell.number ? (
-                                                <span className="absolute left-1.5 top-1 text-[10px] font-medium text-primary/60">
-                                                    {cell.number}
-                                                </span>
-                                            ) : null}
-                                            {cell.answer}
-                                        </div>
-                                    ) : (
-                                        <div key={cell.key} className="aspect-square rounded-[0.72rem] bg-[#0f2033]" />
-                                    )
-                                ))}
-                            </div>
+                                Retry
+                            </button>
                         </div>
-
-                        <div className="grid gap-6 lg:grid-cols-2">
-                            <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Across</p>
-                                <div className="mt-5 space-y-3">
-                                    {CROSSWORD_PUZZLE.across.map((entry) => (
-                                        <div key={entry.id} className="rounded-[1.2rem] border border-primary/10 bg-[#fbf8f3] px-4 py-4">
-                                            <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">{entry.number}</p>
-                                            <p className="mt-2 text-sm leading-relaxed text-primary">{entry.clue}</p>
-                                            <p className="mt-3 font-mono text-xs uppercase tracking-[0.24em] text-text-secondary">{entry.answer}</p>
-                                        </div>
-                                    ))}
+                    ) : selectedCrossword ? (
+                        <div className="grid gap-6 xl:grid-cols-[0.34fr_0.66fr]">
+                            <div className="space-y-4">
+                                <div className="rounded-[1.9rem] border border-primary/10 bg-white p-5 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
+                                    <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Crossword Library</p>
+                                    <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                                        Review any crossword in the run-up, then edit the answer list and clue list for the selected board below.
+                                    </p>
+                                    <div className="mt-5 max-h-[32rem] space-y-2 overflow-auto">
+                                        {crosswordCatalog.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => void handleSelectCrosswordPuzzle(item.id)}
+                                                className={`w-full rounded-[1.1rem] border px-4 py-3 text-left transition-colors ${
+                                                    selectedCrosswordId === item.id
+                                                        ? "border-primary bg-primary text-white"
+                                                        : "border-primary/10 bg-[#fbf8f3] text-primary hover:border-primary/20"
+                                                }`}
+                                            >
+                                                <p className={`text-xs uppercase tracking-[0.22em] ${selectedCrosswordId === item.id ? "text-white/70" : "text-text-secondary"}`}>
+                                                    {item.dateKey}
+                                                </p>
+                                                <p className="mt-2 font-heading text-2xl">{item.id.toUpperCase()}</p>
+                                                <p className={`mt-2 text-sm ${selectedCrosswordId === item.id ? "text-white/78" : "text-text-secondary"}`}>
+                                                    {item.entryCount} entries · {item.rows} x {item.cols}
+                                                </p>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Down</p>
-                                <div className="mt-5 space-y-3">
-                                    {CROSSWORD_PUZZLE.down.map((entry) => (
-                                        <div key={entry.id} className="rounded-[1.2rem] border border-primary/10 bg-[#fbf8f3] px-4 py-4">
-                                            <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">{entry.number}</p>
-                                            <p className="mt-2 text-sm leading-relaxed text-primary">{entry.clue}</p>
-                                            <p className="mt-3 font-mono text-xs uppercase tracking-[0.24em] text-text-secondary">{entry.answer}</p>
+                            <div className="space-y-6">
+                                <div className="rounded-[1.9rem] border border-primary/10 bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-5 text-white shadow-[0_18px_48px_rgba(20,42,68,0.14)]">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.24em] text-white/62">Board Preview</p>
+                                            <p className="mt-2 text-sm text-white/76">Answers are visible here for admin review only.</p>
                                         </div>
-                                    ))}
+                                        <div className="flex flex-wrap gap-3">
+                                            <div className="rounded-full border border-white/14 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white/85">
+                                                {selectedCrossword.rows} x {selectedCrossword.cols}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleResetCrosswordToBase}
+                                                className="rounded-full border border-white/16 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white transition-colors hover:bg-white/14"
+                                            >
+                                                Restore Default
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => void handleSaveCrosswordPuzzle()}
+                                                disabled={crosswordSaving}
+                                                className="rounded-full bg-white px-4 py-2 text-xs uppercase tracking-[0.22em] text-primary transition-colors hover:bg-white/90 disabled:opacity-50"
+                                            >
+                                                {crosswordSaving ? "Saving…" : "Save Puzzle"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="mt-5 grid gap-1.5"
+                                        style={{ gridTemplateColumns: `repeat(${selectedCrossword.cols}, minmax(0, 1fr))` }}
+                                    >
+                                        {selectedCrossword.cells.map((cell) => (
+                                            cell.answer ? (
+                                                <div key={cell.key} className="relative flex aspect-square items-center justify-center rounded-[0.82rem] border border-white/18 bg-white/88 text-base font-semibold uppercase text-primary">
+                                                    {cell.number ? (
+                                                        <span className="absolute left-1.5 top-1 text-[10px] font-medium text-primary/60">
+                                                            {cell.number}
+                                                        </span>
+                                                    ) : null}
+                                                    {cell.answer}
+                                                </div>
+                                            ) : (
+                                                <div key={cell.key} className="aspect-square rounded-[0.72rem] bg-[#0f2033]" />
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Crossword Editor</p>
+                                            <h3 className="mt-3 font-heading text-3xl text-primary">Full word and clue list</h3>
+                                            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">
+                                                Every entry for the selected crossword is editable here, with answer and clue text kept together so you can review the full board in one pass.
+                                            </p>
+                                        </div>
+                                        <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">
+                                            {crosswordFormEntries.length} total entries
+                                        </p>
+                                    </div>
+                                    <div className="mt-5 space-y-4">
+                                        {crosswordFormEntries.map((entry) => (
+                                            <div key={entry.id} className="rounded-[1.2rem] border border-primary/10 bg-[#fbf8f3] px-4 py-4">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">
+                                                        {entry.number}{entry.direction === "across" ? "A" : "D"} · {entry.direction}
+                                                    </p>
+                                                    <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">
+                                                        {entry.answer.length} letters
+                                                    </p>
+                                                </div>
+                                                <div className="mt-3 grid gap-3 lg:grid-cols-[0.32fr_0.68fr]">
+                                                    <div>
+                                                        <label className="mb-1 block text-xs uppercase tracking-[0.2em] text-text-secondary">
+                                                            Answer
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={entry.answer}
+                                                            onChange={(event) =>
+                                                                setCrosswordFormEntries((current) =>
+                                                                    current.map((item) =>
+                                                                        item.id === entry.id
+                                                                            ? { ...item, answer: event.target.value.toUpperCase().replace(/[^A-Z]/g, "") }
+                                                                            : item
+                                                                    )
+                                                                )
+                                                            }
+                                                            className="w-full rounded-[0.9rem] border border-primary/12 bg-white px-3 py-2.5 text-sm uppercase tracking-[0.12em] text-text-primary outline-none transition-colors focus:border-primary"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="mb-1 block text-xs uppercase tracking-[0.2em] text-text-secondary">
+                                                            Clue
+                                                        </label>
+                                                        <textarea
+                                                            rows={2}
+                                                            value={entry.clue}
+                                                            onChange={(event) =>
+                                                                setCrosswordFormEntries((current) =>
+                                                                    current.map((item) =>
+                                                                        item.id === entry.id ? { ...item, clue: event.target.value } : item
+                                                                    )
+                                                                )
+                                                            }
+                                                            className="w-full resize-none rounded-[0.9rem] border border-primary/12 bg-white px-3 py-2.5 text-sm text-text-primary outline-none transition-colors focus:border-primary"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    ) : null}
                 </div>
             );
         }
@@ -1216,6 +1434,11 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                             value={uniquePlayers.filter((player) => player.crosswordSubmissions > 0).length}
                             note="Unique guests who have submitted the crossword board."
                         />
+                        <OverviewMetric
+                            label="Painedle Players"
+                            value={uniquePlayers.filter((player) => player.painedleSubmissions > 0).length}
+                            note="Unique guests who have submitted at least one Painedle score."
+                        />
                     </div>
 
                     {gameScoresError ? (
@@ -1281,7 +1504,7 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         <p className="text-xs uppercase tracking-[0.28em] text-white/60">Games Status</p>
                         <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <p className="max-w-3xl text-sm leading-relaxed text-white/80">
-                                Painedle is live now, the crossword unlocks {crosswordRemaining.isUnlocked ? "now" : `on ${CROSSWORD_UNLOCK_LABEL}`}, and trivia stays locked until {TRIVIA_UNLOCK_LABEL}.
+                                Painedle is live now with the current daily rotation, the mini crossword unlocks {crosswordRemaining.isUnlocked ? "now" : `on ${CROSSWORD_UNLOCK_LABEL}`}, and trivia stays locked until {TRIVIA_UNLOCK_LABEL}.
                             </p>
                             <div className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white/78">
                                 {crosswordRemaining.isUnlocked
@@ -1328,13 +1551,23 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         value={PAINEDLE_WORDS.length}
                         note="Total Painedle answers in rotation."
                     />
+                    <OverviewMetric
+                        label="Word Length"
+                        value="5"
+                        note="Painedle currently runs with fixed five-letter answers."
+                    />
+                    <OverviewMetric
+                        label="Duplicates"
+                        value={duplicateWordCount}
+                        note="Duplicate answers currently present in the live word bank."
+                    />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-3">
+                <div className="grid gap-6 xl:grid-cols-4">
                     <ControlCard
-                        eyebrow="Painedle Control Room"
-                        title="Daily puzzle management"
-                        copy="Keep the live word hidden in the overview, then drill into the answer, the upcoming schedule, or the full bank only when needed."
+                        eyebrow="Painedle Admin"
+                        title="Daily rotation controls"
+                        copy="Check today's answer, inspect the upcoming calendar, and verify the live bank without leaving stale Wordle-era control cards in the overview."
                     >
                         <PillButton label="Reveal today's word" onClick={() => setModalView("today-word")} />
                         <PillButton label="Preview schedule" onClick={() => setModalView("schedule")} />
@@ -1342,18 +1575,18 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                     </ControlCard>
 
                     <ControlCard
-                        eyebrow="Crossword Control Room"
-                        title="Week-before puzzle preview"
-                        copy="Review the full clue list, the solved grid, and the unlock date without exposing the answers in the overview."
+                        eyebrow="Crossword Admin"
+                        title="Crossword word and clue bank"
+                        copy="Review upcoming crossword boards, edit the answer list and clue copy for each date, and save overrides without digging through static source files."
                     >
-                        <PillButton label="Preview crossword" onClick={() => setModalView("crossword")} />
+                        <PillButton label="Edit crossword" onClick={() => setModalView("crossword")} />
                         <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
                     </ControlCard>
 
                     <ControlCard
-                        eyebrow="Trivia Control Room"
-                        title="Question and launch management"
-                        copy="Review every trivia prompt, the correct answer, fun facts, and the current launch state without dumping the entire question bank into the tab body."
+                        eyebrow="Trivia Admin"
+                        title="Question bank and launch"
+                        copy="Review every trivia prompt, correct answer, fun fact, and launch state from one place."
                     >
                         <PillButton label="Question bank" onClick={() => setModalView("trivia-bank")} />
                         <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
@@ -1368,125 +1601,6 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         <PillButton label="Player directory" onClick={() => setModalView("players")} />
                     </ControlCard>
                 </div>
-
-                <div className="grid gap-6 xl:grid-cols-3">
-                    <div className="rounded-[1.8rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                        <div className="flex items-end justify-between gap-4 border-b border-primary/8 pb-4">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Preview</p>
-                                <h3 className="mt-3 font-heading text-3xl text-primary">Crossword board</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setModalView("crossword")}
-                                className="text-xs uppercase tracking-[0.22em] text-primary hover:text-secondary"
-                            >
-                                Open preview
-                            </button>
-                        </div>
-                        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Unlock</p>
-                                <p className="mt-2 text-lg text-primary">{CROSSWORD_UNLOCK_LABEL}</p>
-                                <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-                                    Static one-board puzzle with fill-in-the-blank clues from the couple&apos;s story.
-                                </p>
-                            </div>
-                            <div className="rounded-[1.4rem] border border-primary/10 bg-[#fbf8f3] px-5 py-4 text-center">
-                                <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Entries</p>
-                                <p className="mt-2 font-heading text-4xl text-primary">{CROSSWORD_PUZZLE.entries.length}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-[1.8rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                        <div className="flex items-end justify-between gap-4 border-b border-primary/8 pb-4">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Preview</p>
-                                <h3 className="mt-3 font-heading text-3xl text-primary">Trivia leaderboard</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setModalView("leaderboards")}
-                                className="text-xs uppercase tracking-[0.22em] text-primary hover:text-secondary"
-                            >
-                                View full
-                            </button>
-                        </div>
-                        {gameScoresError ? (
-                            <p className="mt-6 text-sm leading-relaxed text-secondary">{gameScoresError}</p>
-                        ) : leaderboardPreview.trivia.length === 0 ? (
-                            <p className="mt-6 text-sm text-text-secondary">No trivia scores yet.</p>
-                        ) : (
-                            <div className="mt-6 space-y-3">
-                                {leaderboardPreview.trivia.map((score, index) => {
-                                    const player = getPlayerDetails(score);
-                                    return (
-                                        <div key={score.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[1.2rem] border border-primary/8 bg-[#fbf8f3] px-4 py-4">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">{index + 1}</div>
-                                            <div>
-                                                <p className="font-medium text-primary">{player?.username ?? "Guest"}</p>
-                                                <p className="text-sm text-text-secondary">{player?.email ?? "No email"}</p>
-                                            </div>
-                                            <div className="text-primary">{score.score}</div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="rounded-[1.8rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                        <div className="flex items-end justify-between gap-4 border-b border-primary/8 pb-4">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Preview</p>
-                                <h3 className="mt-3 font-heading text-3xl text-primary">Today&rsquo;s Painedle board</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setModalView("today-word")}
-                                className="text-xs uppercase tracking-[0.22em] text-primary hover:text-secondary"
-                            >
-                                Reveal word
-                            </button>
-                        </div>
-                        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Today&rsquo;s key</p>
-                                <p className="mt-2 text-lg text-primary">{todayKey}</p>
-                                <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-                                    Live answer is hidden from the overview. Open the reveal view when you need it.
-                                </p>
-                            </div>
-                            <div className="rounded-[1.4rem] border border-primary/10 bg-[#fbf8f3] px-5 py-4 text-center">
-                                <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Today&rsquo;s plays</p>
-                                <p className="mt-2 font-heading text-4xl text-primary">{todaysPainedleScores.length}</p>
-                            </div>
-                        </div>
-
-                        {gameScoresError ? (
-                            <p className="mt-6 text-sm leading-relaxed text-secondary">{gameScoresError}</p>
-                        ) : leaderboardPreview.painedle.length === 0 ? (
-                            <p className="mt-6 text-sm text-text-secondary">No Painedle submissions for today yet.</p>
-                        ) : (
-                            <div className="mt-6 space-y-3">
-                                {leaderboardPreview.painedle.map((score, index) => {
-                                    const player = getPlayerDetails(score);
-                                    return (
-                                        <div key={score.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[1.2rem] border border-primary/8 bg-[#fbf8f3] px-4 py-4">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">{index + 1}</div>
-                                            <div>
-                                                <p className="font-medium text-primary">{player?.username ?? "Guest"}</p>
-                                                <p className="text-sm text-text-secondary">{score.attempts ?? "-"} guesses</p>
-                                            </div>
-                                            <div className="text-primary">{score.score}</div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
             </div>
 
             {modalView ? (
@@ -1499,7 +1613,7 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                                     {modalView === "today-word" && "Today's Painedle"}
                                     {modalView === "schedule" && "Painedle schedule preview"}
                                     {modalView === "word-bank" && "Painedle word bank"}
-                                    {modalView === "crossword" && "Mini crossword preview"}
+                                    {modalView === "crossword" && "Mini crossword editor"}
                                     {modalView === "trivia-bank" && "Trivia question bank"}
                                     {modalView === "leaderboards" && "Leaderboard views"}
                                     {modalView === "submissions" && "Recent submissions"}

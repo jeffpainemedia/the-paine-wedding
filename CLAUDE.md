@@ -322,3 +322,36 @@ ADMIN_PASSWORD_HASH=
 - **Email popup on games pages** — persists until email entered; returns every visit until saved
 - **Admin mobile sticky column headers** — headers should stick when scrolling the guest list
 - **Admin mobile A-Z side scroller** — fast alphabet navigation for large guest list
+
+## Session Notes — 2026-03-20
+
+### Painedle Mobile Enter Fix
+- Fixed a mobile/on-screen keyboard bug where the Painedle `ENTER` button did not submit guesses.
+- Root cause: the virtual keyboard emitted `ENTER` while the handler only recognized `Enter` from physical keyboards.
+- Updated `src/components/games/PainedleGame.tsx` so the submit path accepts both `Enter` and `ENTER`.
+- This keeps physical keyboard behavior unchanged while restoring correct mobile gameplay.
+- Validation: `npm run build` passed on 2026-03-20 after the input handler change.
+
+### Attire Cleanup — 2026-03-20
+- Removed the casual women’s denim-based outfit references from the ladies attire image set so the gallery stays aligned with the requested dress code tone.
+- Rewrote the ladies and gentlemen attire descriptions in `src/lib/wedding-data.ts` to feel more polished, direct, and less playful.
+- Validation: `npm run build` passed after the attire content update.
+
+### Games Admin Cleanup — 2026-03-20
+- Updated `src/components/admin/GamesAdminPanel.tsx` so the games backend reflects the current live Painedle and crossword setup instead of older preview content.
+- Removed the redundant lower preview cards and kept the admin overview focused on the actual control paths: today's Painedle answer, schedule, word bank, crossword board, trivia bank, submissions, and players.
+- Corrected outdated crossword admin copy that still implied a rotating multi-board release; the admin now describes it as the current single week-before crossword board.
+- Added clearer Painedle overview metrics, including fixed five-letter length and duplicate-count visibility for the live word bank.
+- Validation: `npm run build` passed after the admin cleanup.
+
+### Crossword Admin Editor — 2026-03-20
+- Added `/api/admin/crossword-puzzles` with authenticated GET/PUT support for reviewing and saving crossword puzzle overrides through `site_settings` under `games.crossword.overrides`.
+- Updated `src/components/admin/GamesAdminPanel.tsx` so the crossword admin now includes a real editor: puzzle/date selector, answer list, clue list, restore-default action, and save flow.
+- Updated the public crossword route and `MiniCrosswordGame` to consume server-provided crossword overrides, so admin edits now affect the live puzzle rather than only the admin preview.
+- Validation: `npm run build` passed after wiring the crossword editor and runtime overrides.
+
+### Crossword Midnight + Admin Visibility Fix — 2026-03-21
+- Fixed the public crossword page so it no longer gets stuck on yesterday's board due to static generation; `/games/crossword` now renders dynamically and uses a Chicago-local date key for daily puzzle rollover.
+- Updated `src/lib/games/crossword.ts` to use stable date-key parsing for puzzle rotation and catalog dates, which keeps the board switch tied to the intended local day boundary.
+- Expanded the admin crossword editor so the selected puzzle now shows the full editable entry list in one place instead of splitting content in a way that hid part of the clue/answer set.
+- Validation: `npm run build` passed after the rollover and admin visibility fixes.
