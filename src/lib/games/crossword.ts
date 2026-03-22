@@ -2920,6 +2920,21 @@ export const CROSSWORD_PUZZLE = applyCrosswordEntryOverrides(PUZZLE_POOL[0]);
 export const CROSSWORD_PUZZLE_KEY = CROSSWORD_PUZZLE.id;
 export const CROSSWORD_STORAGE_KEY = getCrosswordStorageKey(CROSSWORD_PUZZLE.id, PUZZLE_ROTATION_START);
 
+/** Returns all unique word+clue pairs across every puzzle, sorted alphabetically. */
+export function getAllCrosswordWordClues(): { word: string; clue: string }[] {
+    const map = new Map<string, string>();
+    for (const puzzle of PUZZLE_POOL) {
+        for (const entry of puzzle.entries) {
+            if (!map.has(entry.answer)) {
+                map.set(entry.answer, entry.clue);
+            }
+        }
+    }
+    return Array.from(map.entries())
+        .map(([word, clue]) => ({ word, clue }))
+        .sort((a, b) => a.word.localeCompare(b.word));
+}
+
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------

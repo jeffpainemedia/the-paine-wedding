@@ -6,6 +6,7 @@ import type { AdminGameScore, GamePlayerRecord } from "@/lib/games/admin-types";
 import {
     CROSSWORD_PUZZLE,
     CROSSWORD_PUZZLE_KEY,
+    getAllCrosswordWordClues,
     type BuiltCrossword,
     type CrosswordCatalogItem,
 } from "@/lib/games/crossword";
@@ -1614,6 +1615,14 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                     >
                         <PillButton label="Edit crossword" onClick={() => setModalView("crossword")} />
                         <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
+                        <PillButton
+                            label="Export words & clues"
+                            onClick={() => {
+                                const entries = getAllCrosswordWordClues();
+                                const json = JSON.stringify(entries, null, 2);
+                                navigator.clipboard.writeText(json).then(() => alert(`Copied ${entries.length} word+clue pairs to clipboard.`));
+                            }}
+                        />
                     </ControlCard>
 
                     <ControlCard
