@@ -741,79 +741,62 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
 
         if (modalView === "crossword") {
             return (
-                <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <OverviewMetric
-                            label="Unlock"
-                            value={crosswordRemaining.isUnlocked ? "Live" : CROSSWORD_UNLOCK_LABEL}
-                            note="The mini crossword runs 200 daily puzzles starting March 15, 2026."
-                        />
-                        <OverviewMetric
-                            label="Puzzle Key"
-                            value={CROSSWORD_PUZZLE_KEY}
-                            note="Static leaderboard key for this one-board puzzle."
-                        />
-                        <OverviewMetric
-                            label="Entries"
-                            value={CROSSWORD_PUZZLE.entries.length}
-                            note="Interlocking fill-in-the-blank clues built from their story."
-                        />
+                <div className="space-y-4">
+                    {/* Status bar */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-text-secondary">
+                        <span className="rounded-full border border-primary/12 bg-[#fbf8f3] px-3 py-1 uppercase tracking-[0.22em] text-primary">
+                            {crosswordRemaining.isUnlocked ? "Live" : CROSSWORD_UNLOCK_LABEL}
+                        </span>
+                        <span>Key: <span className="font-mono text-primary">{CROSSWORD_PUZZLE_KEY}</span></span>
+                        <span>{CROSSWORD_PUZZLE.entries.length} clues · {CROSSWORD_PUZZLE.rows}×{CROSSWORD_PUZZLE.cols} grid</span>
                     </div>
 
-                    <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                        <div className="rounded-[1.9rem] border border-primary/10 bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-5 text-white shadow-[0_18px_48px_rgba(20,42,68,0.14)]">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.24em] text-white/62">Board Preview</p>
-                                    <p className="mt-2 text-sm text-white/76">Answers are visible here for admin review only.</p>
-                                </div>
-                                <div className="rounded-full border border-white/14 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white/85">
-                                    {CROSSWORD_PUZZLE.rows} x {CROSSWORD_PUZZLE.cols}
-                                </div>
-                            </div>
+                    {/* Grid (left) + clue panels (right) — mirrors front-end layout */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {/* Grid panel */}
+                        <div className="self-start rounded-[1.9rem] bg-[linear-gradient(155deg,#173756_0%,#214467_100%)] p-4 shadow-[0_18px_48px_rgba(20,42,68,0.14)]">
+                            <p className="mb-3 text-[10px] uppercase tracking-[0.24em] text-white/55">Board Preview — answers visible</p>
                             <div
-                                className="mt-5 grid gap-1.5"
+                                className="grid w-full gap-1.5"
                                 style={{ gridTemplateColumns: `repeat(${CROSSWORD_PUZZLE.cols}, minmax(0, 1fr))` }}
                             >
                                 {CROSSWORD_PUZZLE.cells.map((cell) => (
                                     cell.answer ? (
-                                        <div key={cell.key} className="relative flex aspect-square items-center justify-center rounded-[0.82rem] border border-white/18 bg-white/88 text-base font-semibold uppercase text-primary">
+                                        <div key={cell.key} className="relative flex aspect-square items-center justify-center rounded-[0.4rem] border border-white/20 bg-white/80 text-sm font-semibold uppercase text-primary">
                                             {cell.number ? (
-                                                <span className="absolute left-1.5 top-1 text-[10px] font-medium text-primary/60">
-                                                    {cell.number}
-                                                </span>
+                                                <span className="absolute left-0.5 top-0.5 text-[8px] font-semibold leading-none text-primary/65">{cell.number}</span>
                                             ) : null}
                                             {cell.answer}
                                         </div>
                                     ) : (
-                                        <div key={cell.key} className="aspect-square rounded-[0.72rem] bg-[#0f2033]" />
+                                        <div key={cell.key} className="aspect-square rounded-[0.35rem] bg-[#0f2033]" />
                                     )
                                 ))}
                             </div>
                         </div>
 
-                        <div className="grid gap-6 lg:grid-cols-2">
-                            <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Across</p>
-                                <div className="mt-5 space-y-3">
+                        {/* Clue panels */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <p className="mb-2 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Across</p>
+                                <div className="space-y-1.5">
                                     {CROSSWORD_PUZZLE.across.map((entry) => (
-                                        <div key={entry.id} className="rounded-[1.2rem] border border-primary/10 bg-[#fbf8f3] px-4 py-4">
-                                            <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">{entry.number}</p>
-                                            <p className="mt-2 text-sm leading-relaxed text-primary">{entry.clue}</p>
-                                            <p className="mt-3 font-mono text-xs uppercase tracking-[0.24em] text-text-secondary">{entry.answer}</p>
+                                        <div key={entry.id} className="rounded-xl border border-primary/8 bg-[#f9f6f1] px-3 py-2.5">
+                                            <span className="mr-1.5 text-[10px] font-bold text-text-secondary">{entry.number}</span>
+                                            <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-accent">{entry.answer}</span>
+                                            <p className="mt-1 text-xs leading-snug text-primary">{entry.clue}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-
-                            <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_12px_34px_rgba(20,42,68,0.05)]">
-                                <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Down</p>
-                                <div className="mt-5 space-y-3">
+                            <div>
+                                <p className="mb-2 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Down</p>
+                                <div className="space-y-1.5">
                                     {CROSSWORD_PUZZLE.down.map((entry) => (
-                                        <div key={entry.id} className="rounded-[1.2rem] border border-primary/10 bg-[#fbf8f3] px-4 py-4">
-                                            <p className="text-xs uppercase tracking-[0.22em] text-text-secondary">{entry.number}</p>
-                                            <p className="mt-2 text-sm leading-relaxed text-primary">{entry.clue}</p>
-                                            <p className="mt-3 font-mono text-xs uppercase tracking-[0.24em] text-text-secondary">{entry.answer}</p>
+                                        <div key={entry.id} className="rounded-xl border border-primary/8 bg-[#f9f6f1] px-3 py-2.5">
+                                            <span className="mr-1.5 text-[10px] font-bold text-text-secondary">{entry.number}</span>
+                                            <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-accent">{entry.answer}</span>
+                                            <p className="mt-1 text-xs leading-snug text-primary">{entry.clue}</p>
                                         </div>
                                     ))}
                                 </div>
