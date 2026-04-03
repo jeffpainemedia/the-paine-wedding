@@ -3,6 +3,14 @@ import Section from "@/components/ui/Section";
 import ScheduleTimelineItem from "@/components/ui/ScheduleTimelineItem";
 import { getWeddingData } from "@/lib/site-settings";
 import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/schedule",
+    title: "Schedule of Events",
+    description: "See the full timeline for Ashlyn and Jeffrey's wedding day, from guest arrival through the send-off.",
+    keywords: ["wedding schedule", "wedding timeline", "ceremony time", "reception time"],
+});
 
 export default async function Schedule() {
     await requirePageVisible("schedule");

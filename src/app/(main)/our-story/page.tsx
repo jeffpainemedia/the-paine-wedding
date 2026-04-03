@@ -2,8 +2,18 @@ import React from "react";
 import Section from "@/components/ui/Section";
 import StoryItem from "@/components/ui/StoryItem";
 import { getWeddingData } from "@/lib/site-settings";
+import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/our-story",
+    title: "Our Story",
+    description: "Read Ashlyn and Jeffrey's story, from how they met to the moments that led to their wedding day.",
+    keywords: ["our story", "how they met", "Ashlyn and Jeffrey story"],
+});
 
 export default async function OurStory() {
+    await requirePageVisible("our-story");
     const { wedding, content } = await getWeddingData();
 
     return (
@@ -39,7 +49,7 @@ export default async function OurStory() {
             </div>
 
             {/* Timeline items — each item has inline edit attributes */}
-            <div className="max-w-6xl mx-auto px-6 pb-32 space-y-28">
+            <div className="max-w-6xl mx-auto px-6 pb-20 md:pb-24 space-y-24 md:space-y-28">
                 {wedding.story.map((item, index) => (
                     <div key={item.title} className="relative">
                         {/* Image target for edit mode */}

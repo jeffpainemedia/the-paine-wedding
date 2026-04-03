@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
 import { useAdminSession } from "@/hooks/useAdminSession";
+import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerGameScore, getStoredGamePlayer, saveStoredGamePlayer, submitGameScore } from "@/lib/games/leaderboard";
 import {
     computeCrosswordScore,
     getCentralDateKey,
@@ -32,6 +33,10 @@ type SavedState = {
 
 function emptyLetters(puzzle: BuiltCrossword): Record<string, string> {
     return Object.fromEntries(puzzle.cells.filter((c) => c.answer).map((c) => [c.key, ""]));
+}
+
+function solutionLetters(puzzle: BuiltCrossword): Record<string, string> {
+    return Object.fromEntries(puzzle.cells.filter((c) => c.answer).map((c) => [c.key, c.answer ?? ""]));
 }
 
 function defaultState(puzzle: BuiltCrossword): SavedState {
@@ -83,6 +88,7 @@ function fmtTime(secs: number) {
     return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
 }
 
+
 type MiniCrosswordGameProps = {
     puzzle: BuiltCrossword;
     dateKey?: string;
@@ -100,8 +106,12 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const [init] = useState(() => loadState(puzzle, storageKey));
     const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const clueRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    const clueBarRef = useRef<HTMLDivElement | null>(null);
     const startTimestamp = useRef<number>(0);
     const pausedSinceRef = useRef<number | null>(null);
+    const repeatClickCellKeyRef = useRef<string | null>(null);
+    const mobileViewportAdjustRef = useRef<number | null>(null);
+    const programmaticFocusRef = useRef(false);
 
     const [letters, setLetters] = useState(init.letters);
     const [activeEntryId, setActiveEntryId] = useState(init.activeEntryId);
@@ -115,6 +125,10 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null || isSolved(puzzle, init.letters));
     const [isPaused, setIsPaused] = useState(false);
     const [pausedMs, setPausedMs] = useState(0);
+    const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [shareCopied, setShareCopied] = useState(false);
+    const [postGameUnlocked, setPostGameUnlocked] = useState(false);
+    const autoSubmitAttempted = useRef(false);
 
     const { isAdmin } = useAdminSession();
 
@@ -136,8 +150,118 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     }, [letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted, storageKey]);
 
     useEffect(() => {
+        if (typeof window === "undefined" || window.matchMedia("(max-width: 767px)").matches) {
+            return;
+        }
+
         clueRefs.current[activeEntryId]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }, [activeEntryId]);
+
+    useEffect(() => {
+        return () => {
+            if (mobileViewportAdjustRef.current !== null) {
+                window.clearTimeout(mobileViewportAdjustRef.current);
+            }
+        };
+    }, []);
+
+    // Auto-submit score on solve if player is stored
+    useEffect(() => {
+        if (!solved || autoSubmitAttempted.current) return;
+        const player = getStoredGamePlayer();
+        if (!player) return;
+
+        autoSubmitAttempted.current = true;
+        setAutoSubmitStatus("submitting");
+
+        const fullName = player.firstName && player.lastName
+            ? `${player.firstName} ${player.lastName}`
+            : player.username ?? "";
+        const computedScore = computeCrosswordScore(displayTime, 0, revealedEntryIds.length);
+        submitGameScore({
+            game: "crossword",
+            username: fullName,
+            email: player.email ?? "",
+            score: computedScore,
+            maxScore: 100,
+            attempts: revealedEntryIds.length,
+            solved: true,
+            puzzleKey: puzzle.id,
+            metadata: {
+                duration_seconds: displayTime,
+                checks_used: 0,
+                reveals_used: revealedEntryIds.length,
+                completed_at: new Date().toISOString(),
+            },
+        })
+            .then(() => {
+                saveStoredGamePlayer({ ...player, username: fullName });
+                setAutoSubmitStatus("success");
+                setScoreSubmitted(true);
+                window.dispatchEvent(new CustomEvent(GAME_LEADERBOARD_REFRESH_EVENT));
+            })
+            .catch(() => {
+                setAutoSubmitStatus("error");
+            });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [solved]);
+
+    useEffect(() => {
+        const storedPlayer = getStoredGamePlayer();
+        if (!storedPlayer || solved) {
+            return;
+        }
+        const lookupPlayer = {
+            email: storedPlayer.email,
+            username: storedPlayer.username,
+        };
+
+        let isActive = true;
+
+        async function loadExistingScore() {
+            try {
+                const existingScore = await fetchPlayerGameScore("crossword", puzzle.id, lookupPlayer);
+                if (!isActive || !existingScore?.solved) {
+                    return;
+                }
+
+                autoSubmitAttempted.current = true;
+                const existingDuration =
+                    typeof existingScore.metadata?.duration_seconds === "number"
+                        ? existingScore.metadata.duration_seconds
+                        : 0;
+                setLetters(solutionLetters(puzzle));
+                setActiveEntryId(puzzle.entries[0]?.id ?? "");
+                setDurationSeconds(existingDuration);
+                setElapsed(existingDuration);
+                setSolved(true);
+                setScoreSubmitted(true);
+                setGameStarted(true);
+                setFocusedKey(null);
+            } catch {
+                // Keep local play available if the lookup fails.
+            }
+        }
+
+        void loadExistingScore();
+
+        return () => {
+            isActive = false;
+        };
+    }, [puzzle, solved]);
+
+    function handleShare() {
+        const timeStr = fmtTime(displayTime);
+        const text = `Mini Crossword — ${timeStr} ✨\nthepainewedding.com/games/crossword`;
+        if (typeof navigator !== "undefined" && navigator.share) {
+            navigator.share({ text }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+            }).catch(() => {});
+        }
+    }
 
     const activeEntry = entryMap.get(activeEntryId) ?? null;
     const activeWordKeys = new Set(activeEntry?.cells ?? []);
@@ -180,6 +304,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         setElapsed(finalDuration);
         setSolved(true);
         setLetters(finalLetters);
+        setPostGameUnlocked(false);
     }
 
     const score = computeCrosswordScore(displayTime, 0, revealedEntryIds.length);
@@ -200,15 +325,54 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         return entryMap.get(ids[0]) ?? null;
     }
 
+    function isMobileViewport() {
+        return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+    }
+
+    function scheduleMobileViewportAdjustment() {
+        if (!isMobileViewport()) {
+            return;
+        }
+
+        if (mobileViewportAdjustRef.current !== null) {
+            window.clearTimeout(mobileViewportAdjustRef.current);
+        }
+
+        mobileViewportAdjustRef.current = window.setTimeout(() => {
+            const clueBar = clueBarRef.current;
+            if (!clueBar) return;
+
+            const rect = clueBar.getBoundingClientRect();
+            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const desiredTop = 88;
+            const maxBottom = Math.max(desiredTop + 44, Math.min(viewportHeight * 0.28, 176));
+
+            let delta = 0;
+            if (rect.top < desiredTop) {
+                delta = rect.top - desiredTop;
+            } else if (rect.bottom > maxBottom) {
+                delta = rect.bottom - maxBottom;
+            }
+
+            if (Math.abs(delta) > 4) {
+                window.scrollBy({ top: delta, behavior: "auto" });
+            }
+        }, 90);
+    }
+
     function focusCell(key: string) {
-        window.requestAnimationFrame(() => inputRefs.current[key]?.focus());
+        programmaticFocusRef.current = true;
+        window.requestAnimationFrame(() => {
+            inputRefs.current[key]?.focus({ preventScroll: true });
+        });
     }
 
     function focusAndSelectCell(key: string) {
+        programmaticFocusRef.current = true;
         window.requestAnimationFrame(() => {
             const input = inputRefs.current[key];
             if (!input) return;
-            input.focus();
+            input.focus({ preventScroll: true });
             input.setSelectionRange(0, input.value.length);
         });
     }
@@ -264,11 +428,23 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
             return;
         }
 
-        const nextEntryItem = nextEntry(entry.id);
-        if (nextEntryItem) {
-            const target = nextEntryItem.cells.find((key) => !next[key]) ?? nextEntryItem.cells[0];
-            setActiveEntryId(nextEntryItem.id);
-            if (target) focusAndSelectCell(target);
+        // Walk forward through entries in tab order, skipping fully-filled ones
+        let candidate = nextEntry(entry.id);
+        const startId = entry.id;
+        while (candidate && candidate.id !== startId) {
+            const emptyCell = candidate.cells.find((key) => !next[key]);
+            if (emptyCell) {
+                setActiveEntryId(candidate.id);
+                focusAndSelectCell(emptyCell);
+                return;
+            }
+            candidate = nextEntry(candidate.id);
+        }
+        // Fallback: just move to first cell of next entry
+        const fallback = nextEntry(entry.id);
+        if (fallback) {
+            setActiveEntryId(fallback.id);
+            focusAndSelectCell(fallback.cells[0]);
         }
     }
 
@@ -276,23 +452,34 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         const entry = entryForCell(cell.key, activeEntry?.direction);
         if (entry) setActiveEntryId(entry.id);
         setFocusedKey(cell.key);
+        const wasProgrammatic = programmaticFocusRef.current;
+        programmaticFocusRef.current = false;
         window.requestAnimationFrame(() => {
             const input = inputRefs.current[cell.key];
             if (!input) return;
             input.setSelectionRange(0, input.value.length);
+            if (!wasProgrammatic) {
+                scheduleMobileViewportAdjustment();
+            }
         });
     }
 
     function handleCellClick(cell: CrosswordCell) {
         if (!cell.answer) return;
-        const ids = entryIdsByCell.get(cell.key) ?? [];
-        if (ids.length === 2 && focusedKey === cell.key) {
-            const other = ids.find((id) => id !== activeEntryId);
-            if (other) setActiveEntryId(other);
-            return;
-        }
         const entry = entryForCell(cell.key, activeEntry?.direction);
         if (entry) setActiveEntryId(entry.id);
+    }
+
+    function handleCellPointerDown(cell: CrosswordCell) {
+        if (!cell.answer) return;
+        // Toggle direction immediately on pointer-down for same cell (reliable on iOS)
+        if (focusedKey === cell.key) {
+            const ids = entryIdsByCell.get(cell.key) ?? [];
+            if (ids.length === 2) {
+                const other = ids.find((id) => id !== activeEntryId);
+                if (other) setActiveEntryId(other);
+            }
+        }
     }
 
     function handleType(cell: CrosswordCell, raw: string) {
@@ -409,57 +596,81 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         setGameStarted(false);
         setIsPaused(false);
         setPausedMs(0);
+        setPostGameUnlocked(false);
         startTimestamp.current = 0;
         pausedSinceRef.current = null;
         window.localStorage.removeItem(storageKey);
     }
 
+    function unlockPostGame() {
+        setPostGameUnlocked(true);
+    }
+
+    const finishLocked = solved && !postGameUnlocked;
+    const showHeaderControls = !finishLocked;
+    const compactSolvedHeader = solved;
+
     return (
         <div className="overflow-hidden rounded-[2.2rem] border border-primary/12 bg-white shadow-[0_24px_80px_rgba(20,42,68,0.10)]">
             <div className="border-b border-primary/8 bg-[#fbf8f3] px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-text-secondary">Daily Puzzle</p>
-                        <h2 className="font-heading text-2xl text-primary">Mini Crossword</h2>
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.3em] text-text-secondary">Daily Puzzle</p>
+                            {solved && postGameUnlocked && (
+                                <button
+                                    type="button"
+                                    onClick={() => setPostGameUnlocked(false)}
+                                    className="mt-1.5 flex items-center gap-1 text-[10px] uppercase tracking-widest text-primary transition-colors hover:text-primary/70"
+                                >
+                                    ← Back to Results
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex min-w-0 flex-col items-end text-right">
+                            <span className={`font-mono font-semibold leading-none tabular-nums text-primary ${
+                                compactSolvedHeader ? "text-[1.65rem] sm:text-[2.25rem]" : "text-[2rem] sm:text-4xl"
+                            }`}>
+                                {fmtTime(displayTime)}
+                            </span>
+                            {solved && <span className="mt-1 text-[10px] uppercase tracking-widest text-accent">solved!</span>}
+                        </div>
                     </div>
 
-                    <div className="flex flex-col items-center">
-                        <span className="font-mono text-3xl font-semibold tabular-nums text-primary">{fmtTime(displayTime)}</span>
-                        {solved && <span className="text-[10px] uppercase tracking-widest text-accent">solved!</span>}
-                    </div>
-
-                    <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                    <div className={`flex flex-wrap items-center justify-start gap-1.5 sm:justify-end ${showHeaderControls ? "" : "hidden"}`}>
                         {gameStarted && !solved && (
                             <button
                                 type="button"
                                 onClick={handlePause}
-                                className="rounded-full border border-primary/20 px-3 py-1.5 text-[10px] uppercase tracking-widest text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+                                className="whitespace-nowrap rounded-full border border-primary/20 px-2.5 py-1.5 text-[9px] uppercase tracking-widest text-text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:px-3 sm:text-[10px]"
                             >
                                 {isPaused ? "Resume" : "Pause"}
                             </button>
                         )}
                         <button
                             onClick={() => setAutoCheck((value) => !value)}
-                            className={`rounded-full border px-3 py-1.5 text-[10px] uppercase tracking-widest transition-colors ${
+                            disabled={finishLocked}
+                            className={`whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[9px] uppercase tracking-widest transition-colors sm:px-3 sm:text-[10px] ${
                                 autoCheck
                                     ? "border-primary bg-primary text-white"
                                     : "border-primary/20 text-text-secondary hover:border-primary/40 hover:text-primary"
-                            }`}
+                            } ${finishLocked ? "cursor-not-allowed opacity-40" : ""}`}
                         >
                             Autocheck
                         </button>
                         {isAdmin && (
                             <button
                                 onClick={handleReveal}
-                                disabled={!activeEntry || solved}
-                                className="rounded-full border border-amber-400/40 bg-amber-50 px-3 py-1.5 text-[10px] uppercase tracking-widest text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                disabled={!activeEntry || solved || finishLocked}
+                                className="whitespace-nowrap rounded-full border border-amber-400/40 bg-amber-50 px-2.5 py-1.5 text-[9px] uppercase tracking-widest text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-[10px]"
                             >
                                 Reveal
                             </button>
                         )}
                         <button
                             onClick={handleReset}
-                            className="rounded-full border border-primary/15 px-3 py-1.5 text-[10px] uppercase tracking-widest text-text-secondary transition-colors hover:border-primary/30 hover:text-primary"
+                            disabled={finishLocked}
+                            className="whitespace-nowrap rounded-full border border-primary/15 px-2.5 py-1.5 text-[9px] uppercase tracking-widest text-text-secondary transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-[10px]"
                         >
                             Clear
                         </button>
@@ -501,7 +712,35 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                     </button>
                 </div>
 
-                <div className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
+                <div
+                    className={`absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-[rgba(23,55,86,0.62)] px-8 text-center backdrop-blur-sm transition-opacity duration-300 ${
+                        finishLocked ? "opacity-100" : "pointer-events-none opacity-0"
+                    }`}
+                >
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                            <path d="M16 3l2.5 8h8.5l-7 5 2.5 8L16 19l-6.5 5 2.5-8-7-5h8.5z" fill="#c9a96e" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 className="font-heading text-3xl text-white">Congratulations!</h3>
+                        <p className="mt-2 text-base text-white/70">You solved the Mini Crossword</p>
+                    </div>
+                    <div>
+                        <p className="font-mono text-5xl font-bold tabular-nums text-accent">{fmtTime(displayTime)}</p>
+                        <p className="mt-2 text-sm text-white/50">Great solve ✨</p>
+                        <p className="mt-1 text-sm font-semibold text-accent">{score} pts</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={unlockPostGame}
+                        className="rounded-full border border-white/30 bg-white/10 px-7 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-white transition-colors hover:bg-white/16"
+                    >
+                        View Board
+                    </button>
+                </div>
+
+                <div ref={clueBarRef} className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
                     {activeEntry ? (
                         <p className="text-sm leading-snug text-primary">
                             <span className="mr-1.5 font-semibold">
@@ -566,9 +805,12 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                             onChange={(e) => handleType(cell, e.target.value)}
                                             onFocus={() => handleCellFocus(cell)}
                                             onBlur={() => setFocusedKey(null)}
+                                            onPointerDown={() => handleCellPointerDown(cell)}
                                             onClick={() => handleCellClick(cell)}
                                             onKeyDown={(e) => handleKeyDown(e, cell)}
                                             onMouseUp={(e) => e.preventDefault()}
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onSelect={(e) => e.preventDefault()}
                                             maxLength={1}
                                             inputMode="text"
                                             autoComplete="off"
@@ -578,7 +820,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                             data-form-type="other"
                                             aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
                                             disabled={solved}
-                                            className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] selection:bg-transparent ${
+                                            className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] [-webkit-touch-callout:none] select-none selection:bg-transparent ${
                                                 wrong ? "text-red-700" : "text-primary"
                                             }`}
                                         />
@@ -654,34 +896,27 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                 </div>
             </div>
 
-            {solved && (
-                <div className="border-t border-primary/8">
-                    <div className="bg-[linear-gradient(160deg,#173756_0%,#214467_100%)] px-6 py-8 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20">
-                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                                <path d="M16 3l2.5 8h8.5l-7 5 2.5 8L16 19l-6.5 5 2.5-8-7-5h8.5z" fill="#c9a96e" />
-                            </svg>
-                        </div>
-                        <h3 className="font-heading text-3xl text-white">Congratulations!</h3>
-                        <p className="mt-2 text-base text-white/70">You solved the Mini Crossword</p>
-                        <p className="mt-4 font-mono text-5xl font-bold tabular-nums text-accent">{fmtTime(displayTime)}</p>
-                        {revealedEntryIds.length > 0 ? (
-                            <p className="mt-2 text-sm text-white/50">
-                                {revealedEntryIds.length} reveal{revealedEntryIds.length > 1 ? "s" : ""} used
-                            </p>
-                        ) : (
-                            <p className="mt-2 text-sm text-white/50">Clean solve ✨</p>
-                        )}
-                        <p className="mt-1 text-sm font-semibold text-accent">{score} pts</p>
-                    </div>
+            {solved && postGameUnlocked && (
+                <div className="border-t border-primary/8 bg-white px-6 py-6">
+                    <div className="space-y-4">
+                        <button
+                            type="button"
+                            onClick={handleShare}
+                            className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border border-primary/20 bg-primary/5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-primary/10"
+                        >
+                            {shareCopied ? "✓ Copied!" : "Share Result"}
+                        </button>
 
-                    <div className="bg-white px-6 py-6">
-                        {scoreSubmitted ? (
+                        {scoreSubmitted || autoSubmitStatus === "success" ? (
                             <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-5 py-4 text-center">
                                 <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Score Locked In</p>
                                 <p className="mt-2 text-sm text-text-secondary">
                                     You&apos;re on the leaderboard — check back to see how others do!
                                 </p>
+                            </div>
+                        ) : autoSubmitStatus === "submitting" ? (
+                            <div className="rounded-[1.5rem] border border-primary/8 bg-surface/40 px-5 py-4 text-center">
+                                <p className="text-sm text-text-secondary/60">Submitting score…</p>
                             </div>
                         ) : (
                             <ScoreSubmissionForm

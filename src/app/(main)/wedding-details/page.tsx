@@ -4,6 +4,14 @@ import { MapPin, Shirt, CalendarHeart, Info, UtensilsCrossed } from "lucide-reac
 import { getWeddingData } from "@/lib/site-settings";
 import Link from "next/link";
 import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/wedding-details",
+    title: "Wedding Details",
+    description: "Get the key wedding details for Ashlyn and Jeffrey's celebration, including venue information, timing, and guest guidance.",
+    keywords: ["wedding details", "venue details", "guest information"],
+});
 
 export default async function WeddingDetails() {
     await requirePageVisible("wedding-details");

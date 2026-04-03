@@ -157,6 +157,58 @@ function clamp(value: number, min: number, max: number) {
     return Math.max(min, Math.min(max, value));
 }
 
+const ALLOWED_RICH_TEXT_TAGS = new Set(["A", "B", "BR", "EM", "I", "LI", "OL", "P", "STRONG", "U", "UL"]);
+
+function sanitizeRichTextHtml(html: string) {
+    if (!html || typeof window === "undefined") return html;
+
+    const parser = new DOMParser();
+    const document = parser.parseFromString(`<div>${html}</div>`, "text/html");
+    const root = document.body.firstElementChild;
+
+    if (!root) return "";
+
+    const sanitizeNode = (node: Node) => {
+        for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                const element = child as HTMLElement;
+                const originalHref = element.getAttribute("href")?.trim() ?? "";
+
+                if (!ALLOWED_RICH_TEXT_TAGS.has(element.tagName)) {
+                    while (element.firstChild) {
+                        node.insertBefore(element.firstChild, element);
+                    }
+                    node.removeChild(element);
+                    continue;
+                }
+
+                for (const attribute of Array.from(element.attributes)) {
+                    element.removeAttribute(attribute.name);
+                }
+
+                if (element.tagName === "A") {
+                    if (/^(https?:|mailto:|tel:|\/)/i.test(originalHref)) {
+                        element.setAttribute("href", originalHref);
+                    } else {
+                        element.removeAttribute("href");
+                    }
+                    element.setAttribute("rel", "noopener noreferrer");
+                }
+
+                sanitizeNode(element);
+                continue;
+            }
+
+            if (child.nodeType === Node.COMMENT_NODE) {
+                node.removeChild(child);
+            }
+        }
+    };
+
+    sanitizeNode(root);
+    return root.innerHTML;
+}
+
 function snapshotRect(element: HTMLElement): RectSnapshot {
     const rect = element.getBoundingClientRect();
     return {
@@ -816,12 +868,12 @@ function TextEditPanel({
 
     useEffect(() => {
         if (richMode && editorRef.current) {
-            editorRef.current.innerHTML = state.currentText;
+            editorRef.current.innerHTML = sanitizeRichTextHtml(state.currentText);
             editorRef.current.focus();
         }
     }, [richMode, state.currentText]);
 
-    const getRichContent = () => editorRef.current?.innerHTML ?? text;
+    const getRichContent = () => sanitizeRichTextHtml(editorRef.current?.innerHTML ?? text);
 
     const handleSave = async () => {
         setSaving(true);
@@ -897,7 +949,6 @@ function TextEditPanel({
                             contentEditable
                             suppressContentEditableWarning
                             className="h-full min-h-[200px] overflow-y-auto rounded-[1.35rem] border border-primary/12 bg-white px-4 py-4 text-sm leading-relaxed text-primary outline-none focus:border-primary/35 focus:ring-2 focus:ring-primary/10"
-                            dangerouslySetInnerHTML={{ __html: state.currentText }}
                         />
                     ) : (
                         <textarea
@@ -1288,12 +1339,12 @@ export default function AdminEditBar() {
             {/* ── Floating admin toolbar ── */}
             <div
                 ref={toolbarRef}
-                className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9997] flex items-center gap-3 rounded-full px-5 py-2.5 shadow-2xl select-none pointer-events-auto"
+                className="fixed bottom-3 left-1/2 z-[9997] flex -translate-x-1/2 items-center gap-1.5 rounded-full px-2.5 py-1.5 shadow-2xl select-none pointer-events-auto md:bottom-5 md:gap-3 md:px-5 md:py-2.5"
                 style={{
                     background: "rgba(10,10,15,0.92)",
                     backdropFilter: "blur(12px)",
                     fontFamily: "system-ui,-apple-system,sans-serif",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     color: "white",
                     border: "1px solid rgba(255,255,255,0.06)",
                 }}
@@ -1305,12 +1356,12 @@ export default function AdminEditBar() {
                 />
 
                 {/* Label */}
-                <span style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>
+                <span className="hidden sm:inline" style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>
                     ADMIN
                 </span>
 
                 {/* Divider */}
-                <span style={{ width: 1, height: 16, background: "#374151", display: "inline-block" }} />
+                <span className="hidden sm:inline-block" style={{ width: 1, height: 16, background: "#374151" }} />
 
                 {/* Edit mode toggle */}
                 <button
@@ -1325,9 +1376,9 @@ export default function AdminEditBar() {
                         });
                     }}
                     style={{
-                        padding: "4px 14px",
+                        padding: "4px 10px",
                         borderRadius: "20px",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         border: "none",
                         cursor: "pointer",
@@ -1336,15 +1387,11 @@ export default function AdminEditBar() {
                         color: editMode ? "#111827" : "#d1d5db",
                     }}
                 >
-                    {editMode ? "✎ Editing ON" : "✎ Edit Mode"}
+                    {editMode ? "Edit On" : "Edit"}
                 </button>
 
                 {/* Hint + admin links when not editing */}
-                {editMode ? (
-                    <span style={{ fontSize: "11px", color: "#fcd34d" }}>
-                        Click any outlined element
-                    </span>
-                ) : (
+                {!editMode && (
                     <>
                         <span style={{ width: 1, height: 16, background: "#374151", display: "inline-block" }} />
                         <a
@@ -1361,7 +1408,7 @@ export default function AdminEditBar() {
                 <button
                     onClick={() => setSettingsOpen((current) => !current)}
                     style={{
-                        padding: "4px 12px",
+                        padding: "4px 10px",
                         borderRadius: "20px",
                         fontSize: "11px",
                         fontWeight: 600,

@@ -6,7 +6,6 @@ import AdminLoginCard from "@/components/admin/AdminLoginCard";
 import GamesAdminPanel from "@/components/admin/GamesAdminPanel";
 import { useAdminSession } from "@/components/admin/useAdminSession";
 import type { AdminGameScore } from "@/lib/games/admin-types";
-import { supabase } from "@/lib/supabase";
 
 export default function AdminGamesPage() {
     const { status, role, login, logout } = useAdminSession();
@@ -16,22 +15,18 @@ export default function AdminGamesPage() {
 
     async function fetchGameData() {
         setLoading(true);
+        const response = await fetch("/api/admin/game-scores", { credentials: "same-origin" });
+        const payload = await response.json() as { gameScores?: AdminGameScore[]; error?: string };
 
-        const { data, error } = await supabase
-            .from("game_scores")
-            .select("id, game, puzzle_key, score, max_score, attempts, solved, metadata, created_at, game_players(id, username, email, created_at)")
-            .order("created_at", { ascending: false })
-            .limit(300);
-
-        if (error) {
+        if (!response.ok) {
             setGameScores([]);
             setGameScoresError(
-                error.message.includes("game_scores")
+                (payload.error ?? "").includes("game_scores")
                     ? "Leaderboard tables are not available yet. Run the game leaderboard migration first."
-                    : error.message
+                    : (payload.error ?? "Failed to load game scores.")
             );
         } else {
-            setGameScores(data as unknown as AdminGameScore[]);
+            setGameScores(payload.gameScores ?? []);
             setGameScoresError(null);
         }
 

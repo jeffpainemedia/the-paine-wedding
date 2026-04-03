@@ -3,8 +3,18 @@ import Link from "next/link";
 import Section from "@/components/ui/Section";
 import { getWeddingData } from "@/lib/site-settings";
 import { MapPin, Plane, Car, ExternalLink, Phone } from "lucide-react";
+import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/travel",
+    title: "Travel & Stay",
+    description: "Find hotels, airports, directions, and venue travel details for Ashlyn and Jeffrey's wedding weekend.",
+    keywords: ["travel", "hotels", "wedding venue directions", "Celeste Texas hotels"],
+});
 
 export default async function Travel() {
+    await requirePageVisible("travel");
     const { wedding } = await getWeddingData();
 
     const greenvilleHotels = wedding.hotels.filter((h) => h.hub === 'Greenville');

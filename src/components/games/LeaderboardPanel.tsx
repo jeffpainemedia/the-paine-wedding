@@ -35,12 +35,7 @@ export default function LeaderboardPanel({
 
         if (game === "crossword") {
             const duration = typeof entry.metadata?.duration_seconds === "number" ? entry.metadata.duration_seconds : null;
-            const reveals = typeof entry.metadata?.reveals_used === "number" ? entry.metadata.reveals_used : null;
             const minutes = duration ? Math.max(1, Math.round(duration / 60)) : null;
-
-            if (minutes && typeof reveals === "number") {
-                return `${minutes} min${minutes === 1 ? "" : "s"} • ${reveals} reveal${reveals === 1 ? "" : "s"}`;
-            }
 
             if (minutes) {
                 return `${minutes} min${minutes === 1 ? "" : "s"}`;

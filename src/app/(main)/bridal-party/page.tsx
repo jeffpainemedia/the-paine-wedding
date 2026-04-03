@@ -2,8 +2,18 @@ import React from "react";
 import Section from "@/components/ui/Section";
 import { PersonPortrait } from "@/components/ui/PersonPortrait";
 import { getWeddingData } from "@/lib/site-settings";
+import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/bridal-party",
+    title: "Bridal Party",
+    description: "Meet the friends and family standing with Ashlyn and Jeff on their wedding day.",
+    keywords: ["bridal party", "bridesmaids", "groomsmen"],
+});
 
 export default async function BridalParty() {
+    await requirePageVisible("bridal-party");
     const { wedding } = await getWeddingData();
     const { bridesmaids, groomsmen } = wedding.bridalParty;
     const hasParty = bridesmaids.length > 0 || groomsmen.length > 0;
@@ -20,7 +30,7 @@ export default async function BridalParty() {
                 </p>
             </Section>
 
-            <Section background="surface" className="py-24">
+            <Section background="surface" className="pb-14 pt-16 md:pb-16 md:pt-20">
                 {!hasParty ? (
                     <div className="max-w-xl mx-auto text-center py-20 space-y-5">
                         <div className="w-16 h-px bg-primary/30 mx-auto" />
@@ -32,7 +42,7 @@ export default async function BridalParty() {
                         <div className="w-16 h-px bg-primary/30 mx-auto" />
                     </div>
                 ) : (
-                    <div className="max-w-6xl mx-auto space-y-32">
+                    <div className="max-w-6xl mx-auto space-y-24 md:space-y-28">
                         {bridesmaids.length > 0 && (
                             <div>
                                 <h2 className="font-heading text-4xl text-center mb-16 text-primary">

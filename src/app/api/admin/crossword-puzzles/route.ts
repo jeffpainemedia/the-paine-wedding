@@ -9,6 +9,7 @@ import {
     parseCrosswordOverrides,
     type CrosswordEntryOverride,
 } from "@/lib/games/crossword";
+import { noStoreJson } from "@/lib/server/request-security";
 
 const CROSSWORD_OVERRIDES_KEY = "games.crossword.overrides";
 
@@ -43,6 +44,10 @@ function normalizeOverrideEntries(entries: unknown): CrosswordEntryOverride[] {
         throw new Error("entries must be an array.");
     }
 
+    if (entries.length > 32) {
+        throw new Error("Too many override entries were provided.");
+    }
+
     return entries.map((entry, index) => {
         if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
             throw new Error(`Entry ${index + 1} is invalid.`);
@@ -54,8 +59,11 @@ function normalizeOverrideEntries(entries: unknown): CrosswordEntryOverride[] {
         const clue = typeof record.clue === "string" ? record.clue.trim() : "";
 
         if (!id) throw new Error(`Entry ${index + 1} is missing an id.`);
+        if (id.length > 32) throw new Error(`Entry ${index + 1} has an invalid id.`);
         if (!answer) throw new Error(`Entry ${id} is missing an answer.`);
+        if (answer.length > 32) throw new Error(`Entry ${id} answer is too long.`);
         if (!clue) throw new Error(`Entry ${id} is missing a clue.`);
+        if (clue.length > 200) throw new Error(`Entry ${id} clue is too long.`);
 
         return { id, answer, clue };
     });
@@ -63,7 +71,7 @@ function normalizeOverrideEntries(entries: unknown): CrosswordEntryOverride[] {
 
 export async function GET(request: NextRequest) {
     const supabase = await getAdminSupabase();
-    if (!supabase) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!supabase) return noStoreJson({ error: "Unauthorized." }, { status: 401 });
 
     try {
         const overrides = await loadCrosswordOverrides(supabase);
@@ -73,7 +81,7 @@ export async function GET(request: NextRequest) {
         const selectedPuzzle = selectedPuzzleId ? getCrosswordPuzzleById(selectedPuzzleId, overrides) : null;
         const basePuzzle = selectedPuzzleId ? getCrosswordPuzzleById(selectedPuzzleId) : null;
 
-        return NextResponse.json({
+        return noStoreJson({
             catalog,
             selectedPuzzleId,
             puzzle: selectedPuzzle,
@@ -81,19 +89,19 @@ export async function GET(request: NextRequest) {
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Could not load crossword puzzles.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return noStoreJson({ error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: NextRequest) {
     const supabase = await getAdminSupabase();
-    if (!supabase) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!supabase) return noStoreJson({ error: "Unauthorized." }, { status: 401 });
 
     try {
         const body = await request.json() as { puzzleId?: string; entries?: unknown };
         const puzzleId = typeof body.puzzleId === "string" ? body.puzzleId.trim() : "";
         if (!puzzleId) {
-            return NextResponse.json({ error: "puzzleId is required." }, { status: 400 });
+            return noStoreJson({ error: "puzzleId is required." }, { status: 400 });
         }
 
         const entries = normalizeOverrideEntries(body.entries);
@@ -102,12 +110,12 @@ export async function PUT(request: NextRequest) {
         // Validate by rebuilding the puzzle with the proposed overrides.
         const validatedPuzzle = getCrosswordPuzzleById(puzzleId, { ...currentOverrides, [puzzleId]: entries });
         if (!validatedPuzzle) {
-            return NextResponse.json({ error: "Puzzle not found." }, { status: 404 });
+            return noStoreJson({ error: "Puzzle not found." }, { status: 404 });
         }
 
         const basePuzzle = getCrosswordPuzzleById(puzzleId);
         if (!basePuzzle) {
-            return NextResponse.json({ error: "Puzzle not found." }, { status: 404 });
+            return noStoreJson({ error: "Puzzle not found." }, { status: 404 });
         }
 
         const nextOverrides = { ...currentOverrides };
@@ -138,13 +146,16 @@ export async function PUT(request: NextRequest) {
         revalidatePath("/games/crossword");
         revalidatePath("/admin/games");
 
-        return NextResponse.json({
+        return noStoreJson({
             ok: true,
             puzzle: validatedPuzzle,
             overridesSaved: changedEntries.length,
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Could not save crossword puzzle.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        const status = message.includes("missing") || message.includes("invalid") || message.includes("too long")
+            ? 400
+            : 500;
+        return noStoreJson({ error: message }, { status });
     }
 }

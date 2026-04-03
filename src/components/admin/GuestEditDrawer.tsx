@@ -19,6 +19,10 @@ type Guest = {
     affiliation: string | null;
     side: string | null;
     likelihood: string | null;
+    viewed_rsvp: boolean;
+    is_plus_one: boolean;
+    plus_one_for_id: string | null;
+    plus_one_claimed: boolean;
     households: { id: string; name: string };
 };
 
@@ -32,11 +36,19 @@ type HouseholdMate = {
 type Props = {
     guest: Guest | null;
     householdMates: HouseholdMate[]; // all guests in same household (including this guest)
+    householdOptions: string[];
     onClose: () => void;
     onSaved: (updatedGuest: Guest) => void;
     onHouseholdRsvp: (householdId: string, attending: boolean | null) => void;
     onDelete: (guestId: string) => void;
 };
+
+function isUnnamedPlusOneGuest(guest: Guest) {
+    return guest.is_plus_one && (
+        (guest.first_name === "Plus" && guest.last_name === "One") ||
+        (guest.first_name === "Plus One" && !guest.last_name)
+    );
+}
 
 function Field({
     label,
@@ -166,6 +178,7 @@ function EnumSelect({
 export default function GuestEditDrawer({
     guest,
     householdMates,
+    householdOptions,
     onClose,
     onSaved,
     onHouseholdRsvp,
@@ -178,6 +191,8 @@ export default function GuestEditDrawer({
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [householdRsvpValue, setHouseholdRsvpValue] = useState<boolean | null>(null);
     const [applyingHousehold, setApplyingHousehold] = useState(false);
+    const [moveHouseholdName, setMoveHouseholdName] = useState("");
+    const [plusOneNameUnknown, setPlusOneNameUnknown] = useState(false);
     const drawerRef = useRef<HTMLDivElement>(null);
 
     // Sync form when guest changes
@@ -187,6 +202,12 @@ export default function GuestEditDrawer({
             setSaveError(null);
             setConfirmDelete(false);
             setHouseholdRsvpValue(guest.attending);
+            setMoveHouseholdName("");
+            setPlusOneNameUnknown(
+                guest.is_plus_one
+                    ? isUnnamedPlusOneGuest(guest)
+                    : !(guest.plus_one_name?.trim())
+            );
         }
     }, [guest?.id]);
 
@@ -208,31 +229,73 @@ export default function GuestEditDrawer({
         setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     }
 
+    function setHouseholdName(name: string | null) {
+        setForm((prev) => (
+            prev
+                ? {
+                    ...prev,
+                    households: {
+                        ...prev.households,
+                        name: name ?? "",
+                    },
+                }
+                : prev
+        ));
+    }
+
     async function handleSave() {
         if (!form) return;
         setSaving(true);
         setSaveError(null);
         try {
+            const trimmedHouseholdName = form.households.name.trim();
+            if (!trimmedHouseholdName) {
+                throw new Error("Household name is required.");
+            }
+
+            const trimmedMoveHouseholdName = moveHouseholdName.trim();
+            const normalizedPlusOneName = plusOneNameUnknown
+                ? null
+                : form.plus_one_name?.trim() || null;
+
+            const normalizedGuest = form.is_plus_one
+                ? {
+                    ...form,
+                    first_name: plusOneNameUnknown ? "Plus" : form.first_name,
+                    last_name: plusOneNameUnknown ? "One" : form.last_name,
+                }
+                : {
+                    ...form,
+                    plus_one_name: normalizedPlusOneName,
+                    plus_one_for_id: null,
+                    plus_one_claimed: false,
+                };
             const res = await fetch("/api/admin/guests", {
                 method: "PATCH",
                 credentials: "same-origin",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    id: form.id,
+                    id: normalizedGuest.id,
+                    household_id: normalizedGuest.households.id,
+                    household_name: trimmedHouseholdName,
+                    target_household_name: trimmedMoveHouseholdName || undefined,
                     updates: {
-                        first_name: form.first_name,
-                        last_name: form.last_name,
-                        suffix: form.suffix,
-                        attending: form.attending,
-                        food_allergies: form.food_allergies,
-                        dietary_restrictions: form.dietary_restrictions,
-                        song_request: form.song_request,
-                        advice: form.advice,
-                        plus_one_name: form.plus_one_name,
-                        plus_one_allowed: form.plus_one_allowed,
-                        affiliation: form.affiliation,
-                        side: form.side,
-                        likelihood: form.likelihood,
+                        first_name: normalizedGuest.first_name,
+                        last_name: normalizedGuest.last_name,
+                        suffix: normalizedGuest.suffix,
+                        attending: normalizedGuest.attending,
+                        food_allergies: normalizedGuest.food_allergies,
+                        dietary_restrictions: normalizedGuest.dietary_restrictions,
+                        song_request: normalizedGuest.song_request,
+                        advice: normalizedGuest.advice,
+                        plus_one_name: normalizedGuest.plus_one_name,
+                        plus_one_allowed: normalizedGuest.plus_one_allowed,
+                        affiliation: normalizedGuest.affiliation,
+                        side: normalizedGuest.side,
+                        likelihood: normalizedGuest.likelihood,
+                        is_plus_one: normalizedGuest.is_plus_one,
+                        plus_one_for_id: normalizedGuest.plus_one_for_id,
+                        plus_one_claimed: normalizedGuest.plus_one_claimed,
                     },
                 }),
             });
@@ -240,7 +303,7 @@ export default function GuestEditDrawer({
                 const data = (await res.json()) as { error?: string };
                 throw new Error(data.error ?? "Save failed");
             }
-            onSaved(form);
+            onSaved(normalizedGuest);
             onClose();
         } catch (e) {
             setSaveError(e instanceof Error ? e.message : "Unknown error");
@@ -453,9 +516,59 @@ export default function GuestEditDrawer({
                             <Field label="Plus-one name (reference only)">
                                 <ClearableText
                                     value={form.plus_one_name ?? ""}
-                                    placeholder="None"
-                                    onChange={(v) => set("plus_one_name", v)}
+                                    placeholder={plusOneNameUnknown ? "Guest will enter their name on the RSVP" : "None"}
+                                    onChange={(v) => {
+                                        if ((v ?? "").trim()) setPlusOneNameUnknown(false);
+                                        set("plus_one_name", v);
+                                    }}
                                 />
+                            </Field>
+                            {form.is_plus_one ? (
+                                <label className="flex items-center gap-2 text-sm text-text-secondary">
+                                    <input
+                                        type="checkbox"
+                                        checked={plusOneNameUnknown}
+                                        onChange={(e) => setPlusOneNameUnknown(e.target.checked)}
+                                        className="h-4 w-4 rounded border-primary/20 text-primary focus:ring-primary/30"
+                                    />
+                                    Do not know this plus-one&apos;s name yet
+                                </label>
+                            ) : form.plus_one_allowed ? (
+                                <label className="flex items-center gap-2 text-sm text-text-secondary">
+                                    <input
+                                        type="checkbox"
+                                        checked={plusOneNameUnknown}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setPlusOneNameUnknown(checked);
+                                            if (checked) {
+                                                set("plus_one_name", null);
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-primary/20 text-primary focus:ring-primary/30"
+                                    />
+                                    Do not know plus-one name yet
+                                </label>
+                            ) : null}
+                            <Field label="Guest role">
+                                <select
+                                    className="w-full rounded-xl border border-primary/12 bg-surface/50 px-3 py-2.5 text-sm text-text-primary focus:border-primary/40 focus:outline-none"
+                                    value={form.is_plus_one ? "plus_one" : "primary"}
+                                    onChange={(e) => {
+                                        const isPlusOne = e.target.value === "plus_one";
+                                        set("is_plus_one", isPlusOne);
+                                        if (!isPlusOne) {
+                                            set("plus_one_allowed", false);
+                                            set("plus_one_name", null);
+                                            set("plus_one_for_id", null);
+                                            set("plus_one_claimed", false);
+                                            setPlusOneNameUnknown(false);
+                                        }
+                                    }}
+                                >
+                                    <option value="primary">Primary guest</option>
+                                    <option value="plus_one">Plus-one guest</option>
+                                </select>
                             </Field>
                             <Field label="Plus-one allowed">
                                 <select
@@ -466,6 +579,31 @@ export default function GuestEditDrawer({
                                     <option value="false">No</option>
                                     <option value="true">Yes</option>
                                 </select>
+                            </Field>
+                            <Field label="Current household">
+                                <ClearableText
+                                    value={form.households.name}
+                                    placeholder="Household name"
+                                    onChange={setHouseholdName}
+                                />
+                            </Field>
+                            <Field label="Move guest to household">
+                                <input
+                                    list="guest-drawer-household-options"
+                                    value={moveHouseholdName}
+                                    onChange={(e) => setMoveHouseholdName(e.target.value)}
+                                    placeholder={form.households.name}
+                                    className="w-full rounded-xl border border-primary/12 bg-surface/50 px-3 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/40 focus:border-primary/40 focus:outline-none"
+                                />
+                                <p className="mt-1 text-[11px] leading-relaxed text-text-secondary/55">
+                                    Leave blank to keep this guest where they are. Enter an existing household name or a new one to move them.
+                                    {!form.is_plus_one ? " Linked plus-one guests will move with their primary guest." : ""}
+                                </p>
+                                <datalist id="guest-drawer-household-options">
+                                    {householdOptions.map((householdName) => (
+                                        <option key={householdName} value={householdName} />
+                                    ))}
+                                </datalist>
                             </Field>
                         </div>
                     </section>

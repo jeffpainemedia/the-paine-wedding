@@ -2,6 +2,15 @@ import React from "react";
 import Section from "@/components/ui/Section";
 import { ExternalLink } from "lucide-react";
 import { getWeddingData } from "@/lib/site-settings";
+import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/registry",
+    title: "Registry",
+    description: "View Ashlyn and Jeffrey's wedding registry and celebrate them with gifts for their home.",
+    keywords: ["wedding registry", "Amazon registry", "Target registry"],
+});
 
 // Per-brand visual config — keeps the page data-driven while adding personality
 const brandConfig: Record<string, {
@@ -37,6 +46,7 @@ const brandConfig: Record<string, {
 };
 
 export default async function Registry() {
+    await requirePageVisible("registry");
     const { wedding } = await getWeddingData();
 
     return (
@@ -51,7 +61,7 @@ export default async function Registry() {
             </Section>
 
             {/* Registry cards */}
-            <Section background="white" className="pt-10 md:pt-14 pb-24 md:pb-32">
+            <Section background="white" className="pb-14 pt-10 md:pb-18 md:pt-14">
                 <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
                     {wedding.registry.map((reg, idx) => {
                         const brand = brandConfig[reg.name];

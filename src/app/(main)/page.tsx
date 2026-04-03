@@ -1,10 +1,23 @@
 import React from "react";
+import type { Metadata } from "next";
 import Section from "@/components/ui/Section";
 import Button from "@/components/ui/Button";
 import { getWeddingData } from "@/lib/site-settings";
+import HeroImage from "@/components/ui/HeroImage";
+import { buildPageMetadata } from "@/lib/seo";
 
 // Always fetch fresh from Supabase — prevents stale hero image flash after admin changes
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { wedding } = await getWeddingData();
+  return buildPageMetadata({
+    path: "/",
+    absoluteTitle: wedding.meta.title,
+    description: wedding.meta.description,
+    keywords: ["wedding website", "wedding RSVP", "wedding registry", "wedding travel"],
+  });
+}
 
 export default async function Home() {
   const { wedding, images, overlays, content } = await getWeddingData();
@@ -12,17 +25,20 @@ export default async function Home() {
   return (
     <>
       {/* Hero Section — data-admin-key lets the AdminEditBar intercept clicks in edit mode */}
-      <section
-        className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden"
-        data-admin-key="images.hero"
+        <section
+            className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden"
+            data-admin-key="images.hero"
         data-admin-type="image"
         data-admin-current-url={images.hero.main}
         data-admin-label="Hero Photo"
-      >
-        <div
-          className="absolute inset-0 bg-primary/20 bg-cover pointer-events-none"
-          style={{ backgroundImage: `url('${images.hero.main}'), url('${images.hero.fallback}')`, backgroundPosition: 'center 25%' }}
-        />
+        >
+        <div className="absolute inset-0 pointer-events-none">
+          <HeroImage
+            src={images.hero.main}
+            fallback={images.hero.fallback}
+            alt={`${wedding.couple.names} hero`}
+          />
+        </div>
         <div className="absolute inset-0 bg-text-primary/30 pointer-events-none" />
         {overlays.hero && (
           <div
@@ -45,13 +61,13 @@ export default async function Home() {
             <p>{wedding.venue.cityDisplay}</p>
           </div>
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button href="/rsvp" variant="primary">
+            <Button href="/rsvp" variant="primary" className="min-w-[11rem] px-10 py-4 text-base">
               RSVP
             </Button>
             <Button
               href="/our-story"
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-primary"
+              className="min-w-[9.5rem] border-white px-7 py-3 text-sm text-white hover:bg-white hover:text-primary"
             >
               Our Story
             </Button>

@@ -1,31 +1,27 @@
-import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AdminEditBar from "@/components/admin/AdminEditBar";
 import ScrollToTop from "@/components/layout/ScrollToTop";
-import { getWeddingData } from "@/lib/site-settings";
+import { getVisiblePublicLinks, PUBLIC_FOOTER_LINKS, PUBLIC_NAV_LINKS } from "@/lib/page-visibility";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const { wedding } = await getWeddingData();
-  return {
-    title: wedding.meta.title,
-    description: wedding.meta.description,
-  };
-}
-
-export default function MainLayout({
+export default async function MainLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [navLinks, footerLinks] = await Promise.all([
+    getVisiblePublicLinks(PUBLIC_NAV_LINKS),
+    getVisiblePublicLinks(PUBLIC_FOOTER_LINKS),
+  ]);
+
   return (
     <>
       <ScrollToTop />
-      <Navbar />
-      <main className="flex-grow min-h-screen flex flex-col bg-base text-text-primary">
+      <Navbar links={navLinks} />
+      <main className="flex-grow flex flex-col bg-base text-text-primary">
         {children}
       </main>
-      <Footer />
+      <Footer links={footerLinks} />
       <AdminEditBar />
     </>
   );

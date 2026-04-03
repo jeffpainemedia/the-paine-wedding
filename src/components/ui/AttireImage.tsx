@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 
 /** Simple client wrapper so the onError handler works in a server-rendered page */
 export function AttireImage({
@@ -39,6 +40,10 @@ export function AttireImage({
                 alt={alt}
                 width={600}
                 height={800}
+                sizes="(min-width: 768px) 33vw, 50vw"
+                quality={60}
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 className={`h-auto w-full object-contain ${imageClassName}`}
                 onError={(e) => {
                     (e.target as HTMLImageElement).src = fallback;

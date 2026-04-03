@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
 import { useAdminSession } from "@/hooks/useAdminSession";
 import {
@@ -14,6 +14,13 @@ import {
     getWordStatusMap,
     type LetterStatus,
 } from "@/lib/games/painedle";
+import {
+    captureBrowserProfile,
+    GAME_LEADERBOARD_REFRESH_EVENT,
+    getStoredGamePlayer,
+    saveStoredGamePlayer,
+    submitGameScore,
+} from "@/lib/games/leaderboard";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -221,6 +228,9 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     const [isCheckingGuess, setIsCheckingGuess] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showAdminAnswer, setShowAdminAnswer] = useState(false);
+    const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [shareCopied, setShareCopied] = useState(false);
+    const autoSubmitAttempted = useRef(false);
 
     const { isAdmin } = useAdminSession();
 
@@ -228,6 +238,68 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     const storageKey = getStorageKey(dateKey);
     const keyboardStatuses = getWordStatusMap(guesses, solution);
     const score = status === "won" ? MAX_GUESSES - guesses.length + 1 : 0;
+
+    // Auto-submit score when game ends if player account is stored
+    useEffect(() => {
+        if (status === "playing" || autoSubmitAttempted.current) return;
+        if (status !== "won") return; // only submit wins
+        const storedPlayer = getStoredGamePlayer();
+        if (!storedPlayer) return;
+        autoSubmitAttempted.current = true;
+        setAutoSubmitStatus("submitting");
+        const browserProfile = storedPlayer.browserProfile ?? captureBrowserProfile();
+        const fullName = storedPlayer.firstName && storedPlayer.lastName
+            ? `${storedPlayer.firstName} ${storedPlayer.lastName}`
+            : storedPlayer.username ?? "";
+        submitGameScore({
+            game: "painedle",
+            username: fullName,
+            email: storedPlayer.email ?? "",
+            score,
+            maxScore: MAX_GUESSES,
+            attempts: guesses.length,
+            solved: true,
+            puzzleKey: dateKey,
+            metadata: {
+                solution,
+                word_length: WORD_LENGTH,
+                browser_language: browserProfile?.language ?? null,
+                browser_languages: browserProfile?.languages ?? null,
+                browser_platform: browserProfile?.platform ?? null,
+                browser_timezone: browserProfile?.timezone ?? null,
+                browser_user_agent: browserProfile?.userAgent ?? null,
+                browser_screen: browserProfile?.screen ?? null,
+            },
+        }).then(() => {
+            saveStoredGamePlayer({ ...storedPlayer, username: fullName, browserProfile });
+            setAutoSubmitStatus("success");
+            window.dispatchEvent(new Event(GAME_LEADERBOARD_REFRESH_EVENT));
+        }).catch(() => {
+            setAutoSubmitStatus("error");
+        });
+    }, [status, score, guesses.length, dateKey, solution]);
+
+    function buildShareText() {
+        const guessEmojis = guesses.map((guess) =>
+            evaluateGuess(guess, solution)
+                .map((s) => s === "correct" ? "🟩" : s === "present" ? "🟨" : "⬛")
+                .join("")
+        );
+        const header = `Painedle ${status === "won" ? guesses.length : "X"}/${MAX_GUESSES}`;
+        return [header, ...guessEmojis, "", "thepainewedding.com/games/painedle"].join("\n");
+    }
+
+    function handleShare() {
+        const text = buildShareText();
+        if (navigator.share) {
+            void navigator.share({ text });
+        } else {
+            void navigator.clipboard.writeText(text).then(() => {
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+            });
+        }
+    }
 
     useEffect(() => {
         const stateToSave: SavedGameState = {
@@ -467,19 +539,41 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
 
                 {/* Post-game */}
                 {status !== "playing" ? (
-                    <div className="relative mt-10">
+                    <div className="relative mt-10 space-y-4">
+                        {/* Share button — always shown after game ends */}
+                        <button
+                            type="button"
+                            onClick={handleShare}
+                            className="flex w-full items-center justify-center gap-2 rounded-[1.75rem] border border-white/15 bg-white/10 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white/80 transition-colors hover:bg-white/18 hover:text-white"
+                        >
+                            {shareCopied ? "✓ Copied!" : "Share Result"}
+                        </button>
+
                         {status === "won" ? (
-                            <ScoreSubmissionForm
-                                game="painedle"
-                                score={score}
-                                maxScore={MAX_GUESSES}
-                                attempts={guesses.length}
-                                solved
-                                puzzleKey={dateKey}
-                                metadata={{ solution, word_length: WORD_LENGTH }}
-                                buttonLabel="Submit Painedle Score"
-                                successMessage="Painedle score submitted."
-                            />
+                            autoSubmitStatus === "success" ? (
+                                <div className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/10 p-5 text-center">
+                                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                                        Score Submitted ✓
+                                    </p>
+                                    <p className="mt-2 text-sm text-white/60">Your Painedle score is on the leaderboard.</p>
+                                </div>
+                            ) : autoSubmitStatus === "submitting" ? (
+                                <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-5 text-center">
+                                    <p className="text-sm text-white/50">Submitting score…</p>
+                                </div>
+                            ) : (
+                                <ScoreSubmissionForm
+                                    game="painedle"
+                                    score={score}
+                                    maxScore={MAX_GUESSES}
+                                    attempts={guesses.length}
+                                    solved
+                                    puzzleKey={dateKey}
+                                    metadata={{ solution, word_length: WORD_LENGTH }}
+                                    buttonLabel="Submit Painedle Score"
+                                    successMessage="Painedle score submitted."
+                                />
+                            )
                         ) : (
                             <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-6">
                                 <p className="text-sm uppercase tracking-[0.3em] text-white/60">Round Complete</p>

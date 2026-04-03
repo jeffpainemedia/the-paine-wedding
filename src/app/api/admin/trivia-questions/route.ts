@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
+import { noStoreJson } from "@/lib/server/request-security";
 
 type TriviaQuestionInsert = {
     prompt: string;
@@ -27,14 +28,28 @@ async function getAdminSupabase() {
 
     if (!supabaseUrl || !serviceRoleKey) return null;
 
-    return createClient(supabaseUrl, serviceRoleKey);
+    return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+}
+
+function cleanTrimmedText(value: unknown, label: string, maxLength: number, required = false) {
+    const trimmed = typeof value === "string" ? value.trim() : "";
+    if (!trimmed) {
+        if (required) {
+            throw new Error(`${label} is required.`);
+        }
+        return null;
+    }
+    if (trimmed.length > maxLength) {
+        throw new Error(`${label} is too long.`);
+    }
+    return trimmed;
 }
 
 export async function GET() {
     const supabase = await getAdminSupabase();
 
     if (!supabase) {
-        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+        return noStoreJson({ error: "Unauthorized." }, { status: 401 });
     }
 
     try {
@@ -45,10 +60,10 @@ export async function GET() {
 
         if (error) throw error;
 
-        return NextResponse.json({ questions: data }, { status: 200 });
+        return noStoreJson({ questions: data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Could not load questions.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return noStoreJson({ error: message }, { status: 500 });
     }
 }
 
@@ -56,32 +71,38 @@ export async function POST(request: NextRequest) {
     const supabase = await getAdminSupabase();
 
     if (!supabase) {
-        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+        return noStoreJson({ error: "Unauthorized." }, { status: 401 });
     }
 
     try {
         const body = await request.json() as Partial<TriviaQuestionInsert>;
-        const { prompt, answer_a, answer_b, answer_c, answer_d, correct_index, fun_fact, sort_order } = body;
+        const prompt = cleanTrimmedText(body.prompt, "Prompt", 240, true);
+        const answerA = cleanTrimmedText(body.answer_a, "Answer A", 120, true);
+        const answerB = cleanTrimmedText(body.answer_b, "Answer B", 120, true);
+        const answerC = cleanTrimmedText(body.answer_c, "Answer C", 120, true);
+        const answerD = cleanTrimmedText(body.answer_d, "Answer D", 120, true);
+        const funFact = cleanTrimmedText(body.fun_fact, "Fun fact", 600);
+        const sortOrder = typeof body.sort_order === "number" ? body.sort_order : 0;
 
-        if (!prompt?.trim() || !answer_a?.trim() || !answer_b?.trim() || !answer_c?.trim() || !answer_d?.trim()) {
-            return NextResponse.json({ error: "Prompt and all four answers are required." }, { status: 400 });
+        if (typeof body.correct_index !== "number" || body.correct_index < 0 || body.correct_index > 3) {
+            return noStoreJson({ error: "correct_index must be 0, 1, 2, or 3." }, { status: 400 });
         }
 
-        if (typeof correct_index !== "number" || correct_index < 0 || correct_index > 3) {
-            return NextResponse.json({ error: "correct_index must be 0, 1, 2, or 3." }, { status: 400 });
+        if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 10_000) {
+            return noStoreJson({ error: "sort_order must be a whole number between 0 and 10000." }, { status: 400 });
         }
 
         const { data, error } = await supabase
             .from("trivia_questions")
             .insert({
-                prompt: prompt.trim(),
-                answer_a: answer_a.trim(),
-                answer_b: answer_b.trim(),
-                answer_c: answer_c.trim(),
-                answer_d: answer_d.trim(),
-                correct_index,
-                fun_fact: fun_fact?.trim() || null,
-                sort_order: sort_order ?? 0,
+                prompt,
+                answer_a: answerA,
+                answer_b: answerB,
+                answer_c: answerC,
+                answer_d: answerD,
+                correct_index: body.correct_index,
+                fun_fact: funFact,
+                sort_order: sortOrder,
                 archived: false,
             })
             .select("*")
@@ -89,9 +110,10 @@ export async function POST(request: NextRequest) {
 
         if (error) throw error;
 
-        return NextResponse.json({ question: data }, { status: 201 });
+        return noStoreJson({ question: data }, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Could not create question.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        const status = message.endsWith("is required.") || message.endsWith("is too long.") ? 400 : 500;
+        return noStoreJson({ error: message }, { status });
     }
 }

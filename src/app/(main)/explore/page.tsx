@@ -2,6 +2,14 @@ import React from "react";
 import Section from "@/components/ui/Section";
 import { ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/explore",
+    title: "Explore Dallas-Fort Worth",
+    description: "Browse favorite Dallas, Fort Worth, and McKinney recommendations for wedding weekend activities, food, and day trips.",
+    keywords: ["Dallas things to do", "Fort Worth", "McKinney", "wedding weekend activities"],
+});
 
 export default function Explore() {
     return (
@@ -15,7 +23,7 @@ export default function Explore() {
                 </p>
             </Section>
 
-            <Section background="base" className="pt-10 md:pt-12 pb-20">
+            <Section background="base" className="pb-12 pt-10 md:pb-14 md:pt-12">
                 <div className="max-w-5xl mx-auto">
 
                     {/* State Fair callout */}
@@ -24,7 +32,7 @@ export default function Explore() {
                             <Star size={22} strokeWidth={1.5} />
                         </div>
                         <div className="flex-1">
-                            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1">Happening This Weekend</p>
+                            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1">Happening Wedding Weekend</p>
                             <h3 className="font-heading text-xl text-amber-900 mb-2">State Fair of Texas — at Fair Park</h3>
                             <p className="text-sm text-amber-800 leading-relaxed mb-3">
                                 The 2026 State Fair runs <strong>September 25 – October 18</strong>, which means Big Tex is in town the same weekend as our wedding! If you&apos;re flying in early or staying a few extra days, this is a bucket-list Texas experience: fried food competitions, live music, carnival rides, and the iconic auto show.

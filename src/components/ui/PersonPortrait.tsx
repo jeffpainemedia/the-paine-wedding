@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 
 const DEFAULT_FALLBACK =
     "/images/hero/JeffAshlyn-7977_2.jpg";
@@ -44,6 +45,10 @@ export function PersonPortrait({
                     src={safeSrc}
                     alt={name}
                     fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                    quality={68}
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     onError={(e) => {
                         (e.target as HTMLImageElement).src = fallback || DEFAULT_FALLBACK;

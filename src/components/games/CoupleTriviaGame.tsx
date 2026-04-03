@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
-import { getStoredGamePlayer } from "@/lib/games/leaderboard";
+import { GAME_LEADERBOARD_REFRESH_EVENT, getStoredGamePlayer, saveStoredGamePlayer, submitGameScore } from "@/lib/games/leaderboard";
 import type { TriviaQuestionRow } from "@/app/api/games/trivia-questions/route";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
@@ -62,6 +62,9 @@ export default function CoupleTriviaGame() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
     const [hasAccount, setHasAccount] = useState(false);
+    const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [shareCopied, setShareCopied] = useState(false);
+    const autoSubmitAttempted = useRef(false);
 
     useEffect(() => {
         fetchTriviaQuestions()
@@ -82,6 +85,57 @@ export default function CoupleTriviaGame() {
         return total + (answer === questions[index]?.correctIndex ? 1 : 0);
     }, 0);
 
+    // Auto-submit when results screen is shown and player is stored
+    useEffect(() => {
+        if (screen !== "results" || autoSubmitAttempted.current) return;
+        const player = getStoredGamePlayer();
+        if (!player) return;
+
+        autoSubmitAttempted.current = true;
+        setAutoSubmitStatus("submitting");
+
+        const fullName = player.firstName && player.lastName
+            ? `${player.firstName} ${player.lastName}`
+            : player.username ?? "";
+        const computedScore = Math.round((score / questions.length) * answeredCount * 10);
+        submitGameScore({
+            game: "trivia",
+            username: fullName,
+            email: player.email ?? "",
+            score: computedScore,
+            maxScore: questions.length * 10,
+            attempts: answeredCount,
+            solved: score === answeredCount && answeredCount === questions.length,
+            puzzleKey: "wedding-day-trivia",
+            metadata: { question_count: questions.length, answered_count: answeredCount, raw_score: score },
+        })
+            .then(() => {
+                saveStoredGamePlayer({ ...player, username: fullName });
+                setAutoSubmitStatus("success");
+                window.dispatchEvent(new CustomEvent(GAME_LEADERBOARD_REFRESH_EVENT));
+            })
+            .catch(() => {
+                setAutoSubmitStatus("error");
+            });
+    }, [screen, score, answeredCount, questions.length]);
+
+    function buildShareText() {
+        const pct = Math.round((score / (answeredCount || 1)) * 100);
+        return `Couple Trivia — ${score}/${answeredCount} (${pct}%)\nthepainewedding.com/games/trivia`;
+    }
+
+    function handleShare() {
+        const text = buildShareText();
+        if (typeof navigator !== "undefined" && navigator.share) {
+            navigator.share({ text }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+            }).catch(() => {});
+        }
+    }
+
     function handleStart() {
         setScreen("playing");
         setTimeout(() => {
@@ -93,6 +147,9 @@ export default function CoupleTriviaGame() {
         setScreen("welcome");
         setCurrentIndex(0);
         setSelectedAnswers([]);
+        autoSubmitAttempted.current = false;
+        setAutoSubmitStatus("idle");
+        setShareCopied(false);
     }
 
     function handleSelect(answerIndex: number) {
@@ -166,54 +223,56 @@ export default function CoupleTriviaGame() {
                 <p className="mt-3 text-sm text-text-secondary/60">{answeredCount < questions.length ? `${answeredCount} of ${questions.length} questions answered` : `All ${questions.length} questions answered`}</p>
                 <p className="mt-4 max-w-2xl text-text-secondary leading-relaxed">{getScoreMessage(score, answeredCount)}</p>
 
-                <div className="mt-10 grid gap-4">
-                    {questions.map((question, index) => {
-                        const answerIndex = selectedAnswers[index];
-                        const isCorrect = answerIndex === question.correctIndex;
-                        const answerLabel = answerIndex !== undefined ? question.answers[answerIndex] : "No answer";
-
-                        return (
-                            <div key={question.id} className="rounded-[1.5rem] border border-primary/8 bg-white/80 p-5">
-                                <p className="text-sm uppercase tracking-[0.24em] text-text-secondary">Question {index + 1}</p>
-                                <h3 className="mt-2 font-heading text-2xl text-primary">{question.prompt}</h3>
-                                <p className="mt-3 text-sm text-text-secondary">
-                                    Your answer: <span className={isCorrect ? "text-primary" : "text-secondary"}>{answerLabel}</span>
-                                </p>
-                                {!isCorrect ? (
-                                    <p className="mt-1 text-sm text-text-secondary">
-                                        Correct answer: <span className="text-primary">{question.answers[question.correctIndex]}</span>
-                                    </p>
-                                ) : null}
-                            </div>
-                        );
-                    })}
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <button
+                        type="button"
+                        onClick={handleShare}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-white px-6 py-3 text-sm font-medium uppercase tracking-[0.2em] text-primary transition-all duration-200 hover:bg-primary/5"
+                    >
+                        {shareCopied ? "✓ Copied!" : "Share Result"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleRestart}
+                        className="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-medium uppercase tracking-[0.2em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/90"
+                    >
+                        Play Again
+                    </button>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleRestart}
-                    className="mt-10 inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-medium uppercase tracking-[0.2em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/90"
-                >
-                    Play Again
-                </button>
-
                 <div className="mt-8">
-                    <ScoreSubmissionForm
-                        game="trivia"
-                        score={Math.round((score / questions.length) * answeredCount * 10)}
-                        maxScore={questions.length * 10}
-                        attempts={answeredCount}
-                        solved={score === answeredCount && answeredCount === questions.length}
-                        puzzleKey="wedding-day-trivia"
-                        metadata={{ question_count: questions.length, answered_count: answeredCount, raw_score: score }}
-                        successMessage="Trivia score submitted."
-                    />
+                    {autoSubmitStatus === "success" ? (
+                        <div className="rounded-[1.5rem] border border-emerald-600/20 bg-emerald-50 p-5 text-center">
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Score Submitted ✓</p>
+                            <p className="mt-2 text-sm text-text-secondary">Your trivia score is on the leaderboard.</p>
+                        </div>
+                    ) : autoSubmitStatus === "submitting" ? (
+                        <div className="rounded-[1.5rem] border border-primary/8 bg-white/60 p-5 text-center">
+                            <p className="text-sm text-text-secondary/60">Submitting score…</p>
+                        </div>
+                    ) : (
+                        <ScoreSubmissionForm
+                            game="trivia"
+                            score={Math.round((score / questions.length) * answeredCount * 10)}
+                            maxScore={questions.length * 10}
+                            attempts={answeredCount}
+                            solved={score === answeredCount && answeredCount === questions.length}
+                            puzzleKey="wedding-day-trivia"
+                            metadata={{ question_count: questions.length, answered_count: answeredCount, raw_score: score }}
+                            successMessage="Trivia score submitted."
+                        />
+                    )}
                 </div>
             </div>
         );
     }
 
     if (!currentQuestion) return null;
+
+    // Only show answers that are not placeholder "—" values
+    const visibleAnswers = currentQuestion.answers
+        .map((answer, index) => ({ answer, index }))
+        .filter(({ answer }) => answer.trim() !== "—");
 
     return (
         <div ref={gameRef} className="scroll-mt-24 rounded-[2rem] border border-primary/10 bg-[linear-gradient(160deg,#fffaf4_0%,#f3ebe0_100%)] p-5 shadow-[0_20px_60px_rgba(20,42,68,0.10)] md:p-10">
@@ -236,8 +295,8 @@ export default function CoupleTriviaGame() {
 
             <div className="mt-5">
                 <h3 className="font-heading text-xl leading-snug text-primary md:text-4xl">{currentQuestion.prompt}</h3>
-                <div className="mt-4 grid grid-cols-2 gap-2 md:gap-4">
-                    {currentQuestion.answers.map((answer, index) => {
+                <div className={`mt-4 grid gap-2 md:gap-4 ${visibleAnswers.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
+                    {visibleAnswers.map(({ answer, index }) => {
                         const isSelected = index === selectedAnswer;
                         const isCorrect = index === currentQuestion.correctIndex;
                         const stateClass = selectedAnswer !== undefined

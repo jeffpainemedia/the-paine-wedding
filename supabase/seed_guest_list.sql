@@ -697,7 +697,7 @@ BEGIN
   INSERT INTO guests
     (household_id, first_name, last_name, suffix, plus_one_allowed, plus_one_name, affiliation, side, likelihood)
   VALUES
-    (hh_id, 'Cailey', 'Taylor', NULL, false, NULL, 'Their Friends', 'Ash', 'Yes');
+    (hh_id, 'Kailey', 'Taylor', NULL, false, NULL, 'Their Friends', 'Ash', 'Yes');
 
   INSERT INTO guests
     (household_id, first_name, last_name, suffix, plus_one_allowed, plus_one_name, affiliation, side, likelihood)

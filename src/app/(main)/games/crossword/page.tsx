@@ -6,8 +6,16 @@ import MiniCrosswordGame from "@/components/games/MiniCrosswordGame";
 import { getCentralDateKey, getDailyCrosswordPuzzle, parseCrosswordOverrides } from "@/lib/games/crossword";
 import GameSuggestions from "@/components/games/GameSuggestions";
 import { getSettingsMap } from "@/lib/site-settings";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildPageMetadata({
+    path: "/games/crossword",
+    title: "Mini Crossword",
+    description: "Play the daily mini crossword built around Ashlyn and Jeffrey, with fresh clues and leaderboard competition.",
+    keywords: ["mini crossword", "daily crossword", "wedding crossword"],
+});
 
 export default async function CrosswordPage() {
     const todayKey = getCentralDateKey();
@@ -40,7 +48,7 @@ export default async function CrosswordPage() {
                 <CollapsibleLeaderboard
                     game="crossword"
                     title="Crossword Leaders"
-                    subtitle="Fastest clean solves and fewer reveals rise to the top."
+                    subtitle="Fastest solves rise to the top."
                     puzzleKey={todayPuzzle.id}
                 />
                 <GameSuggestions current="crossword" />

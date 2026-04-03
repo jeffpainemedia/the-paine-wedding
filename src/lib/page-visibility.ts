@@ -27,6 +27,30 @@ export const MANAGED_PAGES = [
     { slug: "rsvp",            label: "RSVP" },
 ] as const;
 
+type ManagedPageSlug = (typeof MANAGED_PAGES)[number]["slug"];
+
+export const PUBLIC_NAV_LINKS = [
+    { name: "Our Story", href: "/our-story", managedSlug: "our-story" as ManagedPageSlug },
+    { name: "Bridal Party", href: "/bridal-party", managedSlug: "bridal-party" as ManagedPageSlug },
+    { name: "Travel", href: "/travel", managedSlug: "travel" as ManagedPageSlug },
+    { name: "Explore", href: "/explore" },
+    { name: "Attire", href: "/attire", managedSlug: "attire" as ManagedPageSlug },
+    { name: "Registry", href: "/registry", managedSlug: "registry" as ManagedPageSlug },
+    { name: "Games", href: "/games", managedSlug: "games" as ManagedPageSlug },
+    { name: "RSVP", href: "/rsvp", managedSlug: "rsvp" as ManagedPageSlug },
+] as const;
+
+export const PUBLIC_FOOTER_LINKS = [
+    { label: "Our Story", href: "/our-story", managedSlug: "our-story" as ManagedPageSlug },
+    { label: "Travel", href: "/travel", managedSlug: "travel" as ManagedPageSlug },
+    { label: "Attire", href: "/attire", managedSlug: "attire" as ManagedPageSlug },
+    { label: "FAQ", href: "/faq", managedSlug: "faq" as ManagedPageSlug },
+    { label: "Registry", href: "/registry", managedSlug: "registry" as ManagedPageSlug },
+    { label: "Games", href: "/games", managedSlug: "games" as ManagedPageSlug },
+    { label: "RSVP", href: "/rsvp", managedSlug: "rsvp" as ManagedPageSlug },
+    { label: "Feedback", href: "/feedback" },
+] as const;
+
 function getServiceClient() {
     return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,6 +70,28 @@ export async function isPageHidden(slug: string): Promise<boolean> {
         return data?.value === "true";
     } catch {
         return false; // safe default: show the page
+    }
+}
+
+async function getHiddenManagedSlugs(): Promise<Set<ManagedPageSlug>> {
+    try {
+        const sb = getServiceClient();
+        const { data } = await sb
+            .from("site_settings")
+            .select("key, value")
+            .like("key", "page.%.hidden");
+
+        const hiddenSlugs = new Set<ManagedPageSlug>();
+        for (const row of data ?? []) {
+            if (row.value !== "true" || typeof row.key !== "string") continue;
+            const [, slug] = row.key.match(/^page\.(.+)\.hidden$/) ?? [];
+            if (slug && MANAGED_PAGES.some((page) => page.slug === slug)) {
+                hiddenSlugs.add(slug as ManagedPageSlug);
+            }
+        }
+        return hiddenSlugs;
+    } catch {
+        return new Set<ManagedPageSlug>();
     }
 }
 
@@ -72,4 +118,20 @@ export async function requirePageVisible(slug: string): Promise<void> {
     if (hidden && !isAdmin) {
         notFound();
     }
+}
+
+export async function getVisiblePublicLinks<T extends Record<string, unknown>>(links: readonly T[]): Promise<T[]> {
+    const [hiddenSlugs, isAdmin] = await Promise.all([
+        getHiddenManagedSlugs(),
+        isAdminAuthenticated(),
+    ]);
+
+    if (isAdmin) {
+        return [...links];
+    }
+
+    return links.filter((link) => {
+        const managedSlug = link.managedSlug;
+        return typeof managedSlug !== "string" || !hiddenSlugs.has(managedSlug as ManagedPageSlug);
+    });
 }

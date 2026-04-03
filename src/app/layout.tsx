@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, Montserrat } from "next/font/google";
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/seo";
 import "./globals.css";
 
 const bodoni = Bodoni_Moda({
@@ -15,9 +16,10 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.thepainewedding.com"),
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
   title: {
-    default: "Ashlyn & Jeff Paine Wedding | September 26, 2026",
+    default: SITE_NAME,
     template: "%s | The Paine Wedding",
   },
   description:
@@ -33,17 +35,26 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    url: "https://www.thepainewedding.com",
-    siteName: "The Paine Wedding",
-    title: "Ashlyn & Jeff | September 26, 2026",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
     description:
       "Celebrate with Ashlyn & Jeff at Davis & Grey Farms in Celeste, Texas on September 26, 2026.",
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "Ashlyn and Jeffrey wedding website preview",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ashlyn & Jeff | September 26, 2026",
+    title: SITE_NAME,
     description:
       "Celebrate with Ashlyn & Jeff at Davis & Grey Farms in Celeste, Texas.",
+    images: [DEFAULT_OG_IMAGE],
   },
   robots: {
     index: true,
@@ -53,6 +64,12 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -70,30 +87,39 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Event",
-              name: "Ashlyn & Jeff Paine Wedding",
-              startDate: "2026-09-26T17:00:00-05:00",
-              endDate: "2026-09-26T22:00:00-05:00",
-              eventStatus: "https://schema.org/EventScheduled",
-              eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-              location: {
-                "@type": "Place",
-                name: "Davis & Grey Farms",
-                address: {
-                  "@type": "PostalAddress",
-                  streetAddress: "2975 CR 1110",
-                  addressLocality: "Celeste",
-                  addressRegion: "TX",
-                  postalCode: "75423",
-                  addressCountry: "US",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  name: SITE_NAME,
+                  url: SITE_URL,
                 },
-              },
-              organizer: {
-                "@type": "Person",
-                name: "Jeff Paine",
-                url: "https://www.thepainewedding.com",
-              },
-              url: "https://www.thepainewedding.com",
+                {
+                  "@type": "Event",
+                  name: "Ashlyn & Jeff Paine Wedding",
+                  startDate: "2026-09-26T17:00:00-05:00",
+                  endDate: "2026-09-26T22:00:00-05:00",
+                  eventStatus: "https://schema.org/EventScheduled",
+                  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+                  location: {
+                    "@type": "Place",
+                    name: "Davis & Grey Farms",
+                    address: {
+                      "@type": "PostalAddress",
+                      streetAddress: "2975 CR 1110",
+                      addressLocality: "Celeste",
+                      addressRegion: "TX",
+                      postalCode: "75423",
+                      addressCountry: "US",
+                    },
+                  },
+                  organizer: {
+                    "@type": "Person",
+                    name: "Jeff Paine",
+                    url: SITE_URL,
+                  },
+                  url: SITE_URL,
+                },
+              ],
             }),
           }}
         />

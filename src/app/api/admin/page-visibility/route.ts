@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
 import { MANAGED_PAGES } from "@/lib/page-visibility";
+import { revalidatePath } from "next/cache";
+import { noStoreJson } from "@/lib/server/request-security";
 
 function getServiceClient() {
     return createClient(
@@ -25,7 +27,7 @@ async function verifyAdmin(): Promise<boolean> {
 export async function GET() {
     const isAdmin = await verifyAdmin();
     if (!isAdmin) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return noStoreJson({ error: "Unauthorized" }, { status: 401 });
     }
 
     const sb = getServiceClient();
@@ -45,36 +47,45 @@ export async function GET() {
         hidden: hiddenMap[`page.${p.slug}.hidden`] ?? false,
     }));
 
-    return NextResponse.json({ pages });
+    return noStoreJson({ pages });
 }
 
 // POST: { slug: string, hidden: boolean }
 export async function POST(req: NextRequest) {
     const isAdmin = await verifyAdmin();
     if (!isAdmin) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return noStoreJson({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = (await req.json()) as { slug?: string; hidden?: boolean };
     const { slug, hidden } = body;
 
     if (!slug || typeof hidden !== "boolean") {
-        return NextResponse.json({ error: "Missing slug or hidden" }, { status: 400 });
+        return noStoreJson({ error: "Missing slug or hidden" }, { status: 400 });
     }
 
     const isManaged = MANAGED_PAGES.some((p) => p.slug === slug);
     if (!isManaged) {
-        return NextResponse.json({ error: "Unknown page slug" }, { status: 400 });
+        return noStoreJson({ error: "Unknown page slug" }, { status: 400 });
     }
 
     const sb = getServiceClient();
     const key = `page.${slug}.hidden`;
 
     if (hidden) {
-        await sb.from("site_settings").upsert({ key, value: "true" }, { onConflict: "key" });
+        const { error } = await sb.from("site_settings").upsert({ key, value: "true" }, { onConflict: "key" });
+        if (error) {
+            return noStoreJson({ error: error.message }, { status: 500 });
+        }
     } else {
-        await sb.from("site_settings").delete().eq("key", key);
+        const { error } = await sb.from("site_settings").delete().eq("key", key);
+        if (error) {
+            return noStoreJson({ error: error.message }, { status: 500 });
+        }
     }
 
-    return NextResponse.json({ ok: true });
+    revalidatePath("/", "layout");
+    revalidatePath(`/${slug}`);
+
+    return noStoreJson({ ok: true });
 }

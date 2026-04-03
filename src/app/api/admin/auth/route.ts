@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import {
     ADMIN_SESSION_MAX_AGE,
     createAdminSessionToken,
     getAdminSessionCookieBaseOptions,
     getAdminSessionCookieDomain,
 } from "@/lib/admin/session";
+import { getServiceClient } from "@/lib/server/supabase-admin";
+import { enforceRateLimit, noStoreJson } from "@/lib/server/request-security";
 
 // Passwords are stored server-side in environment variables.
 // Set these in .env.local (local dev) and in Vercel project settings (production).
@@ -20,12 +21,20 @@ const PASSWORD_MAP: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
+    const rateLimitResponse = await enforceRateLimit(request, {
+        bucket: "admin-auth",
+        limit: 10,
+        windowSeconds: 60 * 10,
+        message: "Too many admin login attempts. Please wait a few minutes and try again.",
+    });
+    if (rateLimitResponse) return rateLimitResponse;
+
     try {
         const body = await request.json();
         const password: string = (body?.password ?? "").trim();
 
         if (!password) {
-            return NextResponse.json({ error: "Password is required." }, { status: 400 });
+            return noStoreJson({ error: "Password is required." }, { status: 400 });
         }
 
         const role = PASSWORD_MAP[password];
@@ -33,18 +42,16 @@ export async function POST(request: NextRequest) {
         if (!role) {
             // Consistent timing to prevent password enumeration
             await new Promise((r) => setTimeout(r, 300));
-            return NextResponse.json({ error: "Invalid password." }, { status: 401 });
+            return noStoreJson({ error: "Invalid password." }, { status: 401 });
         }
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-        if (supabaseUrl && supabaseKey) {
-            const supabase = createClient(supabaseUrl, supabaseKey);
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
+            const supabase = getServiceClient();
             await supabase.from("admin_logs").insert({ password_used: role });
         }
 
         const response = NextResponse.json({ role }, { status: 200 });
+        response.headers.set("Cache-Control", "no-store");
         response.cookies.set({
             ...getAdminSessionCookieBaseOptions(),
             value: "",
@@ -59,6 +66,6 @@ export async function POST(request: NextRequest) {
 
         return response;
     } catch {
-        return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+        return noStoreJson({ error: "Invalid request." }, { status: 400 });
     }
 }

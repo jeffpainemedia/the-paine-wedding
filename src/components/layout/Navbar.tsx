@@ -6,18 +6,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { WEDDING } from "@/lib/wedding-data";
 
-const navLinks = [
-    { name: "Our Story", href: "/our-story" },
-    { name: "Bridal Party", href: "/bridal-party" },
-    { name: "Travel", href: "/travel" },
-    { name: "Explore", href: "/explore" },
-    { name: "Attire", href: "/attire" },
-    { name: "Registry", href: "/registry" },
-    { name: "Games", href: "/games" },
-    { name: "RSVP", href: "/rsvp" },
-];
+type NavLink = {
+    name: string;
+    href: string;
+};
 
-export default function Navbar() {
+export default function Navbar({ links }: { links: readonly NavLink[] }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const drawerRef = useRef<HTMLDivElement>(null);
     const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -80,7 +74,7 @@ export default function Navbar() {
 
                     {/* Desktop nav */}
                     <nav className="hidden md:flex items-center space-x-8">
-                        {navLinks.map((link) => (
+                        {links.map((link) => (
                             <Link
                                 key={link.name}
                                 href={link.href}
@@ -134,7 +128,7 @@ export default function Navbar() {
                 }`}
             >
                 <nav className="flex flex-col px-6 py-6 space-y-1">
-                    {navLinks.map((link) => (
+                    {links.map((link) => (
                         <Link
                             key={link.name}
                             href={link.href}

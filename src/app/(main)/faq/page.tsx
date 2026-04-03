@@ -1,12 +1,40 @@
 import React from "react";
 import Section from "@/components/ui/Section";
 import { getWeddingData } from "@/lib/site-settings";
+import { requirePageVisible } from "@/lib/page-visibility";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/faq",
+    title: "FAQ",
+    description: "Read frequently asked questions about the wedding day, RSVP timing, venue details, and guest logistics.",
+    keywords: ["wedding FAQ", "guest questions", "RSVP questions"],
+});
 
 export default async function FAQ() {
+    await requirePageVisible("faq");
     const { wedding } = await getWeddingData();
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: wedding.faq
+            .filter((faq) => faq.q !== "TBD" && faq.a !== "TBD")
+            .map((faq) => ({
+                "@type": "Question",
+                name: faq.q,
+                acceptedAnswer: {
+                    "@type": "Answer",
+                    text: faq.a,
+                },
+            })),
+    };
 
     return (
         <div>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+            />
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
                 <h1 className="font-heading text-5xl md:text-6xl mb-6">F.A.Q.</h1>
                 <p className="max-w-xl mx-auto text-text-secondary tracking-wide">

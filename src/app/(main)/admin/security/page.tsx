@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import AdminFrame from "@/components/admin/AdminFrame";
 import AdminLoginCard from "@/components/admin/AdminLoginCard";
 import { useAdminSession } from "@/components/admin/useAdminSession";
-import { supabase } from "@/lib/supabase";
 
 type AdminLog = {
     id: string;
@@ -20,18 +19,15 @@ export default function AdminSecurityPage() {
 
     async function fetchLogs() {
         setLoading(true);
+        const response = await fetch("/api/admin/security-logs", { credentials: "same-origin" });
+        const payload = await response.json() as { logs?: AdminLog[]; error?: string };
 
-        const { data, error: logsError } = await supabase
-            .from("admin_logs")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-        if (logsError) {
-            setError(logsError.message);
+        if (!response.ok) {
+            setError(payload.error ?? "Failed to load security logs.");
             setLogs([]);
         } else {
             setError(null);
-            setLogs(data as AdminLog[]);
+            setLogs(payload.logs ?? []);
         }
 
         setLoading(false);

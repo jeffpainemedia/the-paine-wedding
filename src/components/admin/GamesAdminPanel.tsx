@@ -194,10 +194,10 @@ function OverviewMetric({
     note: string;
 }) {
     return (
-        <div className="rounded-[1.5rem] border border-primary/8 bg-[#fbf8f3] p-5 shadow-[0_8px_24px_rgba(20,42,68,0.04)]">
-            <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">{label}</p>
-            <p className="mt-3 font-heading text-4xl text-primary">{value}</p>
-            <p className="mt-3 text-sm leading-relaxed text-text-secondary">{note}</p>
+        <div className="rounded-[1.2rem] border border-primary/8 bg-[#fbf8f3] p-3 shadow-[0_8px_24px_rgba(20,42,68,0.04)] md:rounded-[1.5rem] md:p-5">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-xs md:tracking-[0.26em]">{label}</p>
+            <p className="mt-2 font-heading text-2xl text-primary md:mt-3 md:text-4xl">{value}</p>
+            <p className="mt-2 text-xs leading-relaxed text-text-secondary md:mt-3 md:text-sm">{note}</p>
         </div>
     );
 }
@@ -214,11 +214,15 @@ function ControlCard({
     children: ReactNode;
 }) {
     return (
-        <div className="rounded-[1.9rem] border border-primary/10 bg-white p-6 shadow-[0_16px_50px_rgba(20,42,68,0.06)]">
-            <p className="text-xs uppercase tracking-[0.28em] text-text-secondary">{eyebrow}</p>
-            <h3 className="mt-4 font-heading text-3xl text-primary">{title}</h3>
-            <p className="mt-3 text-sm leading-relaxed text-text-secondary">{copy}</p>
-            <div className="mt-6 flex flex-wrap gap-3">{children}</div>
+        <div className="rounded-[1.5rem] border border-primary/10 bg-white p-4 shadow-[0_16px_50px_rgba(20,42,68,0.06)] md:rounded-[1.9rem] md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-xs md:tracking-[0.28em]">{eyebrow}</p>
+                    <h3 className="mt-2 font-heading text-2xl text-primary md:mt-4 md:text-3xl">{title}</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-text-secondary md:mt-3 md:text-sm">{copy}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 md:mt-1 md:max-w-[12rem] md:justify-end">{children}</div>
+            </div>
         </div>
     );
 }
@@ -1549,7 +1553,7 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                     </div>
                 )}
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-6">
                     <OverviewMetric
                         label="Total Scores"
                         value={gameScores.length}
@@ -1600,23 +1604,22 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                 <div className="grid gap-6 xl:grid-cols-4">
                     <ControlCard
                         eyebrow="Painedle Admin"
-                        title="Daily rotation controls"
-                        copy="Check today's answer, inspect the upcoming calendar, and verify the live bank without leaving stale Wordle-era control cards in the overview."
+                        title="Painedle"
+                        copy="Open the schedule or the full bank."
                     >
-                        <PillButton label="Reveal today's word" onClick={() => setModalView("today-word")} />
-                        <PillButton label="Preview schedule" onClick={() => setModalView("schedule")} />
-                        <PillButton label="View word bank" onClick={() => setModalView("word-bank")} />
+                        <PillButton label="Schedule" onClick={() => setModalView("schedule")} />
+                        <PillButton label="Word Bank" onClick={() => setModalView("word-bank")} />
                     </ControlCard>
 
                     <ControlCard
                         eyebrow="Crossword Admin"
-                        title="Crossword word and clue bank"
-                        copy="Review upcoming crossword boards, edit the answer list and clue copy for each date, and save overrides without digging through static source files."
+                        title="Crossword"
+                        copy="Edit boards, clues, and exports."
                     >
-                        <PillButton label="Edit crossword" onClick={() => setModalView("crossword")} />
+                        <PillButton label="Edit" onClick={() => setModalView("crossword")} />
                         <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
                         <PillButton
-                            label="Export words & clues"
+                            label="Export"
                             onClick={() => {
                                 const entries = getAllCrosswordWordClues();
                                 const json = JSON.stringify(entries, null, 2);
@@ -1627,20 +1630,20 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
 
                     <ControlCard
                         eyebrow="Trivia Admin"
-                        title="Question bank and launch"
-                        copy="Review every trivia prompt, correct answer, fun fact, and launch state from one place."
+                        title="Trivia"
+                        copy="Manage questions and scores."
                     >
-                        <PillButton label="Question bank" onClick={() => setModalView("trivia-bank")} />
+                        <PillButton label="Questions" onClick={() => setModalView("trivia-bank")} />
                         <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
                     </ControlCard>
 
                     <ControlCard
                         eyebrow="Player Activity"
-                        title="Submissions and people"
-                        copy="Track recent submissions, inspect score timing, and see who is actually playing without turning the overview into a giant table."
+                        title="Players"
+                        copy="See submissions and player activity."
                     >
-                        <PillButton label="Recent submissions" onClick={() => setModalView("submissions")} />
-                        <PillButton label="Player directory" onClick={() => setModalView("players")} />
+                        <PillButton label="Submissions" onClick={() => setModalView("submissions")} />
+                        <PillButton label="Directory" onClick={() => setModalView("players")} />
                     </ControlCard>
                 </div>
             </div>

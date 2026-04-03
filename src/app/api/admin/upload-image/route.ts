@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
+import { noStoreJson } from "@/lib/server/request-security";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+
+function sanitizeStoragePath(path: string) {
+    return path
+        .replace(/\\/g, "/")
+        .replace(/^\//, "")
+        .replace(/\.\.+/g, "")
+        .replace(/[^a-z0-9/._-]/gi, "-")
+        .replace(/\/+/g, "/")
+        .toLowerCase();
+}
 
 async function getAdminSupabase() {
     const cookieStore = await cookies();
@@ -27,7 +41,7 @@ async function getAdminSupabase() {
  */
 export async function POST(request: NextRequest) {
     const supabase = await getAdminSupabase();
-    if (!supabase) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!supabase) return noStoreJson({ error: "Unauthorized." }, { status: 401 });
 
     try {
         const formData = await request.formData();
@@ -35,15 +49,33 @@ export async function POST(request: NextRequest) {
         const pathOverride = formData.get("path");
 
         if (!file || !(file instanceof File)) {
-            return NextResponse.json({ error: "file is required." }, { status: 400 });
+            return noStoreJson({ error: "file is required." }, { status: 400 });
+        }
+
+        if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+            return noStoreJson(
+                { error: "Only JPG, PNG, WebP, and AVIF images are allowed." },
+                { status: 400 },
+            );
+        }
+
+        if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+            return noStoreJson(
+                { error: "Image uploads must be smaller than 10 MB." },
+                { status: 400 },
+            );
         }
 
         const ext = file.name.split(".").pop() ?? "jpg";
         const safeName = file.name.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase();
         const storagePath =
             typeof pathOverride === "string" && pathOverride.trim()
-                ? pathOverride.trim()
+                ? sanitizeStoragePath(pathOverride.trim())
                 : `uploads/${Date.now()}-${safeName}`;
+
+        if (!storagePath || storagePath.startsWith("../")) {
+            return noStoreJson({ error: "Invalid upload path." }, { status: 400 });
+        }
 
         const arrayBuffer = await file.arrayBuffer();
         const buffer = new Uint8Array(arrayBuffer);
@@ -65,9 +97,9 @@ export async function POST(request: NextRequest) {
         // the new image even if the same storage path was overwritten via upsert.
         const cacheBustedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
-        return NextResponse.json({ url: cacheBustedUrl, path: data.path });
+        return noStoreJson({ url: cacheBustedUrl, path: data.path });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Upload failed.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return noStoreJson({ error: message }, { status: 500 });
     }
 }

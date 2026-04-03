@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { enforceRateLimit, noStoreJson } from "@/lib/server/request-security";
 
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -100,6 +101,30 @@ function normalizeEmail(email: string) {
     return email.trim().toLowerCase();
 }
 
+function normalizeUsernameForModeration(username: string) {
+    return username.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isAllowedUsername(username: string) {
+    return /^[\p{L}\p{N}][\p{L}\p{N} ._'’-]{1,31}$/u.test(username);
+}
+
+function containsBlockedLanguage(username: string) {
+    const normalized = normalizeUsernameForModeration(username);
+    return [
+        "fuck",
+        "shit",
+        "bitch",
+        "cunt",
+        "nigger",
+        "nigga",
+        "faggot",
+        "fag",
+        "slut",
+        "whore",
+    ].some((word) => normalized.includes(word));
+}
+
 function isBetterScore(existing: {
     score: number;
     attempts: number | null;
@@ -163,12 +188,20 @@ async function upsertGamePlayer(
 }
 
 export async function POST(request: NextRequest) {
+    const rateLimitResponse = await enforceRateLimit(request, {
+        bucket: "game-submit-score",
+        limit: 25,
+        windowSeconds: 60 * 10,
+        message: "Too many score submissions. Please wait a moment and try again.",
+    });
+    if (rateLimitResponse) return rateLimitResponse;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     // Use service role key (bypasses RLS) for server-side writes; fall back to anon key
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("placeholder") || supabaseKey === "placeholder") {
-        return NextResponse.json({ error: "Game database is not configured." }, { status: 500 });
+        return noStoreJson({ error: "Game database is not configured." }, { status: 500 });
     }
 
     try {
@@ -179,15 +212,22 @@ export async function POST(request: NextRequest) {
         const score = Number(body.score ?? 0);
 
         if (!game || !["trivia", "painedle", "crossword"].includes(game)) {
-            return NextResponse.json({ error: "Invalid game." }, { status: 400 });
+            return noStoreJson({ error: "Invalid game." }, { status: 400 });
         }
 
         if (!username) {
-            return NextResponse.json({ error: "Username is required." }, { status: 400 });
+            return noStoreJson({ error: "Username is required." }, { status: 400 });
+        }
+
+        if (!isAllowedUsername(username) || containsBlockedLanguage(username)) {
+            return noStoreJson(
+                { error: "Please choose a simple display name using letters, numbers, spaces, or punctuation." },
+                { status: 400 },
+            );
         }
 
         if (!Number.isFinite(score) || score < 0) {
-            return NextResponse.json({ error: "Invalid score." }, { status: 400 });
+            return noStoreJson({ error: "Invalid score." }, { status: 400 });
         }
 
         const supabase = createClient<Database>(supabaseUrl, supabaseKey);
@@ -231,7 +271,7 @@ export async function POST(request: NextRequest) {
             });
 
             if (!shouldUpdate) {
-                return NextResponse.json({ improved: false }, { status: 200 });
+                return noStoreJson({ improved: false }, { status: 200 });
             }
 
             const { error } = await supabase
@@ -240,15 +280,15 @@ export async function POST(request: NextRequest) {
                 .eq("id", existingScore.id);
 
             if (error) throw error;
-            return NextResponse.json({ improved: true }, { status: 200 });
+            return noStoreJson({ improved: true }, { status: 200 });
         }
 
         const { error } = await supabase.from("game_scores").insert(scorePayload);
         if (error) throw error;
 
-        return NextResponse.json({ improved: true }, { status: 200 });
+        return noStoreJson({ improved: true }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Could not submit score.";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return noStoreJson({ error: message }, { status: 500 });
     }
 }

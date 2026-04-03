@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 
 interface StoryItemData {
     year: string;
@@ -71,6 +72,10 @@ export default function StoryItem({ item, index, adminImageKey, adminTitleKey, a
                         src={item.image}
                         alt={item.title}
                         fill
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        quality={72}
+                        placeholder="blur"
+                        blurDataURL={IMAGE_BLUR_DATA_URL}
                         className="object-cover transition-transform duration-700 hover:scale-105"
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = item.imageFallback;
