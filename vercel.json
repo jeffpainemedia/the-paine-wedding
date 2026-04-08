@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/rsvp-history-digest",
+      "schedule": "0 14 * * 1"
+    }
+  ]
+}
