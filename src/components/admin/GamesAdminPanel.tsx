@@ -188,16 +188,19 @@ function OverviewMetric({
     label,
     value,
     note,
+    subnote,
 }: {
     label: string;
     value: string | number;
     note: string;
+    subnote?: string;
 }) {
     return (
-        <div className="rounded-[1.2rem] border border-primary/8 bg-[#fbf8f3] p-3 shadow-[0_8px_24px_rgba(20,42,68,0.04)] md:rounded-[1.5rem] md:p-5">
+        <div className="rounded-[1.2rem] border border-primary/8 bg-[#fbf8f3] p-3 shadow-[0_8px_24px_rgba(20,42,68,0.04)] md:rounded-[1.5rem] md:p-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-xs md:tracking-[0.26em]">{label}</p>
-            <p className="mt-2 font-heading text-2xl text-primary md:mt-3 md:text-4xl">{value}</p>
-            <p className="mt-2 text-xs leading-relaxed text-text-secondary md:mt-3 md:text-sm">{note}</p>
+            <p className="mt-2 font-heading text-2xl text-primary md:mt-2 md:text-3xl">{value}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{note}</p>
+            {subnote && <p className="mt-1 text-[10px] text-text-secondary/60">{subnote}</p>}
         </div>
     );
 }
@@ -214,14 +217,14 @@ function ControlCard({
     children: ReactNode;
 }) {
     return (
-        <div className="rounded-[1.5rem] border border-primary/10 bg-white p-4 shadow-[0_16px_50px_rgba(20,42,68,0.06)] md:rounded-[1.9rem] md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="rounded-[1.5rem] border border-primary/10 bg-white p-4 shadow-[0_16px_50px_rgba(20,42,68,0.06)] md:rounded-[1.9rem] md:p-5">
+            <div className="flex flex-col gap-3">
                 <div className="min-w-0">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-xs md:tracking-[0.28em]">{eyebrow}</p>
-                    <h3 className="mt-2 font-heading text-2xl text-primary md:mt-4 md:text-3xl">{title}</h3>
-                    <p className="mt-2 text-xs leading-relaxed text-text-secondary md:mt-3 md:text-sm">{copy}</p>
+                    <h3 className="mt-1.5 font-heading text-2xl text-primary">{title}</h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{copy}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 md:mt-1 md:max-w-[12rem] md:justify-end">{children}</div>
+                <div className="flex flex-wrap gap-2">{children}</div>
             </div>
         </div>
     );
@@ -1553,7 +1556,7 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-6">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                     <OverviewMetric
                         label="Total Scores"
                         value={gameScores.length}
@@ -1568,6 +1571,7 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         label="Trivia Scores"
                         value={triviaScores.length}
                         note="All trivia submissions so far."
+                        subnote={`Avg score: ${averageTriviaScore} / 10`}
                     />
                     <OverviewMetric
                         label="Crossword Scores"
@@ -1575,29 +1579,15 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         note="All mini crossword submissions so far."
                     />
                     <OverviewMetric
-                        label="Avg Trivia"
-                        value={averageTriviaScore}
-                        note="Average trivia score out of 10."
-                    />
-                    <OverviewMetric
                         label="Today's Painedle"
                         value={todaysPainedleScores.length}
                         note="Submissions against today's puzzle key."
                     />
                     <OverviewMetric
-                        label="Word Bank"
+                        label="Painedle Bank"
                         value={PAINEDLE_WORDS.length}
-                        note="Total Painedle answers in rotation."
-                    />
-                    <OverviewMetric
-                        label="Word Length"
-                        value="5"
-                        note="Painedle currently runs with fixed five-letter answers."
-                    />
-                    <OverviewMetric
-                        label="Duplicates"
-                        value={duplicateWordCount}
-                        note="Duplicate answers currently present in the live word bank."
+                        note="Answers in rotation."
+                        subnote={`5-letter words · ${duplicateWordCount} duplicate${duplicateWordCount === 1 ? "" : "s"}`}
                     />
                 </div>
 
