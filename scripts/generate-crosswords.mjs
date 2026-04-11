@@ -2966,6 +2966,7 @@ for (let i = 0; i < 194; i++) {
   const orderedSlots = templateOrders[tName];
 
   let assignment = null;
+  let usedTemplate = tName;
   _puzzleDeadline = Date.now() + PUZZLE_TIMEOUT_MS;
   let attempts = 0;
 
@@ -2988,6 +2989,7 @@ for (let i = 0; i < 194; i++) {
         const candidate = solvePuzzle(templateOrders[t2], i);
         if (candidate && isUniqueGrid(candidate)) {
           assignment = candidate;
+          usedTemplate = t2;
         }
       }
       if (assignment) {
@@ -3000,7 +3002,7 @@ for (let i = 0; i < 194; i++) {
   if (assignment) {
     for (const word of Object.values(assignment)) markWordUsed(word, i);
     usedGridSignatures.add(gridSignature(assignment));
-    puzzles.push({ tName, assignment });
+    puzzles.push({ tName: usedTemplate, assignment });
   } else {
     process.stderr.write(`  WARNING: puzzle ${i+1} failed\n`);
     puzzles.push(null);
@@ -3027,13 +3029,14 @@ for (let i = 0; i < 194; i++) {
   const dateStr = d.toISOString().slice(0, 10);
   const id = `p${String(i+1).padStart(3,'0')}`;
   const theme = themeFor(i);
-  const tName = TEMPLATE_CYCLE[i % TEMPLATE_CYCLE.length];
 
   if (!p) {
     lines.push(`  // ${id} — ${dateStr} — MISSING`);
     continue;
   }
 
+  // Use the actual template that was used (may be fallback, not primary)
+  const tName = p.tName;
   lines.push(`  // ${id} — ${dateStr} — ${theme} — template ${tName}`);
   lines.push(`  { id: "${id}", rows: 5, cols: 5, words: [`);
 
