@@ -103,20 +103,12 @@ export default async function Registry() {
                                         {brand?.tagline ?? reg.description}
                                     </p>
 
-                                    {/* Category pills */}
+                                    {/* Category list */}
                                     {brand?.categories && brand.categories.length > 0 && (
                                         <div className="mb-8">
-                                            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-text-secondary/50">Includes</p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {brand.categories.map((cat) => (
-                                                    <span
-                                                        key={cat}
-                                                        className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500 pointer-events-none select-none"
-                                                    >
-                                                        {cat}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            <p className="text-xs text-text-secondary/60">
+                                                {brand.categories.join(" · ")}
+                                            </p>
                                         </div>
                                     )}
 

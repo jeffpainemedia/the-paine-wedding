@@ -82,10 +82,10 @@ function MistakeDots({ remaining }: { remaining: number }) {
 function SolvedGroupRow({ group }: { group: ConnectionsGroup }) {
     return (
         <div
-            className={`flex flex-col items-center justify-center rounded-[1.1rem] px-4 py-3.5 ${DIFFICULTY_BG[group.difficulty]}`}
+            className={`flex flex-col items-center justify-center rounded-[1.1rem] px-4 md:px-5 py-3.5 md:py-4.5 ${DIFFICULTY_BG[group.difficulty]}`}
         >
-            <p className="text-center text-xs font-bold uppercase tracking-[0.2em]">{group.category}</p>
-            <p className="mt-1 text-center text-sm">{group.words.join(", ")}</p>
+            <p className="text-center text-xs md:text-sm font-bold uppercase tracking-[0.2em]">{group.category}</p>
+            <p className="mt-1 text-center text-sm md:text-base">{group.words.join(", ")}</p>
         </div>
     );
 }
@@ -332,7 +332,7 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
     if (!hydrated) return null;
 
     return (
-        <div className="mx-auto w-full max-w-lg">
+        <div className="mx-auto w-full max-w-xl">
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
 
             {/* Header */}
@@ -384,7 +384,7 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                                     onClick={() => handleWordClick(word)}
                                     disabled={!!animatingGroup || isSubmitting}
                                     className={[
-                                        "relative flex min-h-[3.5rem] items-center justify-center rounded-[0.9rem] border px-1 py-3 text-center text-xs font-bold uppercase tracking-[0.12em] transition-all duration-200 select-none",
+                                        "relative flex min-h-[3.5rem] md:min-h-[4.25rem] items-center justify-center rounded-[0.9rem] border px-1.5 md:px-2 py-3 md:py-3.5 text-center text-xs md:text-sm font-bold uppercase tracking-[0.12em] transition-all duration-200 select-none",
                                         isAnimating
                                             ? "scale-105 border-transparent bg-primary text-white shadow-lg"
                                             : isSelected
@@ -405,21 +405,21 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                         <div className="flex gap-3">
                             <button
                                 onClick={handleShuffle}
-                                className="rounded-full border border-primary/15 bg-white/70 px-5 py-2.5 text-xs uppercase tracking-[0.2em] text-primary transition-colors hover:bg-white"
+                                className="rounded-full border border-primary/15 bg-white/70 px-6 py-3 text-sm uppercase tracking-[0.2em] text-primary transition-colors hover:bg-white"
                             >
                                 Shuffle
                             </button>
                             <button
                                 onClick={handleDeselectAll}
                                 disabled={selectedWords.length === 0}
-                                className="rounded-full border border-primary/15 bg-white/70 px-5 py-2.5 text-xs uppercase tracking-[0.2em] text-primary transition-colors hover:bg-white disabled:opacity-40"
+                                className="rounded-full border border-primary/15 bg-white/70 px-6 py-3 text-sm uppercase tracking-[0.2em] text-primary transition-colors hover:bg-white disabled:opacity-40"
                             >
                                 Deselect All
                             </button>
                             <button
                                 onClick={() => void handleSubmit()}
                                 disabled={selectedWords.length !== 4 || !!animatingGroup || isSubmitting}
-                                className="rounded-full bg-primary px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-white shadow-md transition-all hover:bg-primary/90 disabled:opacity-40"
+                                className="rounded-full bg-primary px-7 py-3 text-sm uppercase tracking-[0.2em] text-white shadow-md transition-all hover:bg-primary/90 disabled:opacity-40"
                             >
                                 Submit
                             </button>

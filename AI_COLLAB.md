@@ -2534,6 +2534,65 @@ Also in Session 34:
 
 ---
 
+### Session 35 (Apr 3–10 — Claude)
+**Admin mobile table redesign (accordion/sticky toggle):**
+
+Implemented the full work order below (Session 35 Sonnet Work Order). Added `MobileViewMode = "sticky" | "accordion"` type, toggle icons in mobile toolbar, accordion card rendering for both Guests and History tables, sticky first-column with opaque backgrounds, sort controls in accordion mode. All desktop behavior preserved.
+
+- `src/app/(main)/admin/page.tsx` — major additions (~300 lines): state vars, toggle SVGs, accordion markup, sticky classes
+- Commit `bb9e9f6` — "Add sticky column / accordion view toggle to admin mobile tables"
+
+**Admin games spacing fix:**
+
+- `src/components/admin/GamesAdminPanel.tsx`: 
+  - `ControlCard` changed from `md:flex-row` to always `flex-col` (prevented pill overflow)
+  - `OverviewMetric` gained `subnote?: string` prop, tightened sizing (`md:p-4`, `md:text-3xl`)
+  - Stats grid consolidated from 9 → 6 cards: merged Word Bank/Word Length/Duplicates → "Painedle Bank", merged Avg Trivia into Trivia Scores subnote
+  - Grid changed from `grid-cols-2 xl:grid-cols-6` (9 cards) to `grid-cols-2 md:grid-cols-3 xl:grid-cols-6` (6 cards)
+- Commit `268d64e` — "Fix admin/games spacing: collapse stats to 6 cards, fix control card overlap"
+
+**Codex untracked files fix:**
+
+- Committed 49 tracked files (`8eed667`) + all Codex-generated untracked source files (`12ef5f5`)
+- Root cause: admin/page.tsx referenced `householdOptions` prop on GuestEditDrawer, but GuestEditDrawer.tsx changes were uncommitted; also Codex API routes/layouts were never staged
+- Deployment fixed after both commits landed
+
+---
+
+### Session 36 (Apr 10 — Claude Cloud / Sonnet)
+**Crossword clue quality improvements:**
+
+- `scripts/generate-crosswords.mjs`:
+  - Added ~300 warm, Mini-crossword-style clue overrides (`CLUE_OVERRIDES`) sourced from ChatGPT
+  - Blocked bad crossword-ese fill: AEGIS, AERIE, ALAR, ALEE, ARS, EYRIE, ODEON, OGEE, SAPA, YAR, BEGAT
+  - Blocked inappropriate words: ABUSE, ARSON, BULLY, DRUNK, GRAVE, HATE, IDIOT, VENOM
+  - Applied `BLOCKED_WORDS` filter to curated pool (not just system dict)
+- `src/components/admin/GamesAdminPanel.tsx`: Added "Export Words & Clues" button to crossword admin card
+- `src/lib/games/crossword.ts`: Added `getAllCrosswordWordClues()` export, regenerated puzzle data
+- Commits: `f91d4a8`, `b392fdb`
+- `scripts/verify-crosswords.mjs`: 0 intersection mismatches, 0 uncued words, 0 blocked word hits
+
+**⚠️ KNOWN ISSUE — Crossword puzzle repetition NOT fully fixed:**
+
+The Session 36 cloud work improved clue quality but did NOT address the core repetition problem:
+- `WORD_COOLDOWN` still = 0 (no reuse prevention between puzzles)
+- No duplicate grid detection was added
+- Result: **93 unique grids out of 194** (worse than the 95 before the session)
+- ATONE appears **33×**, OVATE 19×, EERIE 17×, IMAGE 18×
+
+The two essential fixes still needed:
+1. Set `WORD_COOLDOWN` ≥ 7 in `scripts/generate-crosswords.mjs`
+2. Add `gridSignature()` + `usedGridKeys` Set to reject any puzzle whose sorted word list matches a previous puzzle
+3. Block or limit worst offenders: ATONE, OVATE, EERIE, ESS, AGORA, ROGUE
+4. Regenerate all 194 puzzles and verify: 194 unique grids, max word freq ≤ 15
+
+**Still pending from earlier sessions:**
+- Crossword mobile layout (header/timer overlap, Clear button overflow)
+- Crossword completion overlay positioning
+- TASK 13: stale state on site return
+
+---
+
 ## 📋 SONNET WORK ORDER — Admin Mobile Table Redesign (Session 35)
 
 > **This is a task list for Sonnet to implement.** Claude has researched the codebase and planned every detail below. Follow the plan precisely. Do NOT remove, break, or alter any existing desktop behavior or table features.
