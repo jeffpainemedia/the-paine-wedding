@@ -6,8 +6,8 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata = buildPageMetadata({
     path: "/games",
     title: "Paine Games",
-    description: "Play Painedle, the mini crossword, and couple trivia on Ashlyn and Jeffrey's wedding website.",
-    keywords: ["Painedle", "wedding games", "mini crossword", "couple trivia"],
+    description: "Play Painedle, Crossing Paths, Connected, and Couple Trivia — daily puzzles and games on Ashlyn and Jeffrey's wedding website.",
+    keywords: ["Painedle", "wedding games", "mini crossword", "couple trivia", "Connected"],
 });
 
 export default async function GamesPage() {

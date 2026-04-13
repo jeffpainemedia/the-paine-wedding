@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
     { path: "/games", slug: "games", priority: 0.7, changeFrequency: "daily" as const },
     { path: "/games/painedle", slug: "games", priority: 0.6, changeFrequency: "daily" as const },
     { path: "/games/crossword", slug: "games", priority: 0.6, changeFrequency: "daily" as const },
+    { path: "/games/connections", slug: "games", priority: 0.6, changeFrequency: "daily" as const },
     { path: "/games/trivia", slug: "games", priority: 0.5, changeFrequency: "weekly" as const },
 ];
 

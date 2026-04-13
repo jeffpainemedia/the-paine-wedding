@@ -13,6 +13,12 @@ import {
     type ConnectionsPuzzle,
 } from "@/lib/games/connections";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
+import {
+    submitGameScore,
+    saveStoredGamePlayer,
+    getStoredGamePlayer,
+    GAME_LEADERBOARD_REFRESH_EVENT,
+} from "@/lib/games/leaderboard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -144,6 +150,8 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [elapsed, setElapsed] = useState(0);
     const [hydrated, setHydrated] = useState(false);
+    const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const autoSubmitAttempted = useRef(false);
 
     // Hydrate from localStorage
     useEffect(() => {
@@ -280,6 +288,44 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
         }
     }
 
+    // Auto-submit when game ends and player profile exists
+    useEffect(() => {
+        if (status === "playing" || autoSubmitAttempted.current || scoreSubmitted) return;
+        const player = getStoredGamePlayer();
+        if (!player) return;
+
+        autoSubmitAttempted.current = true;
+        setAutoSubmitStatus("submitting");
+
+        const duration = getDurationSeconds(startedAt, completedAt);
+        const score = computeConnectionsScore(mistakes, duration);
+
+        submitGameScore({
+            game: "connections",
+            username: player.username,
+            email: player.email ?? "",
+            score,
+            maxScore: 100,
+            attempts: mistakes,
+            solved: status === "won",
+            puzzleKey: `connections-${puzzle.id}`,
+            metadata: {
+                duration_seconds: duration,
+                mistakes,
+                completed_at: completedAt ?? new Date().toISOString(),
+            },
+        })
+            .then(() => {
+                saveStoredGamePlayer({ email: player.email, username: player.username, browserProfile: player.browserProfile });
+                setAutoSubmitStatus("success");
+                setScoreSubmitted(true);
+                window.dispatchEvent(new CustomEvent(GAME_LEADERBOARD_REFRESH_EVENT));
+            })
+            .catch(() => {
+                setAutoSubmitStatus("error");
+            });
+    }, [status]);
+
     const durationSeconds = getDurationSeconds(startedAt, completedAt ?? (status !== "playing" ? new Date().toISOString() : null));
     const finalScore = computeConnectionsScore(mistakes, durationSeconds);
 
@@ -396,7 +442,18 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                         </div>
                     </div>
 
-                    {!scoreSubmitted && (
+                    {/* Auto-submit status */}
+                    {autoSubmitStatus === "submitting" && (
+                        <div className="rounded-[1.5rem] border border-primary/8 bg-white/85 px-5 py-4 text-center text-sm text-text-secondary">
+                            Submitting score…
+                        </div>
+                    )}
+                    {autoSubmitStatus === "success" && (
+                        <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-5 py-4 text-center text-sm text-emerald-700">
+                            Score submitted ✓ Your Connected score is on the leaderboard.
+                        </div>
+                    )}
+                    {(autoSubmitStatus === "error" || autoSubmitStatus === "idle") && !scoreSubmitted && (
                         <ScoreSubmissionForm
                             game="connections"
                             score={finalScore}
@@ -414,8 +471,7 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                             onSubmitted={() => setScoreSubmitted(true)}
                         />
                     )}
-
-                    {scoreSubmitted && (
+                    {scoreSubmitted && autoSubmitStatus !== "success" && (
                         <p className="text-center text-sm text-text-secondary">Score submitted ✓</p>
                     )}
                 </div>

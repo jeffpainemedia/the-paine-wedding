@@ -6,6 +6,14 @@ import ConnectionsGame from "@/components/games/ConnectionsGame";
 import { getCentralDateKey } from "@/lib/games/crossword";
 import { getDailyConnectionsPuzzle } from "@/lib/games/connections";
 import GameSuggestions from "@/components/games/GameSuggestions";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+    path: "/games/connections",
+    title: "Connected",
+    description: "Sort 16 words into four hidden groups — a new puzzle every day. Play Connected on Ashlyn and Jeffrey's wedding site.",
+    keywords: ["word game", "connections puzzle", "wedding game", "daily puzzle"],
+});
 
 export const dynamic = "force-dynamic";
 

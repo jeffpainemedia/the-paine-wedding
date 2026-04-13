@@ -15,9 +15,6 @@ export const metadata = buildPageMetadata({
 // Per-brand visual config — keeps the page data-driven while adding personality
 const brandConfig: Record<string, {
     gradientBar: string;
-    pillBg: string;
-    pillText: string;
-    pillBorder: string;
     ctaText: string;
     wordmark: string;
     categories: string[];
@@ -25,9 +22,6 @@ const brandConfig: Record<string, {
 }> = {
     Amazon: {
         gradientBar: "from-[#FF9900] to-[#FFB830]",
-        pillBg: "bg-[#FFF8ED]",
-        pillText: "text-[#9A5C00]",
-        pillBorder: "border-[#FFD580]/50",
         ctaText: "text-[#B86A00]",
         wordmark: "amazon",
         categories: ["Kitchen", "Bedroom", "Bath", "Entertaining", "Home Decor"],
@@ -35,9 +29,6 @@ const brandConfig: Record<string, {
     },
     Target: {
         gradientBar: "from-[#CC0000] to-[#E53935]",
-        pillBg: "bg-[#FFF0F0]",
-        pillText: "text-[#990000]",
-        pillBorder: "border-[#FFCDD2]/60",
         ctaText: "text-[#CC0000]",
         wordmark: "Target",
         categories: ["Home Essentials", "Kitchen", "Storage", "Bedding"],
@@ -114,15 +105,18 @@ export default async function Registry() {
 
                                     {/* Category pills */}
                                     {brand?.categories && brand.categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mb-8">
-                                            {brand.categories.map((cat) => (
-                                                <span
-                                                    key={cat}
-                                                    className={`rounded-full border px-3 py-1 text-xs font-medium ${brand.pillBg} ${brand.pillText} ${brand.pillBorder}`}
-                                                >
-                                                    {cat}
-                                                </span>
-                                            ))}
+                                        <div className="mb-8">
+                                            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-text-secondary/50">Includes</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {brand.categories.map((cat) => (
+                                                    <span
+                                                        key={cat}
+                                                        className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500 pointer-events-none select-none"
+                                                    >
+                                                        {cat}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 
@@ -130,13 +124,13 @@ export default async function Registry() {
                                     <div className="flex-1" />
 
                                     {/* Footer CTA row */}
-                                    <div className="flex items-center justify-between pt-5 border-t border-gray-100">
-                                        <span className="text-xs uppercase tracking-[0.18em] text-text-secondary/55 font-medium">
-                                            View Registry
-                                        </span>
-                                        <span className={`flex items-center gap-1.5 text-sm font-semibold transition-transform duration-200 group-hover:translate-x-0.5 ${brand?.ctaText ?? "text-primary"}`}>
-                                            Browse <ExternalLink size={13} strokeWidth={2} />
-                                        </span>
+                                    <div className="mt-auto pt-6">
+                                        <div className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white transition-all duration-200 group-hover:opacity-90 ${
+                                            reg.name === "Amazon" ? "bg-[#FF9900]" : reg.name === "Target" ? "bg-[#CC0000]" : "bg-primary"
+                                        }`}>
+                                            Browse {reg.name} Registry
+                                            <ExternalLink size={14} strokeWidth={2.5} />
+                                        </div>
                                     </div>
                                 </div>
                             </a>
