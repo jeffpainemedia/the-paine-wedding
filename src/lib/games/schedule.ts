@@ -15,6 +15,13 @@ export function getCrosswordUnlockDate() {
     return new Date(CROSSWORD_UNLOCK_AT);
 }
 
+export const CONNECTIONS_UNLOCK_AT = "2026-04-12T00:00:00-05:00";
+export const CONNECTIONS_UNLOCK_LABEL = "April 12, 2026";
+
+export function getConnectionsUnlockDate() {
+    return new Date(CONNECTIONS_UNLOCK_AT);
+}
+
 function getDateDaysBeforeWedding(daysBeforeWedding: number) {
     const weddingDate = new Date(WEDDING_DAY_AT);
     weddingDate.setDate(weddingDate.getDate() - daysBeforeWedding);

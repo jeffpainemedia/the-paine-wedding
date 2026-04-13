@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export type GameType = "trivia" | "painedle" | "crossword";
+export type GameType = "trivia" | "painedle" | "crossword" | "connections";
 
 export type LeaderboardEntry = {
     id: string;

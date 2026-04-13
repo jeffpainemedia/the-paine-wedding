@@ -76,7 +76,7 @@ type Database = {
     };
 };
 
-type GameType = "trivia" | "painedle" | "crossword";
+type GameType = "trivia" | "painedle" | "crossword" | "connections";
 
 type SubmitScoreBody = {
     game?: GameType;
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
         const username = body.username?.trim() ?? "";
         const score = Number(body.score ?? 0);
 
-        if (!game || !["trivia", "painedle", "crossword"].includes(game)) {
+        if (!game || !["trivia", "painedle", "crossword", "connections"].includes(game)) {
             return NextResponse.json({ error: "Invalid game." }, { status: 400 });
         }
 

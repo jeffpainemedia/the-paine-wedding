@@ -1,19 +1,17 @@
 import Section from "@/components/ui/Section";
-import CrosswordGate from "@/components/games/CrosswordGate";
+import ConnectionsGate from "@/components/games/ConnectionsGate";
 import GameAccountPanel from "@/components/games/GameAccountPanel";
 import CollapsibleLeaderboard from "@/components/games/CollapsibleLeaderboard";
-import MiniCrosswordGame from "@/components/games/MiniCrosswordGame";
-import { getCentralDateKey, getDailyCrosswordPuzzle, parseCrosswordOverrides } from "@/lib/games/crossword";
+import ConnectionsGame from "@/components/games/ConnectionsGame";
+import { getCentralDateKey } from "@/lib/games/crossword";
+import { getDailyConnectionsPuzzle } from "@/lib/games/connections";
 import GameSuggestions from "@/components/games/GameSuggestions";
-import { getSettingsMap } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
-export default async function CrosswordPage() {
+export default async function ConnectionsPage() {
     const todayKey = getCentralDateKey();
-    const settingsMap = await getSettingsMap();
-    const overrides = parseCrosswordOverrides(settingsMap["games.crossword.overrides"]);
-    const todayPuzzle = getDailyCrosswordPuzzle(todayKey, overrides);
+    const todayPuzzle = getDailyConnectionsPuzzle(todayKey);
 
     return (
         <div className="bg-[linear-gradient(180deg,#f8f3ec_0%,#eff1f4_34%,#ffffff_100%)]">
@@ -23,9 +21,9 @@ export default async function CrosswordPage() {
                     <span className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Daily Puzzle</span>
                     <span className="h-px w-12 bg-accent" />
                 </div>
-                <h1 className="mb-4 font-heading text-5xl text-primary md:text-6xl">Crossing Paths</h1>
+                <h1 className="mb-4 font-heading text-5xl text-primary md:text-6xl">Connected</h1>
                 <p className="mx-auto max-w-xl text-text-secondary leading-relaxed">
-                    Ten clues built around Ashlyn & Jeffrey. A fresh puzzle every day — solve it fast for the top spot.
+                    Find four groups of four words that share something in common. A new puzzle every day — solve it with the fewest mistakes for the top spot.
                 </p>
             </Section>
             <Section className="pb-16 pt-8 md:pb-18 md:pt-10">
@@ -33,17 +31,17 @@ export default async function CrosswordPage() {
                     <GameAccountPanel />
                 </div>
                 <div className="mb-10">
-                    <CrosswordGate>
-                        <MiniCrosswordGame puzzle={todayPuzzle} dateKey={todayKey} />
-                    </CrosswordGate>
+                    <ConnectionsGate>
+                        <ConnectionsGame puzzle={todayPuzzle} dateKey={todayKey} />
+                    </ConnectionsGate>
                 </div>
                 <CollapsibleLeaderboard
-                    game="crossword"
-                    title="Crossword Leaders"
-                    subtitle="Fastest clean solves and fewer reveals rise to the top."
-                    puzzleKey={todayPuzzle.id}
+                    game="connections"
+                    title="Connected Leaders"
+                    subtitle="Fewest mistakes and fastest times rise to the top."
+                    puzzleKey={`connections-${todayPuzzle.id}`}
                 />
-                <GameSuggestions current="crossword" />
+                <GameSuggestions current="connections" />
             </Section>
         </div>
     );

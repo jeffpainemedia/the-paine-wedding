@@ -61,7 +61,7 @@ export default function AdminGamesPage() {
             section="games"
             role={role}
             title="Games Admin"
-            description="Painedle, mini crossword, trivia, leaderboards, submissions, and player profiles live here."
+            description="Painedle, Crossing Paths, trivia, leaderboards, submissions, and player profiles live here."
             onLogout={logout}
         >
             {loading ? (

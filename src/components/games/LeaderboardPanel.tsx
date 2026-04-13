@@ -49,6 +49,17 @@ export default function LeaderboardPanel({
             return entry.solved ? "Completed puzzle" : "In progress";
         }
 
+        if (game === "connections") {
+            const mistakes = typeof entry.metadata?.mistakes === "number" ? entry.metadata.mistakes : null;
+            const duration = typeof entry.metadata?.duration_seconds === "number" ? entry.metadata.duration_seconds : null;
+            const minutes = duration !== null ? Math.max(1, Math.round(duration / 60)) : null;
+
+            if (minutes !== null && mistakes !== null) {
+                return `${minutes} min${minutes === 1 ? "" : "s"} • ${mistakes} mistake${mistakes === 1 ? "" : "s"}`;
+            }
+            return entry.solved ? "Completed" : "In progress";
+        }
+
         return entry.solved
             ? `Solved in ${entry.attempts} ${entry.attempts === 1 ? "guess" : "guesses"}`
             : "Unsolved";

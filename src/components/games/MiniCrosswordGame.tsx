@@ -420,7 +420,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                         <p className="text-[10px] uppercase tracking-[0.3em] text-text-secondary">Daily Puzzle</p>
-                        <h2 className="font-heading text-2xl text-primary">Mini Crossword</h2>
+                        <h2 className="font-heading text-2xl text-primary">Crossing Paths</h2>
                     </div>
 
                     <div className="flex flex-col items-center">
@@ -663,7 +663,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                             </svg>
                         </div>
                         <h3 className="font-heading text-3xl text-white">Congratulations!</h3>
-                        <p className="mt-2 text-base text-white/70">You solved the Mini Crossword</p>
+                        <p className="mt-2 text-base text-white/70">You solved Crossing Paths</p>
                         <p className="mt-4 font-mono text-5xl font-bold tabular-nums text-accent">{fmtTime(displayTime)}</p>
                         {revealedEntryIds.length > 0 ? (
                             <p className="mt-2 text-sm text-white/50">

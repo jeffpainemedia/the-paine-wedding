@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+    CONNECTIONS_UNLOCK_LABEL,
     CROSSWORD_UNLOCK_LABEL,
+    getConnectionsUnlockDate,
     getCrosswordUnlockDate,
     getTimeRemaining,
     getTriviaUnlockDate,
@@ -115,12 +117,14 @@ function CountdownCard({
 export default function GamesHubClient() {
     const [crosswordRemaining, setCrosswordRemaining] = useState(() => getTimeRemaining(getCrosswordUnlockDate()));
     const [triviaRemaining, setTriviaRemaining] = useState(() => getTimeRemaining(getTriviaUnlockDate()));
+    const [connectionsRemaining, setConnectionsRemaining] = useState(() => getTimeRemaining(getConnectionsUnlockDate()));
     const { isAdmin } = useAdminSession();
 
     useEffect(() => {
         const interval = window.setInterval(() => {
             setCrosswordRemaining(getTimeRemaining(getCrosswordUnlockDate()));
             setTriviaRemaining(getTimeRemaining(getTriviaUnlockDate()));
+            setConnectionsRemaining(getTimeRemaining(getConnectionsUnlockDate()));
         }, 1000);
 
         return () => window.clearInterval(interval);
@@ -153,8 +157,8 @@ export default function GamesHubClient() {
 
             <CountdownCard
                 eyebrow="Game Two"
-                title="Mini Crossword"
-                copy="A fill-in-the-blank crossword built from Ashlyn and Jeffrey's story opens the week before the wedding."
+                title="Crossing Paths"
+                copy="A fill-in-the-blank puzzle built from Ashlyn and Jeffrey's story — solve the crossword every day to climb the leaderboard."
                 href="/games/crossword"
                 cta="Open Crossword"
                 status={crosswordRemaining.isUnlocked ? "Live Now" : "Unlocks Soon"}
@@ -165,6 +169,18 @@ export default function GamesHubClient() {
 
             <CountdownCard
                 eyebrow="Game Three"
+                title="Connected"
+                copy="Sort 16 words into four hidden groups. A fresh puzzle every day — find them all with the fewest mistakes."
+                href="/games/connections"
+                cta="Play Connected"
+                status={connectionsRemaining.isUnlocked ? "Live Now" : "Unlocks Soon"}
+                remaining={connectionsRemaining}
+                unlockLabel={CONNECTIONS_UNLOCK_LABEL}
+                forceUnlocked={isAdmin}
+            />
+
+            <CountdownCard
+                eyebrow="Game Four"
                 title="Couple Trivia"
                 copy="Reception-day trivia stays locked until the wedding so the room can play it live together."
                 href="/games/trivia"

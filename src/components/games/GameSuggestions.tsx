@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type Game = "painedle" | "crossword" | "trivia";
+type Game = "painedle" | "crossword" | "trivia" | "connections";
 
 const GAMES: Record<Game, { label: string; eyebrow: string; href: string }> = {
     painedle: {
@@ -11,14 +11,19 @@ const GAMES: Record<Game, { label: string; eyebrow: string; href: string }> = {
         href: "/games/painedle",
     },
     crossword: {
-        label: "Mini Crossword",
-        eyebrow: "Wedding story",
+        label: "Crossing Paths",
+        eyebrow: "Daily puzzle",
         href: "/games/crossword",
     },
     trivia: {
         label: "Couple Trivia",
         eyebrow: "Reception day",
         href: "/games/trivia",
+    },
+    connections: {
+        label: "Connected",
+        eyebrow: "Daily puzzle",
+        href: "/games/connections",
     },
 };
 
