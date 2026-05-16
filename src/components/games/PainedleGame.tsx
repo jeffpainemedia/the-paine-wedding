@@ -54,7 +54,7 @@ function tileClasses(status?: LetterStatus, hasLetter?: boolean) {
 function keyboardKeyClasses(status?: LetterStatus) {
     if (status === "correct") return "border-emerald-400 bg-emerald-500 text-white";
     if (status === "present") return "border-[#d6b073] bg-[#c69a72] text-slate-950";
-    if (status === "absent") return "border-[#4e6782] bg-[#28415d] text-white";
+    if (status === "absent") return "border-white/5 bg-black/45 text-white/35";
     return "border-[#6a8097] bg-[#eef2f6] text-primary hover:bg-white";
 }
 
@@ -239,10 +239,9 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     const keyboardStatuses = getWordStatusMap(guesses, solution);
     const score = status === "won" ? MAX_GUESSES - guesses.length + 1 : 0;
 
-    // Auto-submit score when game ends if player account is stored
+    // Auto-submit score when game ends (win or loss) if player account is stored
     useEffect(() => {
         if (status === "playing" || autoSubmitAttempted.current) return;
-        if (status !== "won") return; // only submit wins
         const storedPlayer = getStoredGamePlayer();
         if (!storedPlayer) return;
         autoSubmitAttempted.current = true;
@@ -258,7 +257,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
             score,
             maxScore: MAX_GUESSES,
             attempts: guesses.length,
-            solved: true,
+            solved: status === "won",
             puzzleKey: dateKey,
             metadata: {
                 solution,
@@ -549,38 +548,33 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                             {shareCopied ? "✓ Copied!" : "Share Result"}
                         </button>
 
-                        {status === "won" ? (
-                            autoSubmitStatus === "success" ? (
-                                <div className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/10 p-5 text-center">
-                                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                                        Score Submitted ✓
-                                    </p>
-                                    <p className="mt-2 text-sm text-white/60">Your Painedle score is on the leaderboard.</p>
-                                </div>
-                            ) : autoSubmitStatus === "submitting" ? (
-                                <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-5 text-center">
-                                    <p className="text-sm text-white/50">Submitting score…</p>
-                                </div>
-                            ) : (
-                                <ScoreSubmissionForm
-                                    game="painedle"
-                                    score={score}
-                                    maxScore={MAX_GUESSES}
-                                    attempts={guesses.length}
-                                    solved
-                                    puzzleKey={dateKey}
-                                    metadata={{ solution, word_length: WORD_LENGTH }}
-                                    buttonLabel="Submit Painedle Score"
-                                    successMessage="Painedle score submitted."
-                                />
-                            )
-                        ) : (
-                            <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-6">
-                                <p className="text-sm uppercase tracking-[0.3em] text-white/60">Round Complete</p>
-                                <p className="mt-3 text-white/78">
-                                    Only solved games go on the leaderboard. Come back tomorrow for the next word.
+                        {autoSubmitStatus === "success" ? (
+                            <div className={`rounded-[1.75rem] border p-5 text-center ${status === "won" ? "border-emerald-400/20 bg-emerald-400/10" : "border-white/12 bg-white/8"}`}>
+                                <p className={`text-sm font-semibold uppercase tracking-[0.2em] ${status === "won" ? "text-emerald-300" : "text-white/70"}`}>
+                                    {status === "won" ? "Score Submitted ✓" : "Result Recorded"}
+                                </p>
+                                <p className="mt-2 text-sm text-white/60">
+                                    {status === "won"
+                                        ? "Your Painedle score is on the leaderboard."
+                                        : "Your attempt is on the leaderboard. Better luck tomorrow!"}
                                 </p>
                             </div>
+                        ) : autoSubmitStatus === "submitting" ? (
+                            <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-5 text-center">
+                                <p className="text-sm text-white/50">Submitting score…</p>
+                            </div>
+                        ) : (
+                            <ScoreSubmissionForm
+                                game="painedle"
+                                score={score}
+                                maxScore={MAX_GUESSES}
+                                attempts={guesses.length}
+                                solved={status === "won"}
+                                puzzleKey={dateKey}
+                                metadata={{ solution, word_length: WORD_LENGTH }}
+                                buttonLabel={status === "won" ? "Submit Painedle Score" : "Submit Painedle Attempt"}
+                                successMessage={status === "won" ? "Painedle score submitted." : "Painedle attempt submitted."}
+                            />
                         )}
                     </div>
                 ) : null}
