@@ -2114,6 +2114,35 @@ All games auto-submit scores when a player profile exists (`getStoredGamePlayer(
   - `src/lib/games/crossword.ts` — lines 167-2698 replaced (RAW_PUZZLES array only)
 - Files NOT changed: types, buildPuzzle(), buildCrossword(), renderer, date rotation, scoring
 
+### Session 84 (Apr 13 — Claude Sonnet)
+**Connected game — auto-submit fix, palette colors, admin bypass:**
+
+- **Auto-submit fix:** Connected game was computing `username` directly from `player.username` instead of constructing `fullName` from `firstName + lastName` (matching the pattern in Painedle/Crossword/Trivia). Fixed in `ConnectionsGame.tsx` auto-submit effect.
+- **Existing score check on mount:** Added `useEffect` that calls `fetchPlayerGameScore("connections", puzzleKey, player)` on hydration. If a score already exists in the DB, sets `scoreSubmitted = true` and `autoSubmitAttempted = true` — prevents the manual "Claim Your Score" form from showing even if localStorage was cleared.
+- **Admin bypass — all 4 games:** Added `isAdmin` guard to all auto-submit effects: if admin is logged in, the effect returns early without recording any scores. Added `useAdminSession` import to `ConnectionsGame.tsx`, `CoupleTriviaGame.tsx` (previously missing).
+- **Admin bypass — GameAccountPanel:** When `isAdmin`, renders a read-only "Admin · Testing mode — scores not recorded" bar instead of the signup/login form. Admins can test all games without needing a player account.
+- **Admin bypass — game-over UI:** Each game's post-game score area shows "Admin mode — score not recorded" pill instead of the submission form/success state when admin is logged in. Applied to: Connected, Painedle, Trivia, Crossword.
+- **Difficulty colors (Connected):** Replaced NYT-style bright primary colors (yellow-300, emerald-400, blue-400, purple-400) with site palette variants in `src/lib/games/connections.ts`:
+  - Difficulty 1 (Easiest): `bg-[#C69A72]/25 text-[#7A5C3A]` — warm gold/tan (accent color)
+  - Difficulty 2 (Easy): `bg-[#1A3F6F]/12 text-[#1A3F6F]` — light navy tint
+  - Difficulty 3 (Medium): `bg-[#1A3F6F]/28 text-[#0F2847]` — deeper navy
+  - Difficulty 4 (Hardest): `bg-[#7A1F24]/18 text-[#7A1F24]` — burgundy (secondary color)
+- **Success state colors (all games):** Replaced `emerald-*` success states with `accent/30` border + `accent/10` background + `text-primary` across Connected, Painedle, Trivia, Crossword, and ScoreSubmissionForm. Painedle (dark bg) uses `accent/25 border + accent/12 bg + text-accent`.
+- Files changed: `src/components/games/ConnectionsGame.tsx`, `src/components/games/GameAccountPanel.tsx`, `src/components/games/PainedleGame.tsx`, `src/components/games/CoupleTriviaGame.tsx`, `src/components/games/MiniCrosswordGame.tsx`, `src/components/games/ScoreSubmissionForm.tsx`, `src/lib/games/connections.ts`
+- Build passed, deployed to production
+
+### Session 83 (Apr 13 — Claude Sonnet)
+**Connected game — start/pause overlay + word shuffle fix:**
+
+- **Start overlay:** Added frosted start overlay (`bg-[rgba(23,55,86,0.52)] backdrop-blur-sm`) over the game area. Timer begins only when user clicks "Start". Matches crossword behavior exactly.
+- **Pause/Resume button:** Added pill button in the header (next to `?`) visible when `gameStarted && status === "playing"`. Clicking freezes timer and shows pause overlay. "Resume" dismisses overlay and resumes timer.
+- **Pause accuracy:** Uses `pausedSinceRef` (ref, not state) to record when pause started. On resume, accumulates to `pausedMs` state which is subtracted from elapsed. Final score duration also subtracts paused time.
+- **Timer display:** Shows `0:00` before start instead of "Ready". Tracks elapsed via `startTimestamp.current` ref instead of date math.
+- **localStorage resume:** If saved state has `startedAt` set, `gameStarted` is initialized to `true` so returning players skip the start overlay and resume immediately.
+- **Word randomization fix:** `shuffleOrder` initial state changed from `puzzle.words` (unshuffled group order) to `shuffleArray([...puzzle.words], puzzle.id)` (deterministic shuffle per puzzle). Same fix applied to localStorage fallback.
+- Files changed: `src/components/games/ConnectionsGame.tsx`
+- Deployed to production
+
 ### Session 82 (Apr 12–13 — Claude Opus)
 **Connected game — full build, launch, and polish:**
 

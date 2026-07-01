@@ -3,15 +3,22 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AdminGameScore, GamePlayerRecord } from "@/lib/games/admin-types";
-import {
-    CROSSWORD_PUZZLE,
-    CROSSWORD_PUZZLE_KEY,
-    getAllCrosswordWordClues,
-    type BuiltCrossword,
-    type CrosswordCatalogItem,
-} from "@/lib/games/crossword";
-import { PAINEDLE_WORDS } from "@/lib/games/word-list";
-import { getDailyWord, getTodayKey } from "@/lib/games/painedle";
+// Crossword data is server-only; the admin panel fetches what it needs via
+// /api/admin/crossword-puzzles and /api/admin/games/word-clues. Only types
+// are imported directly here.
+import type { BuiltCrossword, CrosswordCatalogItem } from "@/lib/games/crossword-types";
+import { getTodayKey } from "@/lib/games/painedle";
+
+// Painedle word data is fetched from /api/admin/games/painedle-data instead
+// of imported, so the word list never gets bundled to the client.
+type PainedleAdminData = {
+    words: string[];
+    todayWord: string;
+    todayIndex: number;
+    upcoming: { key: string; isoDate: string; word: string; isToday: boolean; isPast: boolean }[];
+    crossword: { puzzleCount: number; todayPuzzleId: string };
+    connections: { puzzleCount: number };
+};
 import {
     CROSSWORD_UNLOCK_LABEL,
     getCrosswordUnlockDate,
@@ -30,10 +37,26 @@ type ModalView =
     | "schedule"
     | "word-bank"
     | "crossword"
+    | "connections"
     | "trivia-bank"
     | "leaderboards"
     | "submissions"
     | "players";
+
+// Connections puzzle data — read-only viewer for admin browsing past +
+// current + future days. Editing happens in source code.
+type ConnectionsAdminPuzzle = {
+    id: number;
+    words: string[];
+    groups: { category: string; words: string[]; difficulty: 1 | 2 | 3 | 4 }[];
+};
+type ConnectionsAdminCatalogItem = {
+    dateKey: string;
+    isoDate: string;
+    puzzleId: number;
+    isToday: boolean;
+    isPast: boolean;
+};
 
 type ScoreFilter = "all" | "trivia" | "painedle" | "crossword" | "connections";
 
@@ -102,23 +125,11 @@ function getProfileSummary(score: AdminGameScore) {
     };
 }
 
-function buildUpcomingSchedule(days: number) {
-    const today = new Date();
-
-    return Array.from({ length: days }, (_, index) => {
-        const date = new Date(today);
-        date.setDate(today.getDate() + index);
-        const key = getTodayKey(date);
-
-        return {
-            key,
-            label: date.toLocaleDateString(undefined, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-            }),
-            word: getDailyWord(key),
-        };
+function formatScheduleLabel(isoDate: string): string {
+    return new Date(isoDate).toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
     });
 }
 
@@ -405,8 +416,32 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
     const [crosswordOpError, setCrosswordOpError] = useState<string | null>(null);
     const [crosswordSaving, setCrosswordSaving] = useState(false);
     const hasFetchedCrossword = useRef(false);
+    // Connections viewer state
+    const [connectionsCatalog, setConnectionsCatalog] = useState<ConnectionsAdminCatalogItem[]>([]);
+    const [selectedConnectionsId, setSelectedConnectionsId] = useState<number | null>(null);
+    const [selectedConnections, setSelectedConnections] = useState<ConnectionsAdminPuzzle | null>(null);
+    const [connectionsLoadState, setConnectionsLoadState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+    const hasFetchedConnections = useRef(false);
     const [todayKey] = useState(() => getTodayKey());
-    const todayWord = getDailyWord(todayKey);
+    const [painedleData, setPainedleData] = useState<PainedleAdminData | null>(null);
+
+    // Load Painedle word data from the admin API. The admin panel only
+    // mounts when the user is already authenticated, so a 401 here would be
+    // a server issue rather than a permission issue.
+    useEffect(() => {
+        // Pull a 6-week window centered on today so the rotation view shows
+        // recent past + the next month at once.
+        const url = `/api/admin/games/painedle-data?dateKey=${todayKey}&daysBefore=14&daysAfter=28`;
+        fetch(url, { credentials: "same-origin" })
+            .then((r) => r.ok ? r.json() : null)
+            .then((data: PainedleAdminData | null) => {
+                if (data) setPainedleData(data);
+            })
+            .catch(() => { /* non-fatal */ });
+    }, [todayKey]);
+
+    const PAINEDLE_WORDS = painedleData?.words ?? [];
+    const todayWord = painedleData?.todayWord ?? "";
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -484,9 +519,41 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
     useEffect(() => {
         if (modalView !== "crossword") return;
         if (hasFetchedCrossword.current) return;
+        // Wait for painedleData to load so we can default to today's puzzle
+        // instead of puzzle p001 from months ago.
+        if (!painedleData?.crossword.todayPuzzleId) return;
         hasFetchedCrossword.current = true;
-        void fetchCrosswordPuzzle();
-    }, [modalView, fetchCrosswordPuzzle]);
+        void fetchCrosswordPuzzle(painedleData.crossword.todayPuzzleId);
+    }, [modalView, fetchCrosswordPuzzle, painedleData?.crossword.todayPuzzleId]);
+
+    const fetchConnectionsPuzzle = useCallback(async (puzzleId?: number | null) => {
+        setConnectionsLoadState("loading");
+        try {
+            const params = new URLSearchParams({ dateKey: todayKey, daysBefore: "14", daysAfter: "28" });
+            if (puzzleId != null) params.set("puzzleId", String(puzzleId));
+            const res = await fetch(`/api/admin/games/connections?${params.toString()}`, { credentials: "same-origin" });
+            if (!res.ok) throw new Error("Could not load connections puzzle.");
+            const json = await res.json() as {
+                catalog: ConnectionsAdminCatalogItem[];
+                selectedPuzzleId: number;
+                puzzle: ConnectionsAdminPuzzle;
+            };
+            setConnectionsCatalog(json.catalog);
+            setSelectedConnectionsId(json.selectedPuzzleId);
+            setSelectedConnections(json.puzzle);
+            setConnectionsLoadState("ready");
+        } catch {
+            setConnectionsLoadState("error");
+        }
+    }, [todayKey]);
+
+    useEffect(() => {
+        if (modalView !== "connections") return;
+        if (hasFetchedConnections.current) return;
+        hasFetchedConnections.current = true;
+        // Defaults to today's puzzle (no puzzleId arg).
+        void fetchConnectionsPuzzle();
+    }, [modalView, fetchConnectionsPuzzle]);
 
     async function handleSaveQuestion(id: string | null, form: TriviaFormState) {
         setSavingId(id ?? "new");
@@ -630,10 +697,35 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
         () => gameScores.filter((score) => score.game === "painedle").sort(sortPainedleScores),
         [gameScores]
     );
+    const connectionsScores = useMemo(
+        () => gameScores.filter((score) => score.game === "connections").sort(sortTriviaScores),
+        [gameScores]
+    );
     const todaysPainedleScores = useMemo(
         () => painedleScores.filter((score) => score.puzzle_key === todayKey),
         [painedleScores, todayKey]
     );
+    const todaysActivityCount = useMemo(() => {
+        // Crossword and Connections puzzle keys include the puzzle id (not
+        // the date), so "today's activity" looks at the rotating game keys
+        // we know about. This gives a quick "is anyone playing today?" pulse.
+        const todayCrossword = painedleData?.crossword.todayPuzzleId;
+        return gameScores.filter((s) => {
+            if (s.game === "painedle") return s.puzzle_key === todayKey;
+            if (s.game === "crossword" && todayCrossword) return s.puzzle_key === todayCrossword;
+            // Trivia is single-key so we can't gate by date; include if updated today.
+            if (s.game === "trivia") {
+                if (!s.created_at) return false;
+                return s.created_at.slice(0, 10) === todayKey;
+            }
+            // Connections puzzle_key is "connections-<id>" — include if updated today.
+            if (s.game === "connections") {
+                if (!s.created_at) return false;
+                return s.created_at.slice(0, 10) === todayKey;
+            }
+            return false;
+        }).length;
+    }, [gameScores, todayKey, painedleData?.crossword.todayPuzzleId]);
     const averageTriviaScore = triviaScores.length
         ? (triviaScores.reduce((sum, score) => sum + score.score, 0) / triviaScores.length).toFixed(1)
         : "0.0";
@@ -696,13 +788,22 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
             return b.totalSubmissions - a.totalSubmissions || a.username.localeCompare(b.username);
         });
     }, [gameScores]);
-    const upcomingSchedule = useMemo(() => buildUpcomingSchedule(21), []);
-    const uniqueWordBankCount = useMemo(() => new Set(PAINEDLE_WORDS).size, []);
+    const upcomingSchedule = useMemo(
+        () => (painedleData?.upcoming ?? []).map((item) => ({
+            key: item.key,
+            label: formatScheduleLabel(item.isoDate),
+            word: item.word,
+            isToday: item.isToday,
+            isPast: item.isPast,
+        })),
+        [painedleData]
+    );
+    const uniqueWordBankCount = useMemo(() => new Set(PAINEDLE_WORDS).size, [PAINEDLE_WORDS]);
     const duplicateWordCount = PAINEDLE_WORDS.length - uniqueWordBankCount;
     const filteredWordBank = useMemo(() => {
         if (!wordSearch.trim()) return PAINEDLE_WORDS;
         return PAINEDLE_WORDS.filter((word) => word.includes(wordSearch.trim().toLowerCase()));
-    }, [wordSearch]);
+    }, [wordSearch, PAINEDLE_WORDS]);
     const filteredScores = useMemo(() => {
         if (scoreFilter === "all") return gameScores;
         return gameScores.filter((score) => score.game === scoreFilter);
@@ -756,19 +857,19 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                 <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-3">
                         <OverviewMetric
-                            label="Schedule Window"
-                            value="21 days"
-                            note="Preview of the next 3 weeks of daily answers."
+                            label="Window"
+                            value={`${upcomingSchedule.length} days`}
+                            note="Past 2 weeks plus the next 4 weeks of daily answers."
                         />
                         <OverviewMetric
-                            label="Start"
-                            value={upcomingSchedule[0]?.key ?? todayKey}
-                            note="The first row is always today's live puzzle key."
+                            label="Today's Word"
+                            value={todayWord ? todayWord.toUpperCase() : "—"}
+                            note={`Live answer for ${todayKey}.`}
                         />
                         <OverviewMetric
                             label="Cycle"
                             value={`${PAINEDLE_WORDS.length} words`}
-                            note="The rotation advances one word per day and only loops after the full bank is exhausted."
+                            note="One word per day, cycles after the full bank is used."
                         />
                     </div>
 
@@ -779,13 +880,24 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                             <div>Word</div>
                         </div>
                         <div className="max-h-[28rem] overflow-auto divide-y divide-primary/6">
-                            {upcomingSchedule.map((entry) => (
-                                <div key={entry.key} className="grid grid-cols-[1fr_auto_auto] gap-4 px-6 py-4 text-sm text-text-secondary">
-                                    <div className="font-medium text-primary">{entry.label}</div>
-                                    <div>{entry.key}</div>
-                                    <div className="font-mono uppercase text-primary">{entry.word}</div>
-                                </div>
-                            ))}
+                            {upcomingSchedule.map((entry) => {
+                                const rowClass = entry.isToday
+                                    ? "bg-accent/8 text-primary"
+                                    : entry.isPast
+                                        ? "text-text-secondary/55"
+                                        : "text-text-secondary";
+                                return (
+                                    <div key={entry.key} className={`grid grid-cols-[1fr_auto_auto] gap-4 px-6 py-4 text-sm ${rowClass}`}>
+                                        <div className={`font-medium ${entry.isToday ? "text-accent" : entry.isPast ? "text-text-secondary/70" : "text-primary"}`}>
+                                            {entry.label}
+                                            {entry.isToday && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[9px] uppercase tracking-widest text-white">Today</span>}
+                                            {entry.isPast && <span className="ml-2 text-[10px] uppercase tracking-widest opacity-50">Past</span>}
+                                        </div>
+                                        <div>{entry.key}</div>
+                                        <div className={`font-mono uppercase ${entry.isToday ? "text-accent font-bold" : "text-primary"}`}>{entry.word}</div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -866,12 +978,12 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                         />
                         <OverviewMetric
                             label="Selected Puzzle"
-                            value={selectedCrossword?.id ?? CROSSWORD_PUZZLE_KEY}
+                            value={selectedCrossword?.id ?? "—"}
                             note="The current board loaded into the editor."
                         />
                         <OverviewMetric
                             label="Entries"
-                            value={selectedCrossword?.entries.length ?? CROSSWORD_PUZZLE.entries.length}
+                            value={selectedCrossword?.entries.length ?? 0}
                             note="Interlocking clue entries built from Ashlyn and Jeffrey's story."
                         />
                     </div>
@@ -904,26 +1016,49 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                                         Review any crossword in the run-up, then edit the answer list and clue list for the selected board below.
                                     </p>
                                     <div className="mt-5 max-h-[32rem] space-y-2 overflow-auto">
-                                        {crosswordCatalog.map((item) => (
-                                            <button
-                                                key={item.id}
-                                                type="button"
-                                                onClick={() => void handleSelectCrosswordPuzzle(item.id)}
-                                                className={`w-full rounded-[1.1rem] border px-4 py-3 text-left transition-colors ${
-                                                    selectedCrosswordId === item.id
-                                                        ? "border-primary bg-primary text-white"
-                                                        : "border-primary/10 bg-[#fbf8f3] text-primary hover:border-primary/20"
-                                                }`}
-                                            >
-                                                <p className={`text-xs uppercase tracking-[0.22em] ${selectedCrosswordId === item.id ? "text-white/70" : "text-text-secondary"}`}>
-                                                    {item.dateKey}
-                                                </p>
-                                                <p className="mt-2 font-heading text-2xl">{item.id.toUpperCase()}</p>
-                                                <p className={`mt-2 text-sm ${selectedCrosswordId === item.id ? "text-white/78" : "text-text-secondary"}`}>
-                                                    {item.entryCount} entries · {item.rows} x {item.cols}
-                                                </p>
-                                            </button>
-                                        ))}
+                                        {crosswordCatalog.map((item) => {
+                                            const isActive = selectedCrosswordId === item.id;
+                                            const isToday = item.dateKey === todayKey;
+                                            const isPast = item.dateKey < todayKey;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    ref={(el) => {
+                                                        // Scroll today's row into view when the catalog renders.
+                                                        if (el && isToday && !isActive) el.scrollIntoView({ block: "center" });
+                                                    }}
+                                                    onClick={() => void handleSelectCrosswordPuzzle(item.id)}
+                                                    className={`w-full rounded-[1.1rem] border px-4 py-3 text-left transition-colors ${
+                                                        isActive
+                                                            ? "border-primary bg-primary text-white"
+                                                            : isToday
+                                                                ? "border-accent/60 bg-accent/8 text-primary hover:border-accent"
+                                                                : isPast
+                                                                    ? "border-primary/8 bg-white/50 text-text-secondary/80 hover:border-primary/15"
+                                                                    : "border-primary/10 bg-[#fbf8f3] text-primary hover:border-primary/20"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className={`text-xs uppercase tracking-[0.22em] ${isActive ? "text-white/70" : "text-text-secondary"}`}>
+                                                            {item.dateKey}
+                                                        </p>
+                                                        {isToday && (
+                                                            <span className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-widest ${isActive ? "bg-white/20 text-white" : "bg-accent text-white"}`}>
+                                                                Today
+                                                            </span>
+                                                        )}
+                                                        {isPast && !isToday && !isActive && (
+                                                            <span className="text-[9px] uppercase tracking-widest text-text-secondary/50">past</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-2 font-heading text-2xl">{item.id.toUpperCase()}</p>
+                                                    <p className={`mt-2 text-sm ${isActive ? "text-white/78" : "text-text-secondary"}`}>
+                                                        {item.entryCount} entries · {item.rows} x {item.cols}
+                                                    </p>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -1079,6 +1214,122 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                             </div>
                         </div>
                     ) : null}
+                </div>
+            );
+        }
+
+        if (modalView === "connections") {
+            const difficultyLabels = { 1: "Easiest", 2: "Easy", 3: "Medium", 4: "Hardest" } as const;
+            const difficultyBg: Record<1 | 2 | 3 | 4, string> = {
+                1: "bg-[#E8D5BC] text-[#6B4A25]",
+                2: "bg-[#BDC9D9] text-[#1A3F6F]",
+                3: "bg-[#8FA5C0] text-[#0C2242]",
+                4: "bg-[#C4A6AB] text-[#5A1018]",
+            };
+            const selectedDate = connectionsCatalog.find((c) => c.puzzleId === selectedConnectionsId);
+            return (
+                <div className="space-y-6">
+                    {/* Date picker for browsing past + future connections puzzles */}
+                    <div className="rounded-[1.8rem] border border-primary/10 bg-white p-4 shadow-[0_12px_34px_rgba(20,42,68,0.05)] md:p-6">
+                        <p className="text-xs uppercase tracking-[0.26em] text-text-secondary">Browse by date</p>
+                        <p className="mt-2 text-sm text-text-secondary">Past 2 weeks plus the next 4 weeks. Click any date to view that puzzle.</p>
+                        <div className="mt-4 flex flex-wrap gap-1.5">
+                            {connectionsCatalog.map((entry) => {
+                                const isActive = entry.puzzleId === selectedConnectionsId;
+                                const dateObj = new Date(entry.isoDate);
+                                const label = dateObj.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
+                                const ringClass = entry.isToday
+                                    ? "ring-2 ring-accent"
+                                    : "";
+                                const stateClass = isActive
+                                    ? "bg-primary text-white border-primary"
+                                    : entry.isPast
+                                        ? "bg-white/60 text-text-secondary/60 border-primary/8 hover:bg-white"
+                                        : "bg-white text-primary border-primary/12 hover:bg-primary/5";
+                                return (
+                                    <button
+                                        key={entry.dateKey}
+                                        type="button"
+                                        onClick={() => { hasFetchedConnections.current = false; void fetchConnectionsPuzzle(entry.puzzleId); }}
+                                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${stateClass} ${ringClass}`}
+                                        title={`${entry.dateKey} · puzzle #${entry.puzzleId}`}
+                                    >
+                                        {label}
+                                        {entry.isToday && <span className="ml-1 text-[8px] uppercase tracking-widest opacity-70">today</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {connectionsLoadState === "loading" && (
+                        <div className="rounded-[1.5rem] border border-primary/8 bg-white px-6 py-8 text-center text-text-secondary">Loading puzzle…</div>
+                    )}
+                    {connectionsLoadState === "error" && (
+                        <div className="rounded-[1.5rem] border border-secondary/30 bg-secondary/5 px-6 py-5 text-sm text-secondary">Could not load the connections puzzle.</div>
+                    )}
+
+                    {selectedConnections && (
+                        <>
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <OverviewMetric
+                                    label="Date"
+                                    value={selectedDate ? new Date(selectedDate.isoDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                                    note={selectedDate?.isToday ? "Today's live puzzle." : selectedDate?.isPast ? "Past puzzle." : "Upcoming puzzle."}
+                                />
+                                <OverviewMetric
+                                    label="Puzzle ID"
+                                    value={`#${selectedConnections.id}`}
+                                    note={`${painedleData?.connections.puzzleCount ?? "…"} puzzles in the rotation pool.`}
+                                />
+                                <OverviewMetric
+                                    label="Words"
+                                    value={selectedConnections.words.length}
+                                    note="Always 16 words across 4 groups of 4."
+                                />
+                            </div>
+
+                            {/* The 16-word grid as guests see it */}
+                            <div className="rounded-[1.8rem] border border-primary/10 bg-[#fbf8f3] p-5 shadow-[0_12px_34px_rgba(20,42,68,0.05)] md:p-6">
+                                <p className="mb-3 text-xs uppercase tracking-[0.26em] text-text-secondary">Player view (16 shuffled words)</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {selectedConnections.words.map((word) => (
+                                        <div
+                                            key={word}
+                                            className="flex min-h-[3.5rem] items-center justify-center rounded-[0.9rem] border border-primary/12 bg-white px-2 py-3 text-center text-xs font-bold uppercase tracking-[0.08em] text-primary"
+                                        >
+                                            {word}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* The answer key — categories + groups */}
+                            <div className="rounded-[1.8rem] border border-primary/10 bg-white p-5 shadow-[0_12px_34px_rgba(20,42,68,0.05)] md:p-6">
+                                <p className="mb-4 text-xs uppercase tracking-[0.26em] text-text-secondary">Answer key</p>
+                                <div className="space-y-3">
+                                    {[...selectedConnections.groups]
+                                        .sort((a, b) => a.difficulty - b.difficulty)
+                                        .map((group) => (
+                                            <div
+                                                key={group.category}
+                                                className={`flex flex-col gap-1 rounded-[1.1rem] px-5 py-4 ${difficultyBg[group.difficulty]}`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-bold uppercase tracking-[0.18em]">{group.category}</p>
+                                                    <span className="text-[10px] uppercase tracking-widest opacity-70">{difficultyLabels[group.difficulty]}</span>
+                                                </div>
+                                                <p className="text-sm font-medium">{group.words.join(" · ")}</p>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+
+                            <div className="rounded-[1rem] border border-primary/8 bg-[#fbf8f3] px-5 py-4 text-xs leading-relaxed text-text-secondary">
+                                Connections puzzles are read-only here. To edit groups or words, update <span className="font-mono text-primary">src/lib/games/connections-puzzles.ts</span> and redeploy.
+                            </div>
+                        </>
+                    )}
                 </div>
             );
         }
@@ -1556,96 +1807,93 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                {/* Top-line stats — at-a-glance health of the games suite. */}
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <OverviewMetric
-                        label="Total Scores"
-                        value={gameScores.length}
-                        note="All leaderboard rows across the live game set."
-                    />
-                    <OverviewMetric
-                        label="Unique Players"
+                        label="Players"
                         value={uniquePlayers.length}
-                        note="Distinct users by email."
+                        note="Distinct guests across all games."
                     />
                     <OverviewMetric
-                        label="Trivia Scores"
-                        value={triviaScores.length}
-                        note="All trivia submissions so far."
-                        subnote={`Avg score: ${averageTriviaScore} / 10`}
+                        label="Total Plays"
+                        value={gameScores.length}
+                        note={`${triviaScores.length} trivia · ${crosswordScores.length} crossword · ${painedleScores.length} painedle · ${connectionsScores.length} connections`}
                     />
                     <OverviewMetric
-                        label="Crossword Scores"
-                        value={crosswordScores.length}
-                        note="All Crossing Paths submissions so far."
+                        label="Today"
+                        value={todaysActivityCount}
+                        note={`Plays in the last 24h. Painedle today: ${todaysPainedleScores.length}.`}
                     />
                     <OverviewMetric
-                        label="Today's Painedle"
-                        value={todaysPainedleScores.length}
-                        note="Submissions against today's puzzle key."
-                    />
-                    <OverviewMetric
-                        label="Painedle Bank"
-                        value={PAINEDLE_WORDS.length}
-                        note="Answers in rotation."
-                        subnote={`5-letter words · ${duplicateWordCount} duplicate${duplicateWordCount === 1 ? "" : "s"}`}
-                    />
-                    <OverviewMetric
-                        label="Word Length"
-                        value="5"
-                        note="Painedle currently runs with fixed five-letter answers."
-                    />
-                    <OverviewMetric
-                        label="Duplicates"
-                        value={duplicateWordCount}
-                        note="Duplicate answers currently present in the live word bank."
+                        label="Trivia Avg"
+                        value={`${averageTriviaScore} / 10`}
+                        note={remaining.isUnlocked ? "Live now." : `Locked until ${TRIVIA_UNLOCK_LABEL}.`}
                     />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-4">
+                {/* Per-game control cards — each game gets one, in puzzle-of-the-day order. */}
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <ControlCard
-                        eyebrow="Painedle Admin"
-                        title="Daily rotation controls"
-                        copy="Check today's answer, inspect the upcoming calendar, and verify the live bank without leaving stale Wordle-era control cards in the overview."
+                        eyebrow="Daily Word Game"
+                        title="Painedle"
+                        copy={`${PAINEDLE_WORDS.length} words in rotation · today: ${todayWord ? todayWord.toUpperCase() : "…"} (${todaysPainedleScores.length} ${todaysPainedleScores.length === 1 ? "play" : "plays"})`}
                     >
-                        <PillButton label="Schedule" onClick={() => setModalView("schedule")} />
+                        <PillButton label="Today" onClick={() => setModalView("today-word")} />
+                        <PillButton label="Rotation" onClick={() => setModalView("schedule")} />
                         <PillButton label="Word Bank" onClick={() => setModalView("word-bank")} />
                     </ControlCard>
 
                     <ControlCard
-                        eyebrow="Crossword Admin"
-                        title="Crossword word and clue bank"
-                        copy="Review upcoming crossword boards, edit the answer list and clue copy for each date, and save overrides without digging through static source files."
+                        eyebrow="Daily Crossword"
+                        title="Crossing Paths"
+                        copy={`${painedleData?.crossword.puzzleCount ?? "…"} boards · today: ${painedleData?.crossword.todayPuzzleId ?? "…"} · ${crosswordScores.length} lifetime ${crosswordScores.length === 1 ? "play" : "plays"}`}
                     >
-                        <PillButton label="Edit crossword" onClick={() => setModalView("crossword")} />
-                        <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
+                        <PillButton label="Edit boards" onClick={() => setModalView("crossword")} />
+                        <PillButton label="Leaderboard" onClick={() => setModalView("leaderboards")} />
                         <PillButton
-                            label="Export words & clues"
+                            label="Export words"
                             onClick={() => {
-                                const entries = getAllCrosswordWordClues();
-                                const json = JSON.stringify(entries, null, 2);
-                                navigator.clipboard.writeText(json).then(() => alert(`Copied ${entries.length} word+clue pairs to clipboard.`));
+                                fetch("/api/admin/games/word-clues", { credentials: "same-origin" })
+                                    .then((r) => r.ok ? r.json() : Promise.reject(new Error("Unauthorized.")))
+                                    .then((d: { entries: { word: string; clue: string }[] }) => {
+                                        const json = JSON.stringify(d.entries, null, 2);
+                                        return navigator.clipboard.writeText(json).then(() => alert(`Copied ${d.entries.length} word+clue pairs to clipboard.`));
+                                    })
+                                    .catch(() => alert("Could not load word & clue pairs."));
                             }}
                         />
                     </ControlCard>
 
                     <ControlCard
-                        eyebrow="Trivia Admin"
-                        title="Question bank and launch"
-                        copy="Review every trivia prompt, correct answer, fun fact, and launch state from one place."
+                        eyebrow="Daily Group Game"
+                        title="Connected"
+                        copy={`${painedleData?.connections.puzzleCount ?? "…"} puzzles · ${connectionsScores.length} lifetime ${connectionsScores.length === 1 ? "play" : "plays"} · view-only here, edit in src/lib/games/connections-puzzles.ts`}
                     >
-                        <PillButton label="Questions" onClick={() => setModalView("trivia-bank")} />
-                        <PillButton label="Leaderboards" onClick={() => setModalView("leaderboards")} />
+                        <PillButton label="Today" onClick={() => setModalView("connections")} />
+                        <PillButton label="Leaderboard" onClick={() => setModalView("leaderboards")} />
                     </ControlCard>
 
                     <ControlCard
-                        eyebrow="Player Activity"
-                        title="Players"
-                        copy="See submissions and player activity."
+                        eyebrow="Wedding-Day Game"
+                        title="Couple Trivia"
+                        copy={remaining.isUnlocked
+                            ? `Live · 20 questions · ${triviaScores.length} ${triviaScores.length === 1 ? "play" : "plays"} · avg ${averageTriviaScore} / 10`
+                            : `20 questions · locks until ${TRIVIA_UNLOCK_LABEL} · ${triviaScores.length} test ${triviaScores.length === 1 ? "play" : "plays"} so far`}
                     >
-                        <PillButton label="Submissions" onClick={() => setModalView("submissions")} />
-                        <PillButton label="Directory" onClick={() => setModalView("players")} />
+                        <PillButton label="Questions" onClick={() => setModalView("trivia-bank")} />
+                        <PillButton label="Leaderboard" onClick={() => setModalView("leaderboards")} />
                     </ControlCard>
                 </div>
+
+                {/* Players & activity — lifetime view across every game. */}
+                <ControlCard
+                    eyebrow="Cross-Game"
+                    title="Players & Activity"
+                    copy={`${uniquePlayers.length} ${uniquePlayers.length === 1 ? "player" : "players"} · ${gameScores.length} total ${gameScores.length === 1 ? "submission" : "submissions"} across every game`}
+                >
+                    <PillButton label="Submissions" onClick={() => setModalView("submissions")} />
+                    <PillButton label="Directory" onClick={() => setModalView("players")} />
+                </ControlCard>
             </div>
 
             {modalView ? (
@@ -1656,9 +1904,10 @@ export default function GamesAdminPanel({ gameScores, gameScoresError }: GamesAd
                                 <p className="text-xs uppercase tracking-[0.28em] text-text-secondary">Games Admin</p>
                                 <h2 className="mt-2 font-heading text-3xl text-primary">
                                     {modalView === "today-word" && "Today's Painedle"}
-                                    {modalView === "schedule" && "Painedle schedule preview"}
+                                    {modalView === "schedule" && "Painedle rotation"}
                                     {modalView === "word-bank" && "Painedle word bank"}
                                     {modalView === "crossword" && "Crossing Paths editor"}
+                                    {modalView === "connections" && "Connected viewer"}
                                     {modalView === "trivia-bank" && "Trivia question bank"}
                                     {modalView === "leaderboards" && "Leaderboard views"}
                                     {modalView === "submissions" && "Recent submissions"}

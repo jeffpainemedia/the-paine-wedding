@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type AdminSection = "rsvp" | "games" | "security" | "content" | "feedback";
+type AdminSection = "rsvp" | "games" | "security" | "content" | "feedback" | "schedule";
 
 type AdminFrameProps = {
     section: AdminSection;
@@ -20,6 +20,7 @@ const ADMIN_LINKS: Array<{ label: string; href: string; section: AdminSection }>
     { label: "Feedback", href: "/admin/feedback", section: "feedback" },
     { label: "Content", href: "/admin/content", section: "content" },
     { label: "Security", href: "/admin/security", section: "security" },
+    { label: "Schedule", href: "/admin/schedule", section: "schedule" },
 ];
 
 export default function AdminFrame({

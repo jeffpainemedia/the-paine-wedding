@@ -1,82 +1,95 @@
-import React from "react";
+export const dynamic = "force-dynamic";
+
 import Section from "@/components/ui/Section";
-import ScheduleTimelineItem from "@/components/ui/ScheduleTimelineItem";
-import { getWeddingData } from "@/lib/site-settings";
-import { requirePageVisible } from "@/lib/page-visibility";
 import { buildPageMetadata } from "@/lib/seo";
+import { getScheduleUser, getPublicTier, getEventsForTier, getAllEvents } from "@/lib/schedule/queries";
+import { getServiceClient } from "@/lib/server/supabase-admin";
+import { isAdminAuthenticated } from "@/lib/page-visibility";
+import ScheduleClient from "@/components/schedule/ScheduleClient";
 
 export const metadata = buildPageMetadata({
     path: "/schedule",
-    title: "Schedule of Events",
-    description: "See the full timeline for Ashlyn and Jeffrey's wedding day, from guest arrival through the send-off.",
-    keywords: ["wedding schedule", "wedding timeline", "ceremony time", "reception time"],
+    title: "Wedding Day Schedule",
+    description: "The timeline for Ashlyn and Jeffrey's wedding day — ceremony, cocktail hour, dinner, and dancing.",
 });
 
-export default async function Schedule() {
-    await requirePageVisible("schedule");
-    const { wedding } = await getWeddingData();
-    const hasSchedule = wedding.schedule.length > 0;
+export default async function SchedulePage() {
+    // Resolve visitor state in parallel — schedule auth (per-person login) and
+    // admin auth (the cookie set by /admin) are independent.
+    const [authUser, isAdmin] = await Promise.all([
+        getScheduleUser(),
+        isAdminAuthenticated(),
+    ]);
+
+    // Admins see every event across every tier when they haven't explicitly
+    // signed in as a schedule user. This lets them sanity-check the full
+    // timeline without having to log in as Carly or Jeff.
+    if (isAdmin && !authUser) {
+        const events = await getAllEvents();
+        return (
+            <div>
+                <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16 print:py-4">
+                    <h1 className="font-heading text-5xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
+                    <p className="max-w-xl mx-auto text-text-secondary tracking-wide print:text-sm">
+                        Saturday, September 26, 2026 · Davis &amp; Grey Farms
+                    </p>
+                </Section>
+                <Section background="surface" className="py-10 md:py-16 print:py-0">
+                    <div className="max-w-3xl mx-auto">
+                        <ScheduleClient
+                            initialEvents={events}
+                            initialTierSlug="admin"
+                            initialAuth={{ displayName: "Admin", tierLabel: "All Tiers", roleLabel: "Site Admin" }}
+                        />
+                    </div>
+                </Section>
+            </div>
+        );
+    }
+
+    // Otherwise: schedule-user-signed-in flow or anonymous public view.
+    let tierId: string | null = null;
+    let initialAuth = null;
+
+    if (authUser) {
+        const sb = getServiceClient();
+        const { data: tier } = await sb
+            .from("schedule_tiers")
+            .select("id")
+            .eq("slug", authUser.tierSlug)
+            .maybeSingle();
+        tierId = tier?.id ?? null;
+        initialAuth = {
+            displayName: authUser.displayName,
+            tierLabel: authUser.tierLabel,
+            roleLabel: authUser.roleLabel,
+        };
+    }
+
+    if (!tierId) {
+        const publicTier = await getPublicTier();
+        tierId = publicTier?.id ?? null;
+    }
+
+    const events = tierId ? await getEventsForTier(tierId) : [];
+    const tierSlug = authUser?.tierSlug ?? "public";
 
     return (
         <div>
-            <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Schedule of Events</h1>
-                <p className="max-w-xl mx-auto text-text-secondary tracking-wide">
-                    A timeline of our wedding day. We can&apos;t wait to share these moments with you.
+            <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16 print:py-4">
+                <h1 className="font-heading text-5xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
+                <p className="max-w-xl mx-auto text-text-secondary tracking-wide print:text-sm">
+                    Saturday, September 26, 2026 · Davis &amp; Grey Farms
                 </p>
             </Section>
 
-            <Section background="surface" className="py-24">
+            <Section background="surface" className="py-10 md:py-16 print:py-0">
                 <div className="max-w-3xl mx-auto">
-                    {hasSchedule ? (
-                        <div className="relative border-l border-primary/20 pl-8 ml-4 md:pl-12 md:ml-12 space-y-16">
-                            {wedding.schedule.map((item, index) => (
-                                <ScheduleTimelineItem key={index}>
-                                    <div className="relative">
-                                        {/* Timeline Dot */}
-                                        <div className="absolute -left-[41px] md:-left-[57px] top-1.5 w-4 h-4 rounded-full bg-primary ring-4 ring-surface" />
-
-                                        <div className="flex flex-col md:flex-row md:items-baseline md:justify-between mb-2">
-                                            <h2
-                                                className="font-heading text-2xl text-primary"
-                                                data-admin-key={`schedule.${index}.title`}
-                                                data-admin-type="text"
-                                                data-admin-current-text={item.title}
-                                                data-admin-label={`Schedule #${index + 1} — Title`}
-                                            >
-                                                {item.title}
-                                            </h2>
-                                            <span
-                                                className="text-sm font-medium tracking-[0.2em] text-accent mt-2 md:mt-0 uppercase"
-                                                data-admin-key={`schedule.${index}.time`}
-                                                data-admin-type="text"
-                                                data-admin-current-text={item.time}
-                                                data-admin-label={`Schedule #${index + 1} — Time`}
-                                            >
-                                                {item.time}
-                                            </span>
-                                        </div>
-                                        <p
-                                            className="text-text-secondary leading-relaxed"
-                                            data-admin-key={`schedule.${index}.description`}
-                                            data-admin-type="rich-text"
-                                            data-admin-current-text={item.description}
-                                            data-admin-label={`Schedule #${index + 1} — Description`}
-                                        >
-                                            {item.description}
-                                        </p>
-                                    </div>
-                                </ScheduleTimelineItem>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16 space-y-4">
-                            <p className="font-heading text-2xl text-primary">Schedule Coming Soon</p>
-                            <p className="text-text-secondary max-w-sm mx-auto leading-relaxed">
-                                We&apos;re finalizing the details for {wedding.date.display}. Check back soon!
-                            </p>
-                        </div>
-                    )}
+                    <ScheduleClient
+                        initialEvents={events}
+                        initialTierSlug={tierSlug}
+                        initialAuth={initialAuth}
+                    />
                 </div>
             </Section>
         </div>

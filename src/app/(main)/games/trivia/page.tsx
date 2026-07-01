@@ -2,6 +2,7 @@ import Section from "@/components/ui/Section";
 import CoupleTriviaGame from "@/components/games/CoupleTriviaGame";
 import GameAccountPanel from "@/components/games/GameAccountPanel";
 import TriviaGate from "@/components/games/TriviaGate";
+import TriviaLeaderboardGate from "@/components/games/TriviaLeaderboardGate";
 import CollapsibleLeaderboard from "@/components/games/CollapsibleLeaderboard";
 import GameSuggestions from "@/components/games/GameSuggestions";
 
@@ -28,12 +29,14 @@ export default function TriviaPage() {
                         <CoupleTriviaGame />
                     </TriviaGate>
                 </div>
-                <CollapsibleLeaderboard
-                    game="trivia"
-                    title="Trivia Leaders"
-                    subtitle="Highest scores rise to the top once trivia opens on wedding day."
-                    puzzleKey="wedding-day-trivia"
-                />
+                <TriviaLeaderboardGate>
+                    <CollapsibleLeaderboard
+                        game="trivia"
+                        title="Trivia Leaders"
+                        subtitle="Highest scores rise to the top once trivia opens on wedding day."
+                        puzzleKey="wedding-day-trivia"
+                    />
+                </TriviaLeaderboardGate>
                 <GameSuggestions current="trivia" />
             </Section>
         </div>

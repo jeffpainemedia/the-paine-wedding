@@ -27,10 +27,13 @@ type Guest = {
     is_plus_one: boolean;
     plus_one_for_id: string | null;
     plus_one_claimed: boolean;
+    // Already returned by the API (select("*, ...")) — exposed here so the
+    // "Recently RSVPed" sort can use it. Read-only in the admin UI.
+    updated_at?: string | null;
     households: { id: string; name: string };
 };
 
-type SortField = "name" | "household" | "rsvp" | "plusone";
+type SortField = "name" | "household" | "rsvp" | "plusone" | "updated";
 type SortDir = "asc" | "desc";
 type HistorySortField = "when" | "guest" | "household" | "activity" | "dietary" | "song" | "advice";
 type MobileViewMode = "sticky" | "accordion";
@@ -713,6 +716,22 @@ export default function AdminDashboard() {
                 if (sa !== sb2) return sortDir === "asc" ? sb2 - sa : sa - sb2;
                 return a.householdName.localeCompare(b.householdName);
             });
+        } else if (sortField === "updated") {
+            // Sort households by the most-recent updated_at among their guests.
+            // Default direction is newest-first ("desc") so the freshest RSVPs
+            // show at the top. Households whose guests have never been
+            // updated fall to the bottom regardless of direction.
+            const householdLastUpdate = (gs: Guest[]) =>
+                gs.reduce((acc, g) => {
+                    const t = g.updated_at ? Date.parse(g.updated_at) : 0;
+                    return t > acc ? t : acc;
+                }, 0);
+            entries.sort((a, b) => {
+                const ta = householdLastUpdate(a.householdGuests);
+                const tb = householdLastUpdate(b.householdGuests);
+                if (ta !== tb) return sortDir === "asc" ? ta - tb : tb - ta;
+                return a.householdName.localeCompare(b.householdName);
+            });
         } else if (sortField === "name") {
             for (const e of entries) e.householdGuests.sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
             entries.sort((a, b) => {
@@ -733,17 +752,25 @@ export default function AdminDashboard() {
                 const order = (g: Guest) => g.attending === true ? 0 : g.attending === null ? 1 : 2;
                 return sortDir === "asc" ? order(a) - order(b) : order(b) - order(a);
             }
+            if (sortField === "updated") {
+                const ta = a.updated_at ? Date.parse(a.updated_at) : 0;
+                const tb = b.updated_at ? Date.parse(b.updated_at) : 0;
+                if (ta !== tb) return sortDir === "asc" ? ta - tb : tb - ta;
+                return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+            }
             const vals: Record<SortField, string> = {
                 name: `${a.last_name} ${a.first_name}`.toLowerCase(),
                 household: (a.households?.name || "").toLowerCase(),
                 plusone: (a.plus_one_name || "").toLowerCase(),
                 rsvp: "",
+                updated: "",
             };
             const valsB: Record<SortField, string> = {
                 name: `${b.last_name} ${b.first_name}`.toLowerCase(),
                 household: (b.households?.name || "").toLowerCase(),
                 plusone: (b.plus_one_name || "").toLowerCase(),
                 rsvp: "",
+                updated: "",
             };
             const cmp = vals[sortField].localeCompare(valsB[sortField]);
             return sortDir === "asc" ? cmp : -cmp;
@@ -1528,6 +1555,16 @@ export default function AdminDashboard() {
                                             </button>
                                             {activeTab === "guests" && (
                                                 <button
+                                                    onClick={() => handleSort("updated")}
+                                                    title="Sort by who most recently RSVPed"
+                                                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs uppercase tracking-widest transition-colors ${sortField === "updated" ? "bg-primary text-white" : "border border-primary/20 text-primary hover:bg-primary/5"}`}
+                                                >
+                                                    Recent RSVPs
+                                                    {sortField === "updated" && <SortIcon field="updated" />}
+                                                </button>
+                                            )}
+                                            {activeTab === "guests" && (
+                                                <button
                                                     onClick={() => { setEditMode((v) => !v); setRsvpPopover(null); setTextEdit(null); }}
                                                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-widest transition-colors ${editMode ? "bg-accent text-white" : "border border-primary/20 text-primary hover:bg-primary/5"}`}
                                                 >
@@ -1929,13 +1966,13 @@ export default function AdminDashboard() {
                                         {/* Sort controls */}
                                         <div className="flex items-center gap-2 border-b border-primary/6 px-4 py-2">
                                             <span className="text-[9px] uppercase tracking-widest text-text-secondary">Sort:</span>
-                                            {(["name", "rsvp"] as const).map((f) => (
+                                            {(["name", "rsvp", "updated"] as const).map((f) => (
                                                 <button
                                                     key={f}
                                                     onClick={() => handleSort(f)}
                                                     className={`flex items-center gap-0.5 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-widest transition-colors ${sortField === f ? "bg-primary text-white" : "border border-primary/15 text-text-secondary hover:bg-primary/5"}`}
                                                 >
-                                                    {f === "name" ? "Name" : "RSVP"} <SortIcon field={f} />
+                                                    {f === "name" ? "Name" : f === "rsvp" ? "RSVP" : "Recent"} <SortIcon field={f} />
                                                 </button>
                                             ))}
                                         </div>

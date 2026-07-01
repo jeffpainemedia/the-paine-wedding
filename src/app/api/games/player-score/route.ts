@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get("email")?.trim().toLowerCase() ?? "";
     const username = searchParams.get("username")?.trim() ?? "";
 
-    if (!game || !["trivia", "painedle", "crossword"].includes(game)) {
+    if (!game || !["trivia", "painedle", "crossword", "connections"].includes(game)) {
         return noStoreJson({ error: "Invalid game." }, { status: 400 });
     }
 

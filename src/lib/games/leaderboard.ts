@@ -186,6 +186,59 @@ export async function submitGameScore(input: SubmitGameScoreInput) {
     return { improved: Boolean(data.improved) };
 }
 
+// ─── Validated, per-game submit helpers ───────────────────────────────────────
+// Each helper sends the proof data the corresponding game endpoint needs to
+// re-derive the canonical score server-side. Score is never sent — the server
+// computes it.
+
+type ValidatedSubmitResult = { improved: boolean; recorded: boolean; score?: number };
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json() as T & { error?: string };
+    if (!res.ok) throw new Error(data.error || `Request to ${path} failed.`);
+    return data;
+}
+
+export async function submitPainedleScore(input: {
+    dateKey: string;
+    guesses: string[];
+    player: { email: string; username: string };
+}): Promise<ValidatedSubmitResult> {
+    return postJson("/api/games/painedle/submit-score", input);
+}
+
+export async function submitConnectionsScore(input: {
+    puzzleId: number;
+    solvedCategories: string[];
+    mistakes: number;
+    durationSeconds: number;
+    player: { email: string; username: string };
+}): Promise<ValidatedSubmitResult> {
+    return postJson("/api/games/connections/submit-score", input);
+}
+
+export async function submitCrosswordScore(input: {
+    puzzleId: string;
+    letters: Record<string, string>;
+    revealedEntryIds: string[];
+    durationSeconds: number;
+    player: { email: string; username: string };
+}): Promise<ValidatedSubmitResult> {
+    return postJson("/api/games/crossword/submit-score", input);
+}
+
+export async function submitTriviaScore(input: {
+    answers: { questionId: string; chosenIndex: number }[];
+    player: { email: string; username: string };
+}): Promise<ValidatedSubmitResult> {
+    return postJson("/api/games/trivia/submit-score", input);
+}
+
 export async function fetchLeaderboard(game: GameType, options?: { limit?: number; puzzleKey?: string }) {
     const limit = options?.limit ?? 10;
     const params = new URLSearchParams({

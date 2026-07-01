@@ -97,8 +97,8 @@ export default function ScoreSubmissionForm({
 
     if (status === "success") {
         return (
-            <div className="rounded-[1.85rem] border border-emerald-200/70 bg-[linear-gradient(160deg,#f2faf5_0%,#e8f5ed_100%)] p-6 shadow-[0_12px_34px_rgba(20,42,68,0.06)]">
-                <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">Score Submitted</p>
+            <div className="rounded-[1.85rem] border border-accent/30 bg-accent/10 p-6 shadow-[0_12px_34px_rgba(20,42,68,0.06)]">
+                <p className="text-sm uppercase tracking-[0.3em] text-primary">Score Submitted</p>
                 <p className="mt-3 text-text-secondary">{successMessage}</p>
             </div>
         );

@@ -3,7 +3,7 @@ import CrosswordGate from "@/components/games/CrosswordGate";
 import GameAccountPanel from "@/components/games/GameAccountPanel";
 import CollapsibleLeaderboard from "@/components/games/CollapsibleLeaderboard";
 import MiniCrosswordGame from "@/components/games/MiniCrosswordGame";
-import { getCentralDateKey, getDailyCrosswordPuzzle, parseCrosswordOverrides } from "@/lib/games/crossword";
+import { getCentralDateKey, getDailyCrosswordPuzzle, parseCrosswordOverrides, toPublicCrossword } from "@/lib/games/crossword";
 import GameSuggestions from "@/components/games/GameSuggestions";
 import { getSettingsMap } from "@/lib/site-settings";
 import { buildPageMetadata } from "@/lib/seo";
@@ -22,7 +22,9 @@ export default async function CrosswordPage() {
     const todayKey = getCentralDateKey();
     const settingsMap = await getSettingsMap();
     const overrides = parseCrosswordOverrides(settingsMap["games.crossword.overrides"]);
-    const todayPuzzle = getDailyCrosswordPuzzle(todayKey, overrides);
+    // Strip the answer key before sending to the client. Validation flows
+    // through /api/games/crossword/check.
+    const todayPuzzle = toPublicCrossword(getDailyCrosswordPuzzle(todayKey, overrides));
 
     return (
         <div className="bg-[linear-gradient(180deg,#f8f3ec_0%,#eff1f4_34%,#ffffff_100%)]">

@@ -1,3 +1,4 @@
+import "server-only";
 import type { ConnectionsPuzzle } from "@/lib/games/connections";
 
 export const CONNECTIONS_PUZZLES: ConnectionsPuzzle[] = [
@@ -1174,13 +1175,13 @@ export const CONNECTIONS_PUZZLES: ConnectionsPuzzle[] = [
             "SUNDAY",
             "AMATEUR",
             "SOUNDTRACK",
-            "MIRROR",
+            "GAS",
             "SUITCASE",
             "MORNING",
             "GENRE",
             "WHEEL",
             "HEART",
-            "HAPPIEST",
+            "HAPPY",
         ],
         groups: [
             {
@@ -1190,7 +1191,7 @@ export const CONNECTIONS_PUZZLES: ConnectionsPuzzle[] = [
             },
             {
                 category: "Road trip words",
-                words: ["HIGHWAY", "SIGN", "MIRROR", "WHEEL"],
+                words: ["HIGHWAY", "SIGN", "GAS", "WHEEL"],
                 difficulty: 2,
             },
             {
@@ -1200,7 +1201,7 @@ export const CONNECTIONS_PUZZLES: ConnectionsPuzzle[] = [
             },
             {
                 category: "___ HOUR",
-                words: ["SOCIAL", "AMATEUR", "MORNING", "HAPPIEST"],
+                words: ["SOCIAL", "AMATEUR", "MORNING", "HAPPY"],
                 difficulty: 4,
             }
         ],

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const puzzleKey = searchParams.get("puzzleKey");
     const limit = Math.max(1, Math.min(25, Number(searchParams.get("limit") ?? 10)));
 
-    if (!game || !["trivia", "painedle", "crossword"].includes(game)) {
+    if (!game || !["trivia", "painedle", "crossword", "connections"].includes(game)) {
         return NextResponse.json({ error: "Invalid game." }, { status: 400 });
     }
 

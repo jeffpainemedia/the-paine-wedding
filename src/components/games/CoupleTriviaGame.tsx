@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
-import { GAME_LEADERBOARD_REFRESH_EVENT, getStoredGamePlayer, saveStoredGamePlayer, submitGameScore } from "@/lib/games/leaderboard";
-import type { TriviaQuestionRow } from "@/app/api/games/trivia-questions/route";
+import { GAME_LEADERBOARD_REFRESH_EVENT, getStoredGamePlayer, saveStoredGamePlayer, submitTriviaScore } from "@/lib/games/leaderboard";
+import type { PublicTriviaQuestion } from "@/app/api/games/trivia-questions/route";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 
@@ -11,17 +12,21 @@ type TriviaQuestion = {
     id: string;
     prompt: string;
     answers: [string, string, string, string];
-    correctIndex: number;
-    funFact?: string | null;
 };
 
-function rowToQuestion(row: TriviaQuestionRow): TriviaQuestion {
+// Server response from /api/games/trivia/check — only available after the
+// player commits to an answer for that question.
+type CheckResult = {
+    correct: boolean;
+    correctIndex: number;
+    funFact: string | null;
+};
+
+function rowToQuestion(row: PublicTriviaQuestion): TriviaQuestion {
     return {
         id: row.id,
         prompt: row.prompt,
         answers: [row.answer_a, row.answer_b, row.answer_c, row.answer_d],
-        correctIndex: row.correct_index,
-        funFact: row.fun_fact,
     };
 }
 
@@ -32,8 +37,20 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
         throw new Error("Could not load trivia questions.");
     }
 
-    const data = await response.json() as { questions: TriviaQuestionRow[] };
+    const data = await response.json() as { questions: PublicTriviaQuestion[] };
     return data.questions.map(rowToQuestion);
+}
+
+async function checkAnswer(questionId: string, chosenIndex: number): Promise<CheckResult> {
+    const response = await fetch("/api/games/trivia/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, chosenIndex }),
+    });
+    if (!response.ok) {
+        throw new Error("Could not check answer.");
+    }
+    return response.json() as Promise<CheckResult>;
 }
 
 function getScoreMessage(score: number, total: number) {
@@ -61,10 +78,14 @@ export default function CoupleTriviaGame() {
     const [screen, setScreen] = useState<"welcome" | "playing" | "results">("welcome");
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
+    // Per-question response from the server — populated only after a player
+    // submits an answer for that question. Keyed by question id.
+    const [checkResults, setCheckResults] = useState<Record<string, CheckResult>>({});
     const [hasAccount, setHasAccount] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [shareCopied, setShareCopied] = useState(false);
     const autoSubmitAttempted = useRef(false);
+    const { isAdmin } = useAdminSession();
 
     useEffect(() => {
         fetchTriviaQuestions()
@@ -81,13 +102,17 @@ export default function CoupleTriviaGame() {
     const currentQuestion = questions[currentIndex];
     const selectedAnswer = selectedAnswers[currentIndex];
     const answeredCount = selectedAnswers.length;
-    const score = selectedAnswers.reduce((total, answer, index) => {
-        return total + (answer === questions[index]?.correctIndex ? 1 : 0);
+    const currentCheck = currentQuestion ? checkResults[currentQuestion.id] : undefined;
+    // Score is derived from server check results; we count only confirmed
+    // correct answers. Answers still in flight aren't counted yet.
+    const score = questions.reduce((total, q) => {
+        return total + (checkResults[q.id]?.correct ? 1 : 0);
     }, 0);
 
     // Auto-submit when results screen is shown and player is stored
     useEffect(() => {
         if (screen !== "results" || autoSubmitAttempted.current) return;
+        if (isAdmin) return; // Admin play doesn't record scores
         const player = getStoredGamePlayer();
         if (!player) return;
 
@@ -97,17 +122,18 @@ export default function CoupleTriviaGame() {
         const fullName = player.firstName && player.lastName
             ? `${player.firstName} ${player.lastName}`
             : player.username ?? "";
-        const computedScore = Math.round((score / questions.length) * answeredCount * 10);
-        submitGameScore({
-            game: "trivia",
-            username: fullName,
-            email: player.email ?? "",
-            score: computedScore,
-            maxScore: questions.length * 10,
-            attempts: answeredCount,
-            solved: score === answeredCount && answeredCount === questions.length,
-            puzzleKey: "wedding-day-trivia",
-            metadata: { question_count: questions.length, answered_count: answeredCount, raw_score: score },
+        // Validated submission: server re-grades each chosen answer against
+        // the question's correct_index and computes the score from the
+        // verified count.
+        const answers = questions
+            .map((q, idx) => {
+                const chosen = selectedAnswers[idx];
+                return typeof chosen === "number" ? { questionId: q.id, chosenIndex: chosen } : null;
+            })
+            .filter((a): a is { questionId: string; chosenIndex: number } => a !== null);
+        submitTriviaScore({
+            answers,
+            player: { email: player.email ?? "", username: fullName },
         })
             .then(() => {
                 saveStoredGamePlayer({ ...player, username: fullName });
@@ -147,6 +173,7 @@ export default function CoupleTriviaGame() {
         setScreen("welcome");
         setCurrentIndex(0);
         setSelectedAnswers([]);
+        setCheckResults({});
         autoSubmitAttempted.current = false;
         setAutoSubmitStatus("idle");
         setShareCopied(false);
@@ -154,12 +181,22 @@ export default function CoupleTriviaGame() {
 
     function handleSelect(answerIndex: number) {
         if (selectedAnswer !== undefined) return;
+        if (!currentQuestion) return;
 
         setSelectedAnswers((currentAnswers) => {
             const nextAnswers = [...currentAnswers];
             nextAnswers[currentIndex] = answerIndex;
             return nextAnswers;
         });
+
+        // Check the answer server-side. The correct index and fun fact only
+        // become known once the user has committed to a choice.
+        const questionId = currentQuestion.id;
+        checkAnswer(questionId, answerIndex)
+            .then((result) => {
+                setCheckResults((prev) => ({ ...prev, [questionId]: result }));
+            })
+            .catch(() => { /* fail silently — user can still proceed */ });
     }
 
     function handleNext() {
@@ -241,9 +278,13 @@ export default function CoupleTriviaGame() {
                 </div>
 
                 <div className="mt-8">
-                    {autoSubmitStatus === "success" ? (
-                        <div className="rounded-[1.5rem] border border-emerald-600/20 bg-emerald-50 p-5 text-center">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Score Submitted ✓</p>
+                    {isAdmin ? (
+                        <div className="rounded-[1.5rem] border border-accent/20 bg-accent/8 p-5 text-center">
+                            <p className="text-sm text-text-secondary">Admin mode — score not recorded</p>
+                        </div>
+                    ) : autoSubmitStatus === "success" ? (
+                        <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 p-5 text-center">
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Score Submitted ✓</p>
                             <p className="mt-2 text-sm text-text-secondary">Your trivia score is on the leaderboard.</p>
                         </div>
                     ) : autoSubmitStatus === "submitting" ? (
@@ -298,14 +339,20 @@ export default function CoupleTriviaGame() {
                 <div className={`mt-4 grid gap-2 md:gap-4 ${visibleAnswers.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
                     {visibleAnswers.map(({ answer, index }) => {
                         const isSelected = index === selectedAnswer;
-                        const isCorrect = index === currentQuestion.correctIndex;
-                        const stateClass = selectedAnswer !== undefined
+                        // Correct-answer highlight only renders once the
+                        // server has responded — never before.
+                        const isCorrect = currentCheck ? index === currentCheck.correctIndex : false;
+                        const stateClass = selectedAnswer !== undefined && currentCheck
                             ? isCorrect
                                 ? "border-emerald-600 bg-emerald-600 text-white"
                                 : isSelected
                                     ? "border-secondary bg-secondary text-white"
                                     : "border-surface bg-surface text-text-primary"
-                            : "border-primary/10 bg-white/88 text-text-primary hover:border-primary hover:bg-primary/5";
+                            : selectedAnswer !== undefined
+                                ? isSelected
+                                    ? "border-primary bg-primary/5 text-text-primary"
+                                    : "border-surface bg-surface text-text-primary"
+                                : "border-primary/10 bg-white/88 text-text-primary hover:border-primary hover:bg-primary/5";
 
                         return (
                             <button
@@ -324,7 +371,11 @@ export default function CoupleTriviaGame() {
 
             <div className="mt-8 flex flex-col gap-4 border-t border-surface pt-6 md:flex-row md:items-center md:justify-between">
                 <div className="min-h-16 max-w-2xl text-text-secondary">
-                    {selectedAnswer !== undefined && currentQuestion.funFact ? currentQuestion.funFact : "Choose an answer to reveal the fun fact."}
+                    {selectedAnswer === undefined
+                        ? "Choose an answer to reveal the fun fact."
+                        : currentCheck
+                            ? (currentCheck.funFact ?? (currentCheck.correct ? "Correct!" : "Not quite — see the highlighted answer."))
+                            : "Checking your answer…"}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <button

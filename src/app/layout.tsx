@@ -96,6 +96,7 @@ export default function RootLayout({
                 {
                   "@type": "Event",
                   name: "Ashlyn & Jeff Paine Wedding",
+                  description: "Join Ashlyn and Jeffrey Paine as they celebrate their wedding at Davis & Grey Farms in Celeste, Texas on September 26, 2026.",
                   startDate: "2026-09-26T17:00:00-05:00",
                   endDate: "2026-09-26T22:00:00-05:00",
                   eventStatus: "https://schema.org/EventScheduled",
@@ -112,10 +113,22 @@ export default function RootLayout({
                       addressCountry: "US",
                     },
                   },
+                  image: [`${SITE_URL}/images/hero/JeffAshlyn-7977_2.jpg`],
+                  performer: {
+                    "@type": "Person",
+                    name: "Ashlyn & Jeffrey Paine",
+                  },
                   organizer: {
                     "@type": "Person",
                     name: "Jeff Paine",
                     url: SITE_URL,
+                  },
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "USD",
+                    availability: "https://schema.org/InviteOnly",
+                    url: `${SITE_URL}/rsvp`,
                   },
                   url: SITE_URL,
                 },

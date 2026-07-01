@@ -4,13 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/validate-crosswords.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "validate:crosswords": "node scripts/validate-crosswords.mjs",
     "images:rsvp-backdrop": "zsh scripts/optimize-rsvp-gallery.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.3",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "react": "19.2.3",

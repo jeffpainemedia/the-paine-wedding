@@ -7,11 +7,9 @@ import {
     KEYBOARD_ROWS,
     MAX_GUESSES,
     WORD_LENGTH,
-    evaluateGuess,
-    getDailyWord,
+    getKeyboardStatusesFromHistory,
     getStorageKey,
     getTodayKey,
-    getWordStatusMap,
     type LetterStatus,
 } from "@/lib/games/painedle";
 import {
@@ -19,13 +17,18 @@ import {
     GAME_LEADERBOARD_REFRESH_EVENT,
     getStoredGamePlayer,
     saveStoredGamePlayer,
-    submitGameScore,
+    submitPainedleScore,
 } from "@/lib/games/leaderboard";
 
 type GameStatus = "playing" | "won" | "lost";
 
 type SavedGameState = {
     guesses: string[];
+    // Per-guess letter statuses from the server (parallel to guesses[]).
+    // Cached locally so we don't re-fetch on each page load.
+    statusHistory: LetterStatus[][];
+    // Solution is only set after the game ends — populated by /reveal.
+    solution: string | null;
     currentGuess: string;
     status: GameStatus;
     message: string;
@@ -72,56 +75,70 @@ function isEditableTarget(target: EventTarget | null) {
     );
 }
 
-async function validateGuessWord(guess: string) {
-    const response = await fetch("/api/games/validate-word", {
+// Server-side guess check — validates the word AND returns letter statuses
+// (without revealing the solution). Replaces the old "fetch word list,
+// evaluate locally" client logic.
+async function checkGuess(dateKey: string, guess: string): Promise<{
+    valid: boolean;
+    statuses?: LetterStatus[];
+    correct?: boolean;
+}> {
+    const response = await fetch("/api/games/painedle/guess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: guess }),
+        body: JSON.stringify({ dateKey, guess }),
     });
+    if (!response.ok) throw new Error("Could not check guess.");
+    return response.json();
+}
 
-    if (!response.ok) {
-        throw new Error("Could not validate word.");
-    }
+async function fetchSolution(dateKey: string, guesses: string[]): Promise<string | null> {
+    const response = await fetch("/api/games/painedle/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateKey, guesses }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { solution?: string };
+    return data.solution ?? null;
+}
 
-    const data = await response.json() as { valid?: boolean };
-    return Boolean(data.valid);
+function emptyState(): SavedGameState {
+    return {
+        guesses: [],
+        statusHistory: [],
+        solution: null,
+        currentGuess: "",
+        status: "playing",
+        message: "A new wedding word every day.",
+    };
 }
 
 function createInitialState(dateKey: string): SavedGameState {
-    if (typeof window === "undefined") {
-        return {
-            guesses: [],
-            currentGuess: "",
-            status: "playing",
-            message: "A new wedding word every day.",
-        };
-    }
+    if (typeof window === "undefined") return emptyState();
 
     const savedState = window.localStorage.getItem(getStorageKey(dateKey));
-    if (!savedState) {
-        return {
-            guesses: [],
-            currentGuess: "",
-            status: "playing",
-            message: "A new wedding word every day.",
-        };
-    }
+    if (!savedState) return emptyState();
 
     try {
-        const parsed = JSON.parse(savedState) as SavedGameState;
+        const parsed = JSON.parse(savedState) as Partial<SavedGameState> & { guesses?: string[] };
+        // Migrate: if a saved game from the old client had guesses but no
+        // statusHistory, drop the saved state. The server is the source of
+        // truth now and we don't want stale colors based on a different
+        // word list than the server has.
+        if ((parsed.guesses?.length ?? 0) > 0 && !parsed.statusHistory) {
+            return emptyState();
+        }
         return {
             guesses: parsed.guesses ?? [],
+            statusHistory: parsed.statusHistory ?? [],
+            solution: parsed.solution ?? null,
             currentGuess: parsed.currentGuess ?? "",
             status: parsed.status ?? "playing",
             message: parsed.message ?? (parsed.status === "won" ? "You already solved today's Painedle." : "Welcome back."),
         };
     } catch {
-        return {
-            guesses: [],
-            currentGuess: "",
-            status: "playing",
-            message: "A new wedding word every day.",
-        };
+        return emptyState();
     }
 }
 
@@ -219,14 +236,18 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 // ─── Board ────────────────────────────────────────────────────────────────────
 
 function PainedleBoard({ dateKey }: { dateKey: string }) {
-    const [guesses, setGuesses] = useState<string[]>(() => createInitialState(dateKey).guesses);
-    const [currentGuess, setCurrentGuess] = useState(() => createInitialState(dateKey).currentGuess);
-    const [status, setStatus] = useState<GameStatus>(() => createInitialState(dateKey).status);
-    const [message, setMessage] = useState(() => createInitialState(dateKey).message);
+    const initialState = useRef(createInitialState(dateKey));
+    const [guesses, setGuesses] = useState<string[]>(() => initialState.current.guesses);
+    const [statusHistory, setStatusHistory] = useState<LetterStatus[][]>(() => initialState.current.statusHistory);
+    const [solution, setSolution] = useState<string | null>(() => initialState.current.solution);
+    const [currentGuess, setCurrentGuess] = useState(() => initialState.current.currentGuess);
+    const [status, setStatus] = useState<GameStatus>(() => initialState.current.status);
+    const [message, setMessage] = useState(() => initialState.current.message);
     const [flippingRow, setFlippingRow] = useState<number | null>(null);
     const [shakingRow, setShakingRow] = useState<number | null>(null);
     const [isCheckingGuess, setIsCheckingGuess] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
+    const [adminAnswer, setAdminAnswer] = useState<string | null>(null);
     const [showAdminAnswer, setShowAdminAnswer] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [shareCopied, setShareCopied] = useState(false);
@@ -234,15 +255,32 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
 
     const { isAdmin } = useAdminSession();
 
-    const solution = getDailyWord(dateKey);
     const storageKey = getStorageKey(dateKey);
-    const keyboardStatuses = getWordStatusMap(guesses, solution);
+    const keyboardStatuses = getKeyboardStatusesFromHistory(guesses, statusHistory);
     const score = status === "won" ? MAX_GUESSES - guesses.length + 1 : 0;
+
+    // Reveal solution from server once the game ends. Solution is stored in
+    // state (and persisted) so subsequent renders don't need to re-fetch.
+    useEffect(() => {
+        if (status === "playing" || solution || guesses.length === 0) return;
+        let cancelled = false;
+        void fetchSolution(dateKey, guesses).then((s) => {
+            if (cancelled || !s) return;
+            setSolution(s);
+            // If the player lost, surface the revealed word in the status
+            // message now that we have it.
+            if (status === "lost") {
+                setMessage(`The word was ${s.toUpperCase()}.`);
+            }
+        });
+        return () => { cancelled = true; };
+    }, [status, solution, guesses, dateKey]);
 
     // Auto-submit score when game ends if player account is stored
     useEffect(() => {
         if (status === "playing" || autoSubmitAttempted.current) return;
         if (status !== "won") return; // only submit wins
+        if (isAdmin) return; // Admin play doesn't record scores
         const storedPlayer = getStoredGamePlayer();
         if (!storedPlayer) return;
         autoSubmitAttempted.current = true;
@@ -251,25 +289,15 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
         const fullName = storedPlayer.firstName && storedPlayer.lastName
             ? `${storedPlayer.firstName} ${storedPlayer.lastName}`
             : storedPlayer.username ?? "";
-        submitGameScore({
-            game: "painedle",
-            username: fullName,
-            email: storedPlayer.email ?? "",
-            score,
-            maxScore: MAX_GUESSES,
-            attempts: guesses.length,
-            solved: true,
-            puzzleKey: dateKey,
-            metadata: {
-                solution,
-                word_length: WORD_LENGTH,
-                browser_language: browserProfile?.language ?? null,
-                browser_languages: browserProfile?.languages ?? null,
-                browser_platform: browserProfile?.platform ?? null,
-                browser_timezone: browserProfile?.timezone ?? null,
-                browser_user_agent: browserProfile?.userAgent ?? null,
-                browser_screen: browserProfile?.screen ?? null,
-            },
+        // Server validates every guess against today's word and computes the
+        // canonical score from the verified solve position. Browser profile
+        // is no longer attached here — the validated endpoint focuses on
+        // gameplay proof; metadata can be enriched in a follow-up.
+        void browserProfile;
+        submitPainedleScore({
+            dateKey,
+            guesses,
+            player: { email: storedPlayer.email ?? "", username: fullName },
         }).then(() => {
             saveStoredGamePlayer({ ...storedPlayer, username: fullName, browserProfile });
             setAutoSubmitStatus("success");
@@ -277,14 +305,14 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
         }).catch(() => {
             setAutoSubmitStatus("error");
         });
-    }, [status, score, guesses.length, dateKey, solution]);
+    }, [status, score, guesses.length, dateKey, solution, isAdmin]);
 
     function buildShareText() {
-        const guessEmojis = guesses.map((guess) =>
-            evaluateGuess(guess, solution)
-                .map((s) => s === "correct" ? "🟩" : s === "present" ? "🟨" : "⬛")
-                .join("")
-        );
+        const guessEmojis = guesses.map((_, idx) => {
+            const statuses = statusHistory[idx];
+            if (!statuses) return "";
+            return statuses.map((s) => s === "correct" ? "🟩" : s === "present" ? "🟨" : "⬛").join("");
+        });
         const header = `Painedle ${status === "won" ? guesses.length : "X"}/${MAX_GUESSES}`;
         return [header, ...guessEmojis, "", "thepainewedding.com/games/painedle"].join("\n");
     }
@@ -304,13 +332,15 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     useEffect(() => {
         const stateToSave: SavedGameState = {
             guesses,
+            statusHistory,
+            solution,
             currentGuess,
             status,
             message,
         };
 
         window.localStorage.setItem(storageKey, JSON.stringify(stateToSave));
-    }, [currentGuess, guesses, message, status, storageKey]);
+    }, [currentGuess, guesses, statusHistory, solution, message, status, storageKey]);
 
     function triggerShake() {
         const rowIndex = guesses.length;
@@ -331,10 +361,9 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
 
         setIsCheckingGuess(true);
 
-        let isValid = false;
-
+        let result;
         try {
-            isValid = await validateGuessWord(guess);
+            result = await checkGuess(dateKey, guess);
         } catch {
             setMessage("Could not validate that word right now.");
             triggerShake();
@@ -342,19 +371,22 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
             return;
         }
 
-        if (!isValid) {
+        if (!result.valid) {
             setMessage("That guess is not a recognized word.");
             triggerShake();
             setIsCheckingGuess(false);
             return;
         }
 
+        const guessStatuses = result.statuses!;
         const nextGuesses = [...guesses, guess];
+        const nextStatusHistory = [...statusHistory, guessStatuses];
         const nextRowIndex = nextGuesses.length - 1;
-        const hasWon = guess === solution;
+        const hasWon = Boolean(result.correct);
         const hasLost = nextGuesses.length === MAX_GUESSES && !hasWon;
 
         setGuesses(nextGuesses);
+        setStatusHistory(nextStatusHistory);
         setCurrentGuess("");
         setFlippingRow(nextRowIndex);
         setStatus(hasWon ? "won" : hasLost ? "lost" : "playing");
@@ -362,7 +394,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
             hasWon
                 ? "Solved. Strong work."
                 : hasLost
-                    ? `The word was ${solution.toUpperCase()}.`
+                    ? "Out of guesses — the word will be revealed shortly."
                     : "Guess locked in."
         );
         window.setTimeout(() => setFlippingRow(null), 900);
@@ -450,19 +482,37 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                     </button>
                 </div>
 
-                {/* Admin answer reveal */}
+                {/* Admin answer reveal — fetches today's word via the
+                    admin-authenticated endpoint instead of bundling it. */}
                 {isAdmin && (
                     <div className="relative mt-4 flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={() => setShowAdminAnswer((v) => !v)}
+                            onClick={() => {
+                                if (showAdminAnswer) {
+                                    setShowAdminAnswer(false);
+                                    return;
+                                }
+                                if (adminAnswer) {
+                                    setShowAdminAnswer(true);
+                                    return;
+                                }
+                                void fetch(`/api/admin/games/painedle-answer?dateKey=${dateKey}`)
+                                    .then((r) => r.ok ? r.json() : null)
+                                    .then((d: { solution?: string } | null) => {
+                                        if (d?.solution) {
+                                            setAdminAnswer(d.solution);
+                                            setShowAdminAnswer(true);
+                                        }
+                                    });
+                            }}
                             className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/15 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-amber-300 transition-colors hover:bg-amber-400/25"
                         >
                             ⚑ {showAdminAnswer ? "Hide Answer" : "Show Answer"}
                         </button>
-                        {showAdminAnswer && (
+                        {showAdminAnswer && adminAnswer && (
                             <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1.5 font-heading text-lg uppercase tracking-[0.22em] text-amber-300">
-                                {solution}
+                                {adminAnswer}
                             </span>
                         )}
                     </div>
@@ -481,7 +531,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                         const submittedGuess = guesses[rowIndex];
                         const activeGuess = rowIndex === guesses.length ? currentGuess : "";
                         const letters = (submittedGuess ?? activeGuess).padEnd(WORD_LENGTH).split("");
-                        const statuses = submittedGuess ? evaluateGuess(submittedGuess, solution) : [];
+                        const statuses = submittedGuess ? (statusHistory[rowIndex] ?? []) : [];
 
                         return (
                             <div
@@ -550,9 +600,13 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                         </button>
 
                         {status === "won" ? (
-                            autoSubmitStatus === "success" ? (
-                                <div className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/10 p-5 text-center">
-                                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            isAdmin ? (
+                                <div className="rounded-[1.75rem] border border-accent/25 bg-accent/12 p-5 text-center">
+                                    <p className="text-sm text-white/60">Admin mode — score not recorded</p>
+                                </div>
+                            ) : autoSubmitStatus === "success" ? (
+                                <div className="rounded-[1.75rem] border border-accent/25 bg-accent/12 p-5 text-center">
+                                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">
                                         Score Submitted ✓
                                     </p>
                                     <p className="mt-2 text-sm text-white/60">Your Painedle score is on the leaderboard.</p>
@@ -569,7 +623,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                                     attempts={guesses.length}
                                     solved
                                     puzzleKey={dateKey}
-                                    metadata={{ solution, word_length: WORD_LENGTH }}
+                                    metadata={{ solution: solution ?? null, word_length: WORD_LENGTH }}
                                     buttonLabel="Submit Painedle Score"
                                     successMessage="Painedle score submitted."
                                 />

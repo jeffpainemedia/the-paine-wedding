@@ -4,7 +4,7 @@ import GameAccountPanel from "@/components/games/GameAccountPanel";
 import CollapsibleLeaderboard from "@/components/games/CollapsibleLeaderboard";
 import ConnectionsGame from "@/components/games/ConnectionsGame";
 import { getCentralDateKey } from "@/lib/games/crossword";
-import { getDailyConnectionsPuzzle } from "@/lib/games/connections";
+import { getDailyConnectionsPuzzle, toPublicPuzzle } from "@/lib/games/connections-server";
 import GameSuggestions from "@/components/games/GameSuggestions";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -19,7 +19,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ConnectionsPage() {
     const todayKey = getCentralDateKey();
-    const todayPuzzle = getDailyConnectionsPuzzle(todayKey);
+    // Strip the answer key before sending to the client — the page renders
+    // only the 16 shuffled words. Group/category data stays server-side and
+    // is fetched per selection via /api/games/connections/check.
+    const todayPuzzle = toPublicPuzzle(getDailyConnectionsPuzzle(todayKey));
 
     return (
         <div className="bg-[linear-gradient(180deg,#f8f3ec_0%,#eff1f4_34%,#ffffff_100%)]">

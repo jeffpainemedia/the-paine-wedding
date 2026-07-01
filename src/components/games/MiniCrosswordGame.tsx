@@ -3,17 +3,46 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
 import { useAdminSession } from "@/hooks/useAdminSession";
-import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerGameScore, getStoredGamePlayer, saveStoredGamePlayer, submitGameScore } from "@/lib/games/leaderboard";
+import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerGameScore, getStoredGamePlayer, saveStoredGamePlayer, submitCrosswordScore } from "@/lib/games/leaderboard";
 import {
     computeCrosswordScore,
     getCentralDateKey,
     getCrosswordStorageKey,
-    type BuiltCrossword,
-    type CrosswordCell,
     type CrosswordDirection,
     type CrosswordMetadata,
-    type CrosswordNumberedEntry,
-} from "@/lib/games/crossword";
+    type PublicBuiltCrossword,
+    type PublicCrosswordCell,
+    type PublicCrosswordEntry,
+} from "@/lib/games/crossword-types";
+
+// Server validates the entire grid. Returns wrong-cell list + completion flag.
+async function checkGridServer(
+    puzzleId: string,
+    letters: Record<string, string>
+): Promise<{ wrongCells: string[]; allCorrect: boolean }> {
+    const res = await fetch("/api/games/crossword/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ puzzleId, letters }),
+    });
+    if (!res.ok) throw new Error("check failed");
+    return res.json();
+}
+
+// Server reveals the letters of one entry — used by the Reveal action.
+async function revealEntryServer(
+    puzzleId: string,
+    entryId: string
+): Promise<Record<string, string>> {
+    const res = await fetch("/api/games/crossword/reveal-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ puzzleId, entryId }),
+    });
+    if (!res.ok) throw new Error("reveal failed");
+    const data = await res.json() as { letters: Record<string, string> };
+    return data.letters;
+}
 
 function getTodayKey(): string {
     return getCentralDateKey();
@@ -31,15 +60,11 @@ type SavedState = {
     scoreSubmitted: boolean;
 };
 
-function emptyLetters(puzzle: BuiltCrossword): Record<string, string> {
-    return Object.fromEntries(puzzle.cells.filter((c) => c.answer).map((c) => [c.key, ""]));
+function emptyLetters(puzzle: PublicBuiltCrossword): Record<string, string> {
+    return Object.fromEntries(puzzle.cells.filter((c) => c.isFillable).map((c) => [c.key, ""]));
 }
 
-function solutionLetters(puzzle: BuiltCrossword): Record<string, string> {
-    return Object.fromEntries(puzzle.cells.filter((c) => c.answer).map((c) => [c.key, c.answer ?? ""]));
-}
-
-function defaultState(puzzle: BuiltCrossword): SavedState {
+function defaultState(puzzle: PublicBuiltCrossword): SavedState {
     return {
         letters: emptyLetters(puzzle),
         activeEntryId: puzzle.entries[0]?.id ?? "",
@@ -49,7 +74,7 @@ function defaultState(puzzle: BuiltCrossword): SavedState {
     };
 }
 
-function loadState(puzzle: BuiltCrossword, storageKey: string): SavedState {
+function loadState(puzzle: PublicBuiltCrossword, storageKey: string): SavedState {
     if (typeof window === "undefined") return defaultState(puzzle);
 
     try {
@@ -80,8 +105,10 @@ function loadState(puzzle: BuiltCrossword, storageKey: string): SavedState {
     }
 }
 
-function isSolved(puzzle: BuiltCrossword, letters: Record<string, string>) {
-    return puzzle.cells.every((cell) => !cell.answer || letters[cell.key] === cell.answer);
+// Client-side fast check: are all fillable cells filled in? Doesn't validate
+// correctness — that's a server call. Used to gate when we ask the server.
+function allCellsFilled(puzzle: PublicBuiltCrossword, letters: Record<string, string>) {
+    return puzzle.cells.every((cell) => !cell.isFillable || (letters[cell.key] ?? "").length > 0);
 }
 
 function fmtTime(secs: number) {
@@ -90,18 +117,18 @@ function fmtTime(secs: number) {
 
 
 type MiniCrosswordGameProps = {
-    puzzle: BuiltCrossword;
+    puzzle: PublicBuiltCrossword;
     dateKey?: string;
 };
 
 export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: MiniCrosswordGameProps) {
     const storageKey = useMemo(() => getCrosswordStorageKey(puzzle.id, dateKey), [puzzle.id, dateKey]);
-    const entryMap = useMemo(() => new Map<string, CrosswordNumberedEntry>(puzzle.entries.map((entry) => [entry.id, entry])), [puzzle.entries]);
+    const entryMap = useMemo(() => new Map<string, PublicCrosswordEntry>(puzzle.entries.map((entry) => [entry.id, entry])), [puzzle.entries]);
     const entryIdsByCell = useMemo(
-        () => new Map<string, string[]>(puzzle.cells.filter((cell) => cell.answer).map((cell) => [cell.key, cell.entryIds])),
+        () => new Map<string, string[]>(puzzle.cells.filter((cell) => cell.isFillable).map((cell) => [cell.key, cell.entryIds])),
         [puzzle.cells]
     );
-    const cellMap = useMemo(() => new Map<string, CrosswordCell>(puzzle.cells.map((cell) => [cell.key, cell])), [puzzle.cells]);
+    const cellMap = useMemo(() => new Map<string, PublicCrosswordCell>(puzzle.cells.map((cell) => [cell.key, cell])), [puzzle.cells]);
     const tabOrder = useMemo(() => [...puzzle.across.map((entry) => entry.id), ...puzzle.down.map((entry) => entry.id)], [puzzle.across, puzzle.down]);
     const [init] = useState(() => loadState(puzzle, storageKey));
     const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -120,9 +147,13 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const [scoreSubmitted, setScoreSubmitted] = useState(init.scoreSubmitted);
     const [focusedKey, setFocusedKey] = useState<string | null>(null);
     const [autoCheck, setAutoCheck] = useState(false);
+    // Server-supplied "wrong cell" set. Refreshed via /api/games/crossword/check.
+    const [incorrectKeys, setIncorrectKeys] = useState<Set<string>>(new Set());
     const [elapsed, setElapsed] = useState(0);
-    const [solved, setSolved] = useState(() => isSolved(puzzle, init.letters));
-    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null || isSolved(puzzle, init.letters));
+    // Solved is set when the server confirms all cells correct. The initial
+    // state is whatever localStorage said — we re-verify if it claimed solved.
+    const [solved, setSolved] = useState(() => init.durationSeconds !== null);
+    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null);
     const [isPaused, setIsPaused] = useState(false);
     const [pausedMs, setPausedMs] = useState(0);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
@@ -168,6 +199,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     // Auto-submit score on solve if player is stored
     useEffect(() => {
         if (!solved || autoSubmitAttempted.current) return;
+        if (isAdmin) return; // Admin play doesn't record scores
         const player = getStoredGamePlayer();
         if (!player) return;
 
@@ -177,22 +209,15 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         const fullName = player.firstName && player.lastName
             ? `${player.firstName} ${player.lastName}`
             : player.username ?? "";
-        const computedScore = computeCrosswordScore(displayTime, 0, revealedEntryIds.length);
-        submitGameScore({
-            game: "crossword",
-            username: fullName,
-            email: player.email ?? "",
-            score: computedScore,
-            maxScore: 100,
-            attempts: revealedEntryIds.length,
-            solved: true,
-            puzzleKey: puzzle.id,
-            metadata: {
-                duration_seconds: displayTime,
-                checks_used: 0,
-                reveals_used: revealedEntryIds.length,
-                completed_at: new Date().toISOString(),
-            },
+        // Validated submission: server re-checks every cell of `letters`
+        // against the puzzle's answer key and computes the score from the
+        // verified completion + reveals.
+        submitCrosswordScore({
+            puzzleId: puzzle.id,
+            letters,
+            revealedEntryIds,
+            durationSeconds: displayTime,
+            player: { email: player.email ?? "", username: fullName },
         })
             .then(() => {
                 saveStoredGamePlayer({ ...player, username: fullName });
@@ -230,7 +255,10 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                     typeof existingScore.metadata?.duration_seconds === "number"
                         ? existingScore.metadata.duration_seconds
                         : 0;
-                setLetters(solutionLetters(puzzle));
+                // Mark solved without trying to refill the grid — the answer
+                // key is server-only now. Players who cleared their local
+                // storage will see the "solved" celebration without the
+                // pre-filled grid.
                 setActiveEntryId(puzzle.entries[0]?.id ?? "");
                 setDurationSeconds(existingDuration);
                 setElapsed(existingDuration);
@@ -266,17 +294,40 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const activeEntry = entryMap.get(activeEntryId) ?? null;
     const activeWordKeys = new Set(activeEntry?.cells ?? []);
 
-    const incorrectKeys = useMemo(
-        () =>
-            autoCheck
-                ? new Set(
-                    puzzle.cells
-                        .filter((cell) => cell.answer && letters[cell.key] && letters[cell.key] !== cell.answer)
-                        .map((cell) => cell.key)
-                )
-                : new Set<string>(),
-        [puzzle.cells, letters, autoCheck]
-    );
+    // When auto-check is on, query the server after each batch of changes
+    // (debounced) and update the wrong-cells set. When off, clear wrongs.
+    useEffect(() => {
+        if (!autoCheck) {
+            setIncorrectKeys(new Set());
+            return;
+        }
+        const handle = window.setTimeout(() => {
+            void checkGridServer(puzzle.id, letters)
+                .then((result) => setIncorrectKeys(new Set(result.wrongCells)))
+                .catch(() => { /* leave the set as-is on error */ });
+        }, 300);
+        return () => window.clearTimeout(handle);
+    }, [autoCheck, letters, puzzle.id]);
+
+    // When the player has filled in every cell, check the grid server-side to
+    // confirm a solve. This replaces the old client-side answer comparison.
+    useEffect(() => {
+        if (solved || !gameStarted) return;
+        if (!allCellsFilled(puzzle, letters)) return;
+        let cancelled = false;
+        void checkGridServer(puzzle.id, letters)
+            .then((result) => {
+                if (cancelled) return;
+                if (result.allCorrect) {
+                    completePuzzleFromCheck();
+                } else if (autoCheck) {
+                    setIncorrectKeys(new Set(result.wrongCells));
+                }
+            })
+            .catch(() => { /* try again on next change */ });
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [letters, gameStarted, solved, puzzle.id, autoCheck]);
 
     function handleStartGame() {
         startTimestamp.current = Date.now();
@@ -307,6 +358,16 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         setPostGameUnlocked(false);
     }
 
+    // Called after the server confirms the grid is fully correct. We don't
+    // overwrite letters because the player already entered the correct values.
+    function completePuzzleFromCheck() {
+        const finalDuration = Math.round((Date.now() - startTimestamp.current - pausedMs) / 1000);
+        setDurationSeconds(finalDuration);
+        setElapsed(finalDuration);
+        setSolved(true);
+        setPostGameUnlocked(false);
+    }
+
     const score = computeCrosswordScore(displayTime, 0, revealedEntryIds.length);
     const metadata: CrosswordMetadata = {
         duration_seconds: displayTime,
@@ -315,7 +376,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         completed_at: new Date().toISOString(),
     };
 
-    function entryForCell(key: string, prefer?: CrosswordDirection): CrosswordNumberedEntry | null {
+    function entryForCell(key: string, prefer?: CrosswordDirection): PublicCrosswordEntry | null {
         const ids = entryIdsByCell.get(key) ?? [];
         if (ids.length === 0) return null;
         if (prefer) {
@@ -377,7 +438,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         });
     }
 
-    function selectEntry(entry: CrosswordNumberedEntry, focusFirst = true) {
+    function selectEntry(entry: PublicCrosswordEntry, focusFirst = true) {
         setActiveEntryId(entry.id);
         if (focusFirst) {
             const target = entry.cells.find((key) => !letters[key]) ?? entry.cells[0];
@@ -385,7 +446,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         }
     }
 
-    function nextEntry(currentId: string, reverse = false): CrosswordNumberedEntry | null {
+    function nextEntry(currentId: string, reverse = false): PublicCrosswordEntry | null {
         const idx = tabOrder.indexOf(currentId);
         if (idx === -1) return null;
         const next = reverse
@@ -394,7 +455,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         return entryMap.get(next) ?? null;
     }
 
-    function nextEmptyCellInEntry(entry: CrosswordNumberedEntry, startIndex: number, nextLetters: Record<string, string>) {
+    function nextEmptyCellInEntry(entry: PublicCrosswordEntry, startIndex: number, nextLetters: Record<string, string>) {
         for (let i = startIndex + 1; i < entry.cells.length; i += 1) {
             const key = entry.cells[i];
             if (!nextLetters[key]) return key;
@@ -402,7 +463,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         return null;
     }
 
-    function writeLetter(cell: CrosswordCell, rawLetter: string) {
+    function writeLetter(cell: PublicCrosswordCell, rawLetter: string) {
         if (durationSeconds !== null) return;
 
         const letter = rawLetter.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
@@ -411,13 +472,9 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
             : entryForCell(cell.key, activeEntry?.direction);
 
         const next = { ...letters, [cell.key]: letter };
-
-        if (isSolved(puzzle, next)) {
-            completePuzzle(next);
-            return;
-        }
-
         setLetters(next);
+        // The "all cells filled?" effect on `letters` will fire and call the
+        // server to confirm the solve.
 
         if (!letter || !entry) return;
 
@@ -448,7 +505,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         }
     }
 
-    function handleCellFocus(cell: CrosswordCell) {
+    function handleCellFocus(cell: PublicCrosswordCell) {
         const entry = entryForCell(cell.key, activeEntry?.direction);
         if (entry) setActiveEntryId(entry.id);
         setFocusedKey(cell.key);
@@ -464,14 +521,14 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         });
     }
 
-    function handleCellClick(cell: CrosswordCell) {
-        if (!cell.answer) return;
+    function handleCellClick(cell: PublicCrosswordCell) {
+        if (!cell.isFillable) return;
         const entry = entryForCell(cell.key, activeEntry?.direction);
         if (entry) setActiveEntryId(entry.id);
     }
 
-    function handleCellPointerDown(cell: CrosswordCell) {
-        if (!cell.answer) return;
+    function handleCellPointerDown(cell: PublicCrosswordCell) {
+        if (!cell.isFillable) return;
         // Toggle direction immediately on pointer-down for same cell (reliable on iOS)
         if (focusedKey === cell.key) {
             const ids = entryIdsByCell.get(cell.key) ?? [];
@@ -482,7 +539,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         }
     }
 
-    function handleType(cell: CrosswordCell, raw: string) {
+    function handleType(cell: PublicCrosswordCell, raw: string) {
         if (!raw) {
             setLetters((prev) => ({ ...prev, [cell.key]: "" }));
             return;
@@ -491,8 +548,8 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         writeLetter(cell, raw);
     }
 
-    function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, cell: CrosswordCell) {
-        if (!cell.answer) return;
+    function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, cell: PublicCrosswordCell) {
+        if (!cell.isFillable) return;
 
         if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
             e.preventDefault();
@@ -527,7 +584,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         if (e.key === "ArrowRight") {
             e.preventDefault();
             const target = cellMap.get(cellKey(cell.row, cell.col + 1));
-            if (target?.answer) {
+            if (target?.isFillable) {
                 const entry = entryForCell(target.key, "across");
                 if (entry) setActiveEntryId(entry.id);
                 focusCell(target.key);
@@ -538,7 +595,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         if (e.key === "ArrowLeft") {
             e.preventDefault();
             const target = cellMap.get(cellKey(cell.row, cell.col - 1));
-            if (target?.answer) {
+            if (target?.isFillable) {
                 const entry = entryForCell(target.key, "across");
                 if (entry) setActiveEntryId(entry.id);
                 focusCell(target.key);
@@ -549,7 +606,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         if (e.key === "ArrowDown") {
             e.preventDefault();
             const target = cellMap.get(cellKey(cell.row + 1, cell.col));
-            if (target?.answer) {
+            if (target?.isFillable) {
                 const entry = entryForCell(target.key, "down");
                 if (entry) setActiveEntryId(entry.id);
                 focusCell(target.key);
@@ -560,7 +617,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         if (e.key === "ArrowUp") {
             e.preventDefault();
             const target = cellMap.get(cellKey(cell.row - 1, cell.col));
-            if (target?.answer) {
+            if (target?.isFillable) {
                 const entry = entryForCell(target.key, "down");
                 if (entry) setActiveEntryId(entry.id);
                 focusCell(target.key);
@@ -569,18 +626,20 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         }
     }
 
-    function handleReveal() {
+    async function handleReveal() {
         if (!activeEntry || durationSeconds !== null) return;
-        const next = { ...letters };
-        activeEntry.cells.forEach((key, index) => {
-            next[key] = activeEntry.answer[index] ?? "";
-        });
-        setRevealedEntryIds((current) => (current.includes(activeEntry.id) ? current : [...current, activeEntry.id]));
-        if (isSolved(puzzle, next)) {
-            completePuzzle(next);
-        } else {
-            setLetters(next);
+        const entry = activeEntry;
+        let revealed: Record<string, string>;
+        try {
+            revealed = await revealEntryServer(puzzle.id, entry.id);
+        } catch {
+            return;
         }
+        const next = { ...letters, ...revealed };
+        setRevealedEntryIds((current) => (current.includes(entry.id) ? current : [...current, entry.id]));
+        setLetters(next);
+        // The all-cells-filled effect will trigger a server check and mark
+        // the puzzle solved if the reveal completed it.
     }
 
     function handleReset() {
@@ -770,7 +829,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                             }}
                         >
                             {puzzle.cells.map((cell) => {
-                                if (!cell.answer) {
+                                if (!cell.isFillable) {
                                     return <div key={cell.key} className="bg-primary" style={{ width: 56, height: 56 }} />;
                                 }
 
@@ -919,9 +978,13 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                     </div>
 
                     <div className="bg-white px-6 py-6">
-                        {scoreSubmitted ? (
-                            <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-5 py-4 text-center">
-                                <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Score Locked In</p>
+                        {isAdmin ? (
+                            <div className="rounded-[1.5rem] border border-accent/20 bg-accent/8 px-5 py-4 text-center">
+                                <p className="text-sm text-text-secondary">Admin mode — score not recorded</p>
+                            </div>
+                        ) : scoreSubmitted ? (
+                            <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 px-5 py-4 text-center">
+                                <p className="text-xs uppercase tracking-[0.3em] text-primary">Score Locked In</p>
                                 <p className="mt-2 text-sm text-text-secondary">
                                     You&apos;re on the leaderboard — check back to see how others do!
                                 </p>

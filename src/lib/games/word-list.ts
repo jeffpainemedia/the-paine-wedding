@@ -1,5 +1,11 @@
 // 200 five-letter wedding words — themed, personal, and fun.
 // The rotation starts at "bride" (2026-03-08). Words cycle sequentially through this list.
+//
+// IMPORTANT: server-only. This module must never be bundled into a client
+// chunk — that would expose the entire daily-word rotation. All Painedle
+// gameplay routes through /api/games/painedle/* on the server.
+import "server-only";
+
 const PAINEDLE_WORD_LIST = [
     // Wedding ceremony
     "abide", "adore", "agape", "aglow", "aisle", "altar", "amber", "amity",

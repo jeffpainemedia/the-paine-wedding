@@ -9,6 +9,7 @@ import {
     saveStoredGamePlayer,
     type StoredGamePlayer,
 } from "@/lib/games/leaderboard";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 export default function GameAccountPanel() {
     type AccountMode = "create" | "signin";
@@ -140,7 +141,22 @@ export default function GameAccountPanel() {
         setIsEditing(true);
     }
 
+    const { isAdmin } = useAdminSession();
+
     if (!isClient) return null;
+
+    // Admin bypass — show a read-only "testing" bar instead of signup/profile
+    if (isAdmin) {
+        return (
+            <div className="rounded-[1.2rem] border border-accent/20 bg-accent/8 px-4 py-2.5">
+                <div className="flex items-center gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-text-secondary whitespace-nowrap">Admin</p>
+                    <span className="text-text-secondary/30 text-xs">·</span>
+                    <p className="text-sm text-text-secondary">Testing mode — scores not recorded</p>
+                </div>
+            </div>
+        );
+    }
 
     // Collapsed display
     if (savedPlayer && !isEditing) {
