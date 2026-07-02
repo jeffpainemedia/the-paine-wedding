@@ -14,6 +14,7 @@ import {
 } from "@/lib/games/painedle";
 import {
     captureBrowserProfile,
+    fetchPlayerGameScore,
     GAME_LEADERBOARD_REFRESH_EVENT,
     getStoredGamePlayer,
     saveStoredGamePlayer,
@@ -178,7 +179,9 @@ function HelpModal({ onClose }: { onClose: () => void }) {
                         className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
                         aria-label="Close"
                     >
-                        ✕
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
@@ -276,35 +279,61 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
         return () => { cancelled = true; };
     }, [status, solution, guesses, dateKey]);
 
-    // Auto-submit score when game ends if player account is stored
+    // Auto-submit score when game ends if player account is stored. First
+    // checks whether the server already has a recorded score for today's
+    // puzzle (e.g. the player reloaded the page after a win) so we never
+    // double-post the same win to the leaderboard.
     useEffect(() => {
         if (status === "playing" || autoSubmitAttempted.current) return;
         if (status !== "won") return; // only submit wins
         if (isAdmin) return; // Admin play doesn't record scores
         const storedPlayer = getStoredGamePlayer();
         if (!storedPlayer) return;
+
         autoSubmitAttempted.current = true;
-        setAutoSubmitStatus("submitting");
-        const browserProfile = storedPlayer.browserProfile ?? captureBrowserProfile();
-        const fullName = storedPlayer.firstName && storedPlayer.lastName
-            ? `${storedPlayer.firstName} ${storedPlayer.lastName}`
-            : storedPlayer.username ?? "";
-        // Server validates every guess against today's word and computes the
-        // canonical score from the verified solve position. Browser profile
-        // is no longer attached here — the validated endpoint focuses on
-        // gameplay proof; metadata can be enriched in a follow-up.
-        void browserProfile;
-        submitPainedleScore({
-            dateKey,
-            guesses,
-            player: { email: storedPlayer.email ?? "", username: fullName },
-        }).then(() => {
-            saveStoredGamePlayer({ ...storedPlayer, username: fullName, browserProfile });
-            setAutoSubmitStatus("success");
-            window.dispatchEvent(new Event(GAME_LEADERBOARD_REFRESH_EVENT));
-        }).catch(() => {
-            setAutoSubmitStatus("error");
-        });
+        let isActive = true;
+
+        void fetchPlayerGameScore("painedle", dateKey, {
+            email: storedPlayer.email,
+            username: storedPlayer.username,
+        })
+            .then((existing) => {
+                if (!isActive) return;
+                if (existing) {
+                    setAutoSubmitStatus("success");
+                    return;
+                }
+
+                setAutoSubmitStatus("submitting");
+                const browserProfile = storedPlayer.browserProfile ?? captureBrowserProfile();
+                const fullName = storedPlayer.firstName && storedPlayer.lastName
+                    ? `${storedPlayer.firstName} ${storedPlayer.lastName}`
+                    : storedPlayer.username ?? "";
+                // Server validates every guess against today's word and
+                // computes the canonical score from the verified solve
+                // position. Browser profile is no longer attached here — the
+                // validated endpoint focuses on gameplay proof; metadata can
+                // be enriched in a follow-up.
+                void browserProfile;
+                return submitPainedleScore({
+                    dateKey,
+                    guesses,
+                    player: { email: storedPlayer.email ?? "", username: fullName },
+                }).then(() => {
+                    if (!isActive) return;
+                    saveStoredGamePlayer({ ...storedPlayer, username: fullName, browserProfile });
+                    setAutoSubmitStatus("success");
+                    window.dispatchEvent(new Event(GAME_LEADERBOARD_REFRESH_EVENT));
+                });
+            })
+            .catch(() => {
+                if (isActive) setAutoSubmitStatus("error");
+            });
+
+        return () => {
+            isActive = false;
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status, score, guesses.length, dateKey, solution, isAdmin]);
 
     function buildShareText() {
@@ -508,7 +537,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                             }}
                             className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/15 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-amber-300 transition-colors hover:bg-amber-400/25"
                         >
-                            ⚑ {showAdminAnswer ? "Hide Answer" : "Show Answer"}
+                            {showAdminAnswer ? "Hide Answer" : "Show Answer"}
                         </button>
                         {showAdminAnswer && adminAnswer && (
                             <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1.5 font-heading text-lg uppercase tracking-[0.22em] text-amber-300">
@@ -579,7 +608,12 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                                         }}
                                         className={`flex h-[calc((100vw-2rem)/10)] max-h-14 min-h-10 items-center justify-center rounded-[0.6rem] border text-xs font-semibold uppercase tracking-[0.05em] transition-colors duration-200 md:h-14 md:rounded-[0.9rem] md:text-sm ${sizeClass} ${statusClass}`}
                                     >
-                                        {isBack ? "←" : key}
+                                        {isBack ? (
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                                                <path d="M21 12H9m0 0 4-4m-4 4 4 4" />
+                                                <path d="M9 12 4.5 6.5a1 1 0 0 0-1.5.8v9.4a1 1 0 0 0 1.5.8L9 12Z" />
+                                            </svg>
+                                        ) : key}
                                     </button>
                                 );
                             })}
@@ -596,7 +630,7 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                             onClick={handleShare}
                             className="flex w-full items-center justify-center gap-2 rounded-[1.75rem] border border-white/15 bg-white/10 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white/80 transition-colors hover:bg-white/18 hover:text-white"
                         >
-                            {shareCopied ? "✓ Copied!" : "Share Result"}
+                            {shareCopied ? "Copied!" : "Share Result"}
                         </button>
 
                         {status === "won" ? (
@@ -606,8 +640,11 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                                 </div>
                             ) : autoSubmitStatus === "success" ? (
                                 <div className="rounded-[1.75rem] border border-accent/25 bg-accent/12 p-5 text-center">
-                                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">
-                                        Score Submitted ✓
+                                    <p className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                                            <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                        Score Submitted
                                     </p>
                                     <p className="mt-2 text-sm text-white/60">Your Painedle score is on the leaderboard.</p>
                                 </div>
@@ -646,16 +683,18 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
 export default function PainedleGame() {
     const [dateKey, setDateKey] = useState(() => getTodayKey());
 
+    // Daily rollover is tied to the Central-time day key (matches server
+    // word selection), not the browser's local midnight. Poll rather than
+    // schedule a single local-midnight timeout, since that timeout doesn't
+    // line up with the actual Central day boundary.
     useEffect(() => {
-        const now = new Date();
-        const nextMidnight = new Date(now);
-        nextMidnight.setHours(24, 0, 0, 0);
-        const timeout = window.setTimeout(() => {
-            setDateKey(getTodayKey());
-        }, nextMidnight.getTime() - now.getTime() + 50);
+        const interval = window.setInterval(() => {
+            const currentKey = getTodayKey();
+            setDateKey((prev) => (prev === currentKey ? prev : currentKey));
+        }, 60_000);
 
-        return () => window.clearTimeout(timeout);
-    }, [dateKey]);
+        return () => window.clearInterval(interval);
+    }, []);
 
     return <PainedleBoard key={dateKey} dateKey={dateKey} />;
 }

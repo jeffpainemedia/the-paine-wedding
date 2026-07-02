@@ -9,7 +9,7 @@ type FooterLink = {
 
 export default function Footer({ links }: { links: readonly FooterLink[] }) {
     return (
-        <footer className="w-full border-t border-gray-200 bg-surface py-8 text-center md:py-12">
+        <footer className="w-full border-t border-primary/10 bg-surface py-8 text-center md:py-12">
             <div className="mx-auto max-w-4xl px-5 md:px-6">
                 <h2 className="mb-3 font-heading text-2xl text-primary md:mb-4 md:text-3xl">{WEDDING.couple.names}</h2>
                 <p className="mb-6 text-xs uppercase tracking-[0.22em] text-text-secondary md:mb-8 md:text-sm md:tracking-widest">

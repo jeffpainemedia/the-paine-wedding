@@ -81,6 +81,10 @@ export default function CoupleTriviaGame() {
     // Per-question response from the server — populated only after a player
     // submits an answer for that question. Keyed by question id.
     const [checkResults, setCheckResults] = useState<Record<string, CheckResult>>({});
+    // Tracks questions where the answer-check request failed, so we can show
+    // a retry affordance instead of silently leaving the player stuck with
+    // no fun fact and no correct-answer highlight.
+    const [checkErrors, setCheckErrors] = useState<Record<string, boolean>>({});
     const [hasAccount, setHasAccount] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [shareCopied, setShareCopied] = useState(false);
@@ -103,6 +107,7 @@ export default function CoupleTriviaGame() {
     const selectedAnswer = selectedAnswers[currentIndex];
     const answeredCount = selectedAnswers.length;
     const currentCheck = currentQuestion ? checkResults[currentQuestion.id] : undefined;
+    const currentCheckFailed = currentQuestion ? Boolean(checkErrors[currentQuestion.id]) : false;
     // Score is derived from server check results; we count only confirmed
     // correct answers. Answers still in flight aren't counted yet.
     const score = questions.reduce((total, q) => {
@@ -179,6 +184,25 @@ export default function CoupleTriviaGame() {
         setShareCopied(false);
     }
 
+    // Check the answer server-side. The correct index and fun fact only
+    // become known once the user has committed to a choice.
+    function runCheck(questionId: string, answerIndex: number) {
+        setCheckErrors((prev) => {
+            if (!prev[questionId]) return prev;
+            const next = { ...prev };
+            delete next[questionId];
+            return next;
+        });
+
+        checkAnswer(questionId, answerIndex)
+            .then((result) => {
+                setCheckResults((prev) => ({ ...prev, [questionId]: result }));
+            })
+            .catch(() => {
+                setCheckErrors((prev) => ({ ...prev, [questionId]: true }));
+            });
+    }
+
     function handleSelect(answerIndex: number) {
         if (selectedAnswer !== undefined) return;
         if (!currentQuestion) return;
@@ -189,14 +213,7 @@ export default function CoupleTriviaGame() {
             return nextAnswers;
         });
 
-        // Check the answer server-side. The correct index and fun fact only
-        // become known once the user has committed to a choice.
-        const questionId = currentQuestion.id;
-        checkAnswer(questionId, answerIndex)
-            .then((result) => {
-                setCheckResults((prev) => ({ ...prev, [questionId]: result }));
-            })
-            .catch(() => { /* fail silently — user can still proceed */ });
+        runCheck(currentQuestion.id, answerIndex);
     }
 
     function handleNext() {
@@ -266,7 +283,7 @@ export default function CoupleTriviaGame() {
                         onClick={handleShare}
                         className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-white px-6 py-3 text-sm font-medium uppercase tracking-[0.2em] text-primary transition-all duration-200 hover:bg-primary/5"
                     >
-                        {shareCopied ? "✓ Copied!" : "Share Result"}
+                        {shareCopied ? "Copied!" : "Share Result"}
                     </button>
                     <button
                         type="button"
@@ -284,7 +301,7 @@ export default function CoupleTriviaGame() {
                         </div>
                     ) : autoSubmitStatus === "success" ? (
                         <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 p-5 text-center">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Score Submitted ✓</p>
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Score Submitted</p>
                             <p className="mt-2 text-sm text-text-secondary">Your trivia score is on the leaderboard.</p>
                         </div>
                     ) : autoSubmitStatus === "submitting" ? (
@@ -373,9 +390,22 @@ export default function CoupleTriviaGame() {
                 <div className="min-h-16 max-w-2xl text-text-secondary">
                     {selectedAnswer === undefined
                         ? "Choose an answer to reveal the fun fact."
-                        : currentCheck
-                            ? (currentCheck.funFact ?? (currentCheck.correct ? "Correct!" : "Not quite — see the highlighted answer."))
-                            : "Checking your answer…"}
+                        : currentCheckFailed
+                            ? (
+                                <span className="inline-flex flex-wrap items-center gap-2">
+                                    <span>Couldn&apos;t check that answer.</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => currentQuestion && runCheck(currentQuestion.id, selectedAnswer)}
+                                        className="text-sm font-medium text-primary underline underline-offset-2 transition-colors hover:text-primary/70"
+                                    >
+                                        Tap to retry
+                                    </button>
+                                </span>
+                            )
+                            : currentCheck
+                                ? (currentCheck.funFact ?? (currentCheck.correct ? "Correct!" : "Not quite — see the highlighted answer."))
+                                : "Checking your answer…"}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <button

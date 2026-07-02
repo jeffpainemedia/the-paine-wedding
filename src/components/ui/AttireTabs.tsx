@@ -69,7 +69,7 @@ export default function AttireTabs({
                                 className={`relative rounded-t-[1.8rem] border px-4 py-3 text-left transition-all duration-300 md:px-8 md:py-4 ${
                                     active
                                         ? "z-20 -mb-px border-primary/18 border-b-transparent bg-primary text-white"
-                                        : "z-0 mb-0.5 border-primary/12 bg-[linear-gradient(180deg,rgba(251,248,243,0.98)_0%,rgba(245,240,231,0.98)_100%)] text-primary hover:bg-[linear-gradient(180deg,rgba(248,243,235,0.98)_0%,rgba(241,235,226,0.98)_100%)]"
+                                        : "z-0 mb-0.5 border-primary/12 bg-surface text-primary hover:bg-primary/5"
                                 }`}
                             >
                                 <div className={`font-heading leading-none text-lg md:text-3xl ${active ? "text-white" : "text-primary"}`}>

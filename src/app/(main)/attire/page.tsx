@@ -36,8 +36,11 @@ export default async function Attire() {
     return (
         <div>
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Attire</h1>
-                <p className="max-w-2xl mx-auto text-text-secondary tracking-wide leading-relaxed">
+                <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                    Dress Code
+                </p>
+                <h1 className="font-heading text-4xl md:text-6xl mb-6">Attire</h1>
+                <p className="max-w-xl mx-auto text-text-secondary tracking-wide leading-relaxed">
                     {dresscodeReady
                         ? `We respectfully request ${wedding.dresscode.short.toLowerCase()} attire for our celebration.`
                         : "Dress code details coming soon — we can\u2019t wait to celebrate with you in style."}

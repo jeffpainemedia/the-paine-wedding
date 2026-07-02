@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Section from "@/components/ui/Section";
 import { getWeddingData } from "@/lib/site-settings";
-import { MapPin, Plane, Car, ExternalLink, Phone } from "lucide-react";
+import { MapPin, Plane, ExternalLink, Phone } from "lucide-react";
 import { requirePageVisible } from "@/lib/page-visibility";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -25,7 +25,10 @@ export default async function Travel() {
         <div>
             {/* Hero */}
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Travel &amp; Stay</h1>
+                <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                    Getting There
+                </p>
+                <h1 className="font-heading text-4xl md:text-6xl mb-6">Travel &amp; Stay</h1>
                 <p className="max-w-xl mx-auto text-text-secondary tracking-wide leading-relaxed">
                     Everything you need to get here and settle in. The venue is located in the
                     northeast Texas countryside — about an hour from Dallas.
@@ -36,7 +39,7 @@ export default async function Travel() {
             <Section background="base" className="py-16">
                 <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
                     <div>
-                        <div className="w-full aspect-square rounded-[1.7rem] bg-gray-200 shadow-[0_20px_44px_rgba(20,42,68,0.09)] relative overflow-hidden group border border-primary/10">
+                        <div className="w-full aspect-square rounded-[1.7rem] bg-primary/5 shadow-[0_20px_44px_rgba(20,42,68,0.09)] relative overflow-hidden group border border-primary/10">
                             <iframe
                                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3303.3!2d-96.1374!3d33.3287!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x864c6d2b4d0a7b5d%3A0x0!2sDavis+%26+Grey+Farms!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus"
                                 className="absolute inset-0 w-full h-full"
@@ -76,8 +79,9 @@ export default async function Travel() {
                                     2975 CR 1110, Celeste, TX 75423
                                 </a>.
                             </p>
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-                                <strong>Bus &amp; large vehicle note:</strong> Use FM 2194 for easier access to the venue.
+                            <div className="border border-accent/30 bg-accent/10 rounded-[4px] p-4 text-sm text-text-primary">
+                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">Note</p>
+                                <strong className="font-medium">Bus &amp; large vehicle note:</strong> Use FM 2194 for easier access to the venue.
                             </div>
                             <p className="text-sm">
                                 The venue is a rural property — please follow GPS directions carefully.
@@ -97,13 +101,13 @@ export default async function Travel() {
                                         href={item.href}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:border-primary/20 hover:bg-surface/40 transition-colors group"
+                                        className="flex items-center justify-between p-3 rounded-[4px] border border-primary/10 hover:border-primary/20 hover:bg-surface/40 transition-colors group"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Plane size={15} className="text-primary/60 shrink-0" />
                                             <span className="text-sm font-medium">{item.label}</span>
                                         </div>
-                                        <span className="text-xs text-text-secondary group-hover:text-primary transition-colors">{item.time} →</span>
+                                        <span className="text-xs text-text-secondary group-hover:text-primary transition-colors">{item.time}</span>
                                     </a>
                                 ))}
                             </div>
@@ -164,12 +168,12 @@ export default async function Travel() {
                     {/* Greenville Hotels */}
                     <div className="mb-14">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="h-px flex-1 bg-gray-200" />
+                            <div className="h-px flex-1 bg-primary/10" />
                             <div className="text-center">
                                 <h3 className="font-heading text-xl text-primary">Greenville Area</h3>
                                 <p className="text-xs text-text-secondary uppercase tracking-widest mt-0.5">~13 miles · ~19 min from venue</p>
                             </div>
-                            <div className="h-px flex-1 bg-gray-200" />
+                            <div className="h-px flex-1 bg-primary/10" />
                         </div>
                         <div className="grid md:grid-cols-3 gap-6">
                             {greenvilleHotels.map((hotel) => (
@@ -181,12 +185,12 @@ export default async function Travel() {
                     {/* McKinney Hotels */}
                     <div className="mb-14">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="h-px flex-1 bg-gray-200" />
+                            <div className="h-px flex-1 bg-primary/10" />
                             <div className="text-center">
                                 <h3 className="font-heading text-xl text-primary">McKinney Area</h3>
                                 <p className="text-xs text-text-secondary uppercase tracking-widest mt-0.5">~38 miles · ~51 min from venue</p>
                             </div>
-                            <div className="h-px flex-1 bg-gray-200" />
+                            <div className="h-px flex-1 bg-primary/10" />
                         </div>
                         <p className="text-sm text-text-secondary mb-6 text-center max-w-lg mx-auto">
                             A lovely destination stay with McKinney&apos;s walkable historic downtown, 120+ shops, and great dining. A longer drive from the venue but a memorable experience.
@@ -202,12 +206,12 @@ export default async function Travel() {
                     {nearbyRentals.length > 0 && (
                         <div>
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="h-px flex-1 bg-gray-200" />
+                                <div className="h-px flex-1 bg-primary/10" />
                                 <div className="text-center">
                                     <h3 className="font-heading text-xl text-primary">Short-Term Rentals</h3>
                                     <p className="text-xs text-text-secondary uppercase tracking-widest mt-0.5">Closest private options</p>
                                 </div>
-                                <div className="h-px flex-1 bg-gray-200" />
+                                <div className="h-px flex-1 bg-primary/10" />
                             </div>
                             <div className="grid md:grid-cols-2 gap-6">
                                 {nearbyRentals.map((hotel) => (
@@ -223,38 +227,30 @@ export default async function Travel() {
             <Section background="surface" className="py-16">
                 <div className="max-w-3xl mx-auto">
                     <h2 className="font-heading text-3xl text-center text-primary mb-10">Getting Around</h2>
-                    <div className="grid sm:grid-cols-3 gap-6">
+                    <div className="divide-y divide-primary/10 border-t border-primary/10">
                         {[
                             {
-                                icon: Car,
+                                number: '01',
                                 title: 'Rental Car',
                                 description: 'Best option for flexibility. All major rental companies are available at both DFW and Love Field airports.',
                             },
                             {
-                                icon: ({ size, className }: { size: number; className: string }) => (
-                                    <svg width={size} height={size} className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                    </svg>
-                                ),
+                                number: '02',
                                 title: 'Shuttle / Charter',
                                 description: 'Great for groups! If your hotel plans a shuttle, coordinate with your group. Minimizes impaired-driving risk after the reception.',
                             },
                             {
-                                icon: ({ size, className }: { size: number; className: string }) => (
-                                    <svg width={size} height={size} className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                    </svg>
-                                ),
+                                number: '03',
                                 title: 'Ride-Share',
                                 description: 'Works in the Dallas metro but can be unreliable for late-night rural pickups. Have a backup plan if you rely on Uber/Lyft.',
                             },
-                        ].map(({ icon: Icon, title, description }) => (
-                            <div key={title} className="surface-panel p-6 text-center">
-                                <div className="w-12 h-12 mx-auto mb-4 bg-primary/8 rounded-full flex items-center justify-center text-primary">
-                                    <Icon size={22} className="text-primary" />
+                        ].map(({ number, title, description }) => (
+                            <div key={title} className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-8 py-6">
+                                <span className="font-heading text-3xl text-accent shrink-0 md:w-14">{number}</span>
+                                <div>
+                                    <h3 className="font-medium text-base mb-1.5 text-text-primary">{title}</h3>
+                                    <p className="text-sm text-text-secondary leading-relaxed">{description}</p>
                                 </div>
-                                <h3 className="font-medium text-base mb-2 text-text-primary">{title}</h3>
-                                <p className="text-sm text-text-secondary leading-relaxed">{description}</p>
                             </div>
                         ))}
                     </div>
@@ -273,7 +269,7 @@ export default async function Travel() {
 
 function HotelCard({ hotel }: { hotel: { name: string; distance: string; description: string; address: string; phone: string; bookingUrl: string; hub: string; badge: string } }) {
     return (
-        <div className="bg-white rounded-[1.5rem] border border-primary/8 p-6 shadow-[0_8px_24px_rgba(20,42,68,0.06)] flex flex-col hover:shadow-[0_12px_32px_rgba(20,42,68,0.1)] hover:-translate-y-0.5 transition-all duration-200">
+        <div className="bg-white rounded-[1.5rem] border border-primary/10 p-6 shadow-[0_8px_24px_rgba(20,42,68,0.06)] flex flex-col hover:shadow-[0_12px_32px_rgba(20,42,68,0.1)] hover:-translate-y-0.5 transition-all duration-200">
             {hotel.badge ? (
                 <span className="inline-block mb-3 text-[11px] font-semibold uppercase tracking-widest text-accent bg-accent/10 px-2.5 py-1 rounded-full self-start">
                     {hotel.badge}
@@ -290,7 +286,7 @@ function HotelCard({ hotel }: { hotel: { name: string; distance: string; descrip
                 {hotel.phone ? (
                     <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                         <Phone size={12} className="shrink-0 text-primary/50" />
-                        <a href={`tel:${hotel.phone.replace(/[^0-9+]/g, '')}`} className="hover:text-primary transition-colors">{hotel.phone}</a>
+                        <a href={`tel:${hotel.phone.replace(/[^0-9+]/g, '')}`} className="py-1 -my-1 hover:text-primary transition-colors">{hotel.phone}</a>
                     </div>
                 ) : null}
             </div>

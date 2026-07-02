@@ -14,22 +14,19 @@ export const metadata = buildPageMetadata({
 
 // Per-brand visual config — keeps the page data-driven while adding personality
 const brandConfig: Record<string, {
-    gradientBar: string;
-    ctaText: string;
+    underline: string;
     wordmark: string;
     categories: string[];
     tagline: string;
 }> = {
     Amazon: {
-        gradientBar: "from-[#FF9900] to-[#FFB830]",
-        ctaText: "text-[#B86A00]",
+        underline: "bg-[#FF9900]",
         wordmark: "amazon",
         categories: ["Kitchen", "Bedroom", "Bath", "Entertaining", "Home Decor"],
         tagline: "Our full registry for the home — from everyday essentials to the special touches that make a house feel like ours.",
     },
     Target: {
-        gradientBar: "from-[#CC0000] to-[#E53935]",
-        ctaText: "text-[#CC0000]",
+        underline: "bg-[#CC0000]",
         wordmark: "Target",
         categories: ["Home Essentials", "Kitchen", "Storage", "Bedding"],
         tagline: "Everyday home essentials and quality basics — the kind of things you reach for every single day.",
@@ -44,7 +41,10 @@ export default async function Registry() {
         <div>
             {/* Hero */}
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Registry</h1>
+                <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                    With Gratitude
+                </p>
+                <h1 className="font-heading text-4xl md:text-6xl mb-6">Registry</h1>
                 <p className="max-w-xl mx-auto text-text-secondary tracking-wide leading-relaxed">
                     Your presence at our wedding is the greatest gift of all. But if you&apos;d like to honor us
                     with something for the home, here&apos;s where we&apos;ve registered.
@@ -64,13 +64,8 @@ export default async function Registry() {
                                 href={reg.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.07)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_48px_rgba(0,0,0,0.11)]"
+                                className="group flex flex-col overflow-hidden rounded-[4px] border border-primary/10 bg-white transition-colors duration-300 hover:border-primary/25"
                             >
-                                {/* Brand color top bar */}
-                                {brand && (
-                                    <div className={`h-[5px] w-full bg-gradient-to-r ${brand.gradientBar}`} />
-                                )}
-
                                 <div className="flex flex-col flex-1 p-8 md:p-9">
                                     {/* Wordmark */}
                                     <div className="mb-5">
@@ -79,22 +74,28 @@ export default async function Registry() {
                                                 <span className="font-heading text-[1.85rem] leading-none tracking-tight text-[#232F3E]">
                                                     amazon
                                                 </span>
-                                                <div className="mt-1.5 h-[3px] w-10 rounded-full bg-[#FF9900]" />
+                                                <div className={`mt-2 h-[2px] w-10 ${brand?.underline ?? "bg-primary"}`} />
                                             </div>
                                         ) : reg.name === "Target" ? (
-                                            <div className="flex items-center gap-2.5">
-                                                {/* Simple bullseye */}
-                                                <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" fill="none">
-                                                    <circle cx="16" cy="16" r="14" stroke="#CC0000" strokeWidth="2.5" />
-                                                    <circle cx="16" cy="16" r="8"  stroke="#CC0000" strokeWidth="2.5" />
-                                                    <circle cx="16" cy="16" r="3"  fill="#CC0000" />
-                                                </svg>
-                                                <span className="font-heading text-[1.85rem] leading-none tracking-tight text-[#CC0000]">
-                                                    Target
-                                                </span>
+                                            <div>
+                                                <div className="flex items-center gap-2.5">
+                                                    {/* Simple bullseye */}
+                                                    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" fill="none">
+                                                        <circle cx="16" cy="16" r="14" stroke="#CC0000" strokeWidth="2.5" />
+                                                        <circle cx="16" cy="16" r="8"  stroke="#CC0000" strokeWidth="2.5" />
+                                                        <circle cx="16" cy="16" r="3"  fill="#CC0000" />
+                                                    </svg>
+                                                    <span className="font-heading text-[1.85rem] leading-none tracking-tight text-[#CC0000]">
+                                                        Target
+                                                    </span>
+                                                </div>
+                                                <div className={`mt-2 h-[2px] w-10 ${brand?.underline ?? "bg-primary"}`} />
                                             </div>
                                         ) : (
-                                            <span className="font-heading text-2xl text-primary">{reg.name}</span>
+                                            <div>
+                                                <span className="font-heading text-2xl text-primary">{reg.name}</span>
+                                                <div className="mt-2 h-[2px] w-10 bg-primary" />
+                                            </div>
                                         )}
                                     </div>
 
@@ -117,11 +118,9 @@ export default async function Registry() {
 
                                     {/* Footer CTA row */}
                                     <div className="mt-auto pt-6">
-                                        <div className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white transition-all duration-200 group-hover:opacity-90 ${
-                                            reg.name === "Amazon" ? "bg-[#FF9900]" : reg.name === "Target" ? "bg-[#CC0000]" : "bg-primary"
-                                        }`}>
+                                        <div className="flex w-full items-center justify-center gap-2 rounded-[4px] border border-primary py-3.5 text-sm font-semibold text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
                                             Browse {reg.name} Registry
-                                            <ExternalLink size={14} strokeWidth={2.5} />
+                                            <ExternalLink size={14} strokeWidth={2} />
                                         </div>
                                     </div>
                                 </div>

@@ -280,7 +280,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
 
     function handleShare() {
         const timeStr = fmtTime(displayTime);
-        const text = `Crossing Paths — ${timeStr} ✨\nthepainewedding.com/games/crossword`;
+        const text = `Crossing Paths — ${timeStr}\nthepainewedding.com/games/crossword`;
         if (typeof navigator !== "undefined" && navigator.share) {
             navigator.share({ text }).catch(() => {});
         } else {
@@ -312,7 +312,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     // When the player has filled in every cell, check the grid server-side to
     // confirm a solve. This replaces the old client-side answer comparison.
     useEffect(() => {
-        if (solved || !gameStarted) return;
+        if (solved || !gameStarted || isPaused) return;
         if (!allCellsFilled(puzzle, letters)) return;
         let cancelled = false;
         void checkGridServer(puzzle.id, letters)
@@ -327,7 +327,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
             .catch(() => { /* try again on next change */ });
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [letters, gameStarted, solved, puzzle.id, autoCheck]);
+    }, [letters, gameStarted, solved, puzzle.id, autoCheck, isPaused]);
 
     function handleStartGame() {
         startTimestamp.current = Date.now();
@@ -464,7 +464,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     }
 
     function writeLetter(cell: PublicCrosswordCell, rawLetter: string) {
-        if (durationSeconds !== null) return;
+        if (durationSeconds !== null || isPaused) return;
 
         const letter = rawLetter.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
         const entry = activeEntry && activeEntry.cells.includes(cell.key)
@@ -540,6 +540,8 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     }
 
     function handleType(cell: PublicCrosswordCell, raw: string) {
+        if (isPaused) return;
+
         if (!raw) {
             setLetters((prev) => ({ ...prev, [cell.key]: "" }));
             return;
@@ -549,7 +551,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     }
 
     function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, cell: PublicCrosswordCell) {
-        if (!cell.isFillable) return;
+        if (!cell.isFillable || isPaused) return;
 
         if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
             e.preventDefault();
@@ -683,7 +685,10 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                     onClick={() => setPostGameUnlocked(false)}
                                     className="mt-1.5 flex items-center gap-1 text-[10px] uppercase tracking-widest text-primary transition-colors hover:text-primary/70"
                                 >
-                                    ← Back to Results
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5">
+                                        <path d="M15 18l-6-6 6-6" />
+                                    </svg>
+                                    Back to Results
                                 </button>
                             )}
                         </div>
@@ -788,7 +793,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                     </div>
                     <div>
                         <p className="font-mono text-5xl font-bold tabular-nums text-accent">{fmtTime(displayTime)}</p>
-                        <p className="mt-2 text-sm text-white/50">Great solve ✨</p>
+                        <p className="mt-2 text-sm text-white/50">Great solve</p>
                         <p className="mt-1 text-sm font-semibold text-accent">{score} pts</p>
                     </div>
                     <button
@@ -879,7 +884,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                             spellCheck={false}
                                             data-form-type="other"
                                             aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
-                                            disabled={solved}
+                                            disabled={solved || isPaused}
                                             className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] [-webkit-touch-callout:none] select-none selection:bg-transparent ${
                                                 wrong ? "text-red-700" : "text-primary"
                                             }`}
@@ -914,7 +919,9 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                                 </span>
                                                 {entry.clue}
                                                 {isRevealed && !isActive && (
-                                                    <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
+                                                        <path d="M20 6L9 17l-5-5" />
+                                                    </svg>
                                                 )}
                                             </button>
                                         );
@@ -944,7 +951,9 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                                 </span>
                                                 {entry.clue}
                                                 {isRevealed && !isActive && (
-                                                    <span className="ml-1 text-[9px] uppercase tracking-widest opacity-40">✓</span>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
+                                                        <path d="M20 6L9 17l-5-5" />
+                                                    </svg>
                                                 )}
                                             </button>
                                         );
@@ -972,7 +981,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                                 {revealedEntryIds.length} reveal{revealedEntryIds.length > 1 ? "s" : ""} used
                             </p>
                         ) : (
-                            <p className="mt-2 text-sm text-white/50">Clean solve ✨</p>
+                            <p className="mt-2 text-sm text-white/50">Clean solve</p>
                         )}
                         <p className="mt-1 text-sm font-semibold text-accent">{score} pts</p>
                     </div>

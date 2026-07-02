@@ -56,9 +56,9 @@ export default async function WeddingDetails() {
                         href={wedding.venue.mapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-4 inline-block text-sm underline underline-offset-4 text-primary/70 hover:text-primary transition-colors"
+                        className="mt-4 inline-block text-sm underline decoration-accent/60 underline-offset-4 text-primary/70 hover:text-primary transition-colors"
                     >
-                        View on Google Maps &rarr;
+                        View on Google Maps
                     </Link>
                 </>
             ),
@@ -90,9 +90,9 @@ export default async function WeddingDetails() {
                             </p>
                             <Link
                                 href="/attire"
-                                className="mt-4 inline-block text-sm underline underline-offset-4 text-primary/70 hover:text-primary transition-colors"
+                                className="mt-4 inline-block text-sm underline decoration-accent/60 underline-offset-4 text-primary/70 hover:text-primary transition-colors"
                             >
-                                View Attire Details &rarr;
+                                View Attire Details
                             </Link>
                         </>
                     ) : (
@@ -197,27 +197,34 @@ export default async function WeddingDetails() {
     ];
 
     return (
-        <div className="pt-20">
-            <Section background="surface" className="text-center pb-24 top-0 mt-[-80px] pt-40">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Wedding Details</h1>
-                <p className="max-w-2xl mx-auto text-text-secondary tracking-wide">
-                    Everything you need to know about our special day to celebrate with us.
-                </p>
+        <div>
+            <Section background="surface" className="pb-14 pt-12 md:pb-16 md:pt-16">
+                <div className="max-w-2xl">
+                    <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                        The Details
+                    </p>
+                    <h1 className="font-heading text-5xl md:text-7xl mb-6 text-primary">
+                        Wedding <span className="italic">Details</span>
+                    </h1>
+                    <p className="max-w-2xl text-text-secondary tracking-wide leading-relaxed">
+                        Everything you need to know about our special day to celebrate with us.
+                    </p>
+                </div>
             </Section>
 
-            <Section background="base" className="pt-0 -mt-24">
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <Section background="base" className="pt-12 md:pt-16">
+                <div className="max-w-4xl mx-auto">
                     {details.map((detail, idx) => {
                         const Icon = detail.icon;
                         return (
                             <div
                                 key={idx}
-                                className="bg-white p-12 text-center rounded-sm shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] border border-surface/50 transition-all duration-300 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.08)] hover:-translate-y-1"
+                                className="grid md:grid-cols-[1fr_2fr] gap-3 md:gap-10 py-10 border-t border-primary/10 first:border-t-0 md:first:border-t md:first:pt-0"
                             >
-                                <div className="w-16 h-16 mx-auto mb-6 bg-surface rounded-full flex items-center justify-center text-primary">
-                                    <Icon size={24} strokeWidth={1.5} />
+                                <div className="flex items-center gap-3">
+                                    <Icon size={20} strokeWidth={1.5} className="text-accent shrink-0" />
+                                    <h2 className="font-heading text-2xl md:text-3xl text-primary">{detail.title}</h2>
                                 </div>
-                                <h2 className="font-heading text-2xl mb-4 text-primary">{detail.title}</h2>
                                 <div className="text-text-secondary leading-relaxed space-y-1">
                                     {detail.content}
                                 </div>

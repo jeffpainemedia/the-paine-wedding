@@ -26,7 +26,7 @@ export default async function Home() {
     <>
       {/* Hero Section — data-admin-key lets the AdminEditBar intercept clicks in edit mode */}
         <section
-            className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden"
+            className="relative w-full h-dvh min-h-[600px] flex items-center justify-center overflow-hidden"
             data-admin-key="images.hero"
         data-admin-type="image"
         data-admin-current-url={images.hero.main}

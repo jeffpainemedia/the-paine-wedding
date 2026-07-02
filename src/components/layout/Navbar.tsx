@@ -66,7 +66,6 @@ export default function Navbar({ links }: { links: readonly NavLink[] }) {
                                 alt={WEDDING.couple.names}
                                 width={110}
                                 height={36}
-                                priority
                                 className="h-8 w-auto"
                             />
                         </span>
@@ -80,8 +79,8 @@ export default function Navbar({ links }: { links: readonly NavLink[] }) {
                                 href={link.href}
                                 className={`border-b-2 pb-1 text-sm uppercase tracking-widest transition-all duration-200 ${
                                     pathname === link.href || pathname.startsWith(`${link.href}/`)
-                                        ? "border-primary/45 text-primary font-semibold"
-                                        : "border-transparent text-text-secondary hover:border-primary/30 hover:text-primary hover:font-semibold"
+                                        ? "border-primary/45 text-primary"
+                                        : "border-transparent text-text-secondary hover:border-primary/30 hover:text-primary"
                                 }`}
                             >
                                 {link.name}
@@ -133,9 +132,9 @@ export default function Navbar({ links }: { links: readonly NavLink[] }) {
                             key={link.name}
                             href={link.href}
                             onClick={() => setMenuOpen(false)}
-                            className={`border-b border-surface/60 py-3 text-sm uppercase tracking-widest transition-colors duration-200 last:border-0 ${
+                            className={`border-b border-surface/60 py-3 text-sm uppercase tracking-widest underline-offset-4 transition-colors duration-200 last:border-0 ${
                                 pathname === link.href || pathname.startsWith(`${link.href}/`)
-                                    ? "text-primary font-semibold"
+                                    ? "text-primary underline"
                                     : "text-text-secondary hover:text-primary"
                             }`}
                         >

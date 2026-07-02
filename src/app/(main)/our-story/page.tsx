@@ -19,32 +19,32 @@ export default async function OurStory() {
     return (
         <div>
             {/* Page header */}
-            <Section background="surface" className="text-center pb-10 pt-12 md:pb-12 md:pt-16">
-                <div className="flex items-center justify-center gap-4 mb-5">
-                    <span className="h-px w-12 bg-accent" />
-                    <span className="uppercase tracking-[0.3em] text-xs text-accent font-medium">
-                        Our Story
-                    </span>
-                    <span className="h-px w-12 bg-accent" />
+            <Section background="surface" className="pb-10 pt-12 md:pb-12 md:pt-16">
+                <div className="max-w-2xl">
+                    <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                        The Story
+                    </p>
+                    <h1 className="font-heading text-5xl md:text-7xl mb-6 text-primary">
+                        {wedding.couple.names.split(" & ")[0]}{" "}
+                        <span className="font-amp normal-case">&amp;</span>{" "}
+                        {wedding.couple.names.split(" & ")[1]}
+                    </h1>
+                    <p
+                        className="text-text-secondary leading-relaxed"
+                        data-admin-key="story.subtitle"
+                        data-admin-type="rich-text"
+                        data-admin-current-text={content.storySubtitle}
+                        data-admin-label="Story Page Subtitle"
+                    >
+                        {content.storySubtitle}
+                    </p>
                 </div>
-                <h1 className="font-heading text-5xl md:text-7xl mb-6 text-primary">
-                    {wedding.couple.names}
-                </h1>
-                <p
-                    className="max-w-xl mx-auto text-text-secondary leading-relaxed"
-                    data-admin-key="story.subtitle"
-                    data-admin-type="rich-text"
-                    data-admin-current-text={content.storySubtitle}
-                    data-admin-label="Story Page Subtitle"
-                >
-                    {content.storySubtitle}
-                </p>
             </Section>
 
             {/* Thin rule */}
             <div className="flex items-center justify-center mb-16 px-6">
                 <span className="h-px flex-1 max-w-xs bg-surface" />
-                <span className="mx-4 text-secondary text-xs">&#10022;</span>
+                <span className="mx-4 inline-block h-1.5 w-1.5 rotate-45 bg-accent" aria-hidden="true" />
                 <span className="h-px flex-1 max-w-xs bg-surface" />
             </div>
 

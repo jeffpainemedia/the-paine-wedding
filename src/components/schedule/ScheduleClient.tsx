@@ -44,10 +44,17 @@ function EventRow({ event }: { event: ScheduleEvent }) {
             </div>
 
             {/* Time */}
-            <div className="w-28 shrink-0 pt-0.5 text-right md:w-32 print:w-24">
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-accent print:text-[10px]">
-                    {timeStr}
-                </span>
+            <div className="w-24 shrink-0 pt-0.5 text-right md:w-32 print:w-24">
+                {timeStr.split("–").map((part, i) => (
+                    <span
+                        key={i}
+                        className={`block whitespace-nowrap text-xs font-medium uppercase tracking-[0.18em] print:text-[10px] ${
+                            i === 0 ? "text-accent" : "text-text-secondary/70"
+                        }`}
+                    >
+                        {i === 0 ? part : `– ${part}`}
+                    </span>
+                ))}
             </div>
 
             {/* Content */}
@@ -190,17 +197,17 @@ export default function ScheduleClient({ initialEvents, initialTierSlug, initial
                         </p>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         onClick={handlePrint}
                         title="Save as PDF — your browser will open a print dialog. Choose 'Save as PDF' as destination."
-                        className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-white/60 px-3.5 py-2 text-[11px] uppercase tracking-[0.2em] text-text-secondary transition-colors hover:border-primary/30 hover:text-primary"
+                        className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-white/60 px-3.5 py-2.5 text-[11px] uppercase tracking-[0.2em] text-text-secondary transition-colors hover:border-primary/30 hover:text-primary"
                     >
-                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-3.5 w-3.5">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-3.5 w-3.5 shrink-0">
                             <path d="M10 3v9m0 0-3-3m3 3 3-3M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        Save PDF
+                        <span className="whitespace-nowrap">Save PDF</span>
                     </button>
                     {!auth && (
                         <SignInPopover onSignedIn={(d, t) => void handleSignedIn(d, t)} />

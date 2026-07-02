@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Section from "@/components/ui/Section";
 import Button from "@/components/ui/Button";
 import { WEDDING } from "@/lib/wedding-data";
@@ -268,22 +269,26 @@ function RSVPProgressBar({ currentStep, onStepClick }: {
                                 onClick={() => isClickable && onStepClick(stepNum)}
                                 disabled={!isClickable}
                                 aria-label={isClickable ? `Go back to step ${stepNum}: ${label}` : label}
-                                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                                    isCompleted
-                                        ? "bg-primary border-primary text-white cursor-pointer hover:bg-primary/80 hover:scale-110"
-                                        : isCurrent
-                                        ? "bg-white border-primary text-primary shadow-[0_0_0_3px_rgba(26,63,111,0.12)] cursor-default"
-                                        : "bg-white border-primary/20 text-text-secondary/40 cursor-default"
-                                }`}
+                                className={`flex items-center justify-center p-[9px] -m-[9px] rounded-full transition-all duration-300 ${isClickable ? "cursor-pointer" : "cursor-default"}`}
                             >
-                                {isCompleted ? (
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                ) : stepNum}
+                                <span
+                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
+                                        isCompleted
+                                            ? "bg-primary border-primary text-white hover:bg-primary/80 hover:scale-110"
+                                            : isCurrent
+                                            ? "bg-white border-primary text-primary shadow-[0_0_0_3px_rgba(26,63,111,0.12)]"
+                                            : "bg-white border-primary/20 text-text-secondary/40"
+                                    }`}
+                                >
+                                    {isCompleted ? (
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : stepNum}
+                                </span>
                             </button>
                             <span
-                                className={`mt-2 text-[9px] sm:text-[10px] uppercase tracking-wider font-medium text-center leading-tight transition-colors duration-300 ${
+                                className={`mt-2 text-[10px] uppercase tracking-wider font-medium text-center leading-tight transition-colors duration-300 ${
                                     isCurrent ? "text-primary" : isCompleted ? "text-primary/50" : "text-text-secondary/35"
                                 }`}
                                 style={{ maxWidth: "4.5rem" }}
@@ -299,7 +304,7 @@ function RSVPProgressBar({ currentStep, onStepClick }: {
 }
 
 // ── Shared back/outline button style ─────────────────────────────────────────
-const outlineBtn = "px-6 py-3 text-sm font-medium border border-gray-200 rounded-sm text-text-secondary hover:border-primary hover:text-primary transition-colors";
+const outlineBtn = "px-6 py-3 text-sm font-medium border border-primary/15 rounded-sm text-text-secondary hover:border-primary hover:text-primary transition-colors";
 
 // Auto-resize textarea hook
 function useAutoResize(value: string, minRows: number = 1) {
@@ -337,7 +342,7 @@ function SongRequestField({ value, onChange }: { value: string; onChange: (v: st
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="e.g. Mr. Brightside, Shout, anything Pitbull..."
                 rows={1}
-                className="w-full border-b border-gray-300 py-3 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-gray-400 resize-none"
+                className="w-full border-b border-primary/15 py-3 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-text-secondary/50 resize-none"
                 style={{ minHeight: "44px" }}
             />
         </div>
@@ -364,7 +369,7 @@ function AdviceField({ value, onChange }: { value: string; onChange: (v: string)
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="Share a thought..."
                 rows={3}
-                className="w-full border border-gray-200 p-3 text-sm rounded-sm focus:outline-none focus:border-primary bg-white resize-none placeholder:text-gray-400"
+                className="w-full border border-primary/15 p-3 text-sm rounded-sm focus:outline-none focus:border-primary bg-white resize-none placeholder:text-text-secondary/50"
                 style={{ minHeight: "84px" }}
             />
         </div>
@@ -406,7 +411,7 @@ function PlusOneSlot({
                         value={response?.nameEdited ? (response?.firstName ?? "") : ""}
                         onChange={(e) => onNameChange(e.target.value, response?.lastName ?? "")}
                         placeholder="First name"
-                        className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-gray-400"
+                        className="w-full border-b border-primary/15 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-text-secondary/50"
                     />
                 </div>
                 <div>
@@ -416,7 +421,7 @@ function PlusOneSlot({
                         value={response?.nameEdited ? (response?.lastName ?? "") : ""}
                         onChange={(e) => onNameChange(response?.firstName ?? "", e.target.value)}
                         placeholder="Last name"
-                        className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-gray-400"
+                        className="w-full border-b border-primary/15 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-text-secondary/50"
                     />
                 </div>
             </div>
@@ -431,7 +436,7 @@ function PlusOneSlot({
                             className={`px-4 py-1.5 text-sm font-medium rounded-sm border transition-colors ${
                                 isAttending === true
                                     ? "bg-primary text-white border-primary"
-                                    : "bg-white text-text-secondary border-gray-200 hover:border-primary hover:text-primary"
+                                    : "bg-white text-text-secondary border-primary/15 hover:border-primary hover:text-primary"
                             }`}
                         >Attending</button>
                         <button type="button"
@@ -439,7 +444,7 @@ function PlusOneSlot({
                             className={`px-4 py-1.5 text-sm font-medium rounded-sm border transition-colors ${
                                 isAttending === false
                                     ? "bg-secondary text-white border-secondary"
-                                    : "bg-white text-text-secondary border-gray-200 hover:border-secondary hover:text-secondary"
+                                    : "bg-white text-text-secondary border-primary/15 hover:border-secondary hover:text-secondary"
                             }`}
                         >Declined</button>
                     </div>
@@ -459,12 +464,12 @@ function PlusOneSlot({
                             <div className="flex items-center justify-between">
                                 <label className="block text-xs uppercase tracking-widest text-text-secondary">Dietary Restriction / Allergy</label>
                                 <button type="button" onClick={onHideAllergy}
-                                    className="text-xs text-text-secondary/40 hover:text-red-400 transition-colors">✕ Remove</button>
+                                    className="text-xs text-text-secondary/40 hover:text-secondary transition-colors">Remove</button>
                             </div>
                             <input type="text" value={response?.food_allergies || ""}
                                 onChange={(e) => onAllergyChange(e.target.value)}
                                 placeholder="e.g. gluten-free, nut allergy"
-                                className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-gray-400" />
+                                className="w-full border-b border-primary/15 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-text-secondary/50" />
                         </div>
                     )}
                 </div>
@@ -724,7 +729,7 @@ export default function RSVP() {
 
     // ── Step 2: response helpers ──────────────────────────────────────────────
 
-    // Toggle: clicking the currently-selected option deselects it (→ null)
+    // Toggle: clicking the currently-selected option deselects it (-> null)
     const handleAttendingToggle = (guestId: string, value: boolean) => {
         const current = responses[guestId]?.attending;
         setResponses((prev) => ({
@@ -908,10 +913,10 @@ export default function RSVP() {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="relative min-h-screen overflow-hidden">
+        <div className="relative min-h-dvh overflow-hidden">
             <RSVPBackdrop />
 
-            <Section className="relative z-10 flex min-h-screen flex-col justify-center bg-transparent py-20 text-center md:py-28">
+            <Section className="relative z-10 flex min-h-dvh flex-col justify-center bg-transparent py-20 text-center md:py-28">
                 {/* Card — min-height prevents jarring jumps between steps */}
                 <div
                     className="surface-panel mx-auto w-full max-w-[min(92vw,52rem)] p-6 shadow-[0_32px_90px_rgba(8,16,28,0.24)] sm:p-8 lg:p-12"
@@ -934,13 +939,13 @@ export default function RSVP() {
 
                     {/* Error banners */}
                     {envError && (
-                        <div className="mb-8 p-6 bg-red-50 text-red-900 border border-red-200 rounded-sm text-left">
-                            <h3 className="font-heading text-xl mb-2 text-red-800">Database Connection Error</h3>
+                        <div className="mb-8 p-6 bg-secondary/5 text-secondary border border-secondary/25 rounded-sm text-left">
+                            <h3 className="font-heading text-xl mb-2 text-secondary">Database Connection Error</h3>
                             <p className="text-sm">Running locally without a Supabase connection. Add keys to <code>.env.local</code> or test on the live domain.</p>
                         </div>
                     )}
                     {error && !envError && (
-                        <div className="mb-6 p-4 bg-red-50 text-red-800 text-sm border border-red-200 rounded-sm">
+                        <div className="mb-6 p-4 bg-secondary/5 text-secondary text-sm border border-secondary/25 rounded-sm">
                             {error}
                         </div>
                     )}
@@ -1034,7 +1039,12 @@ export default function RSVP() {
                             </div>
                             <p className="text-base text-text-secondary">Is this you?</p>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <Button className="flex-1" onClick={handleConfirm}>Yes, that&apos;s me →</Button>
+                                <Button className="flex-1" onClick={handleConfirm}>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        Yes, that&apos;s me
+                                        <ArrowRight size={15} strokeWidth={1.5} />
+                                    </span>
+                                </Button>
                                 <button type="button" onClick={handleNotMe} className={`flex-1 ${outlineBtn}`}>
                                     Not me — search again
                                 </button>
@@ -1071,7 +1081,7 @@ export default function RSVP() {
                                                         className={`px-5 py-2 text-sm font-medium rounded-sm border transition-colors ${
                                                             isAttending === true
                                                                 ? "bg-primary text-white border-primary"
-                                                                : "bg-white text-text-secondary border-gray-200 hover:border-primary hover:text-primary"
+                                                                : "bg-white text-text-secondary border-primary/15 hover:border-primary hover:text-primary"
                                                         }`}
                                                     >Attending</button>
                                                     <button type="button"
@@ -1079,7 +1089,7 @@ export default function RSVP() {
                                                         className={`px-5 py-2 text-sm font-medium rounded-sm border transition-colors ${
                                                             isAttending === false
                                                                 ? "bg-secondary text-white border-secondary"
-                                                                : "bg-white text-text-secondary border-gray-200 hover:border-secondary hover:text-secondary"
+                                                                : "bg-white text-text-secondary border-primary/15 hover:border-secondary hover:text-secondary"
                                                         }`}
                                                     >Declined</button>
                                                 </div>
@@ -1098,14 +1108,14 @@ export default function RSVP() {
                                                             <div className="flex items-center justify-between">
                                                                 <label className="block text-xs uppercase tracking-widest text-text-secondary">Dietary Restriction / Allergy</label>
                                                                 <button type="button" onClick={() => hideAllergyField(guest.id)}
-                                                                    className="text-xs text-text-secondary/40 hover:text-red-400 transition-colors leading-none" aria-label="Remove dietary restriction">
-                                                                    ✕ Remove
+                                                                    className="text-xs text-text-secondary/40 hover:text-secondary transition-colors leading-none" aria-label="Remove dietary restriction">
+                                                                    Remove
                                                                 </button>
                                                             </div>
                                                             <input type="text" autoFocus value={resp?.food_allergies || ""}
                                                                 onChange={(e) => handleAllergyChange(guest.id, e.target.value)}
                                                                 placeholder="e.g. gluten-free, nut allergy"
-                                                                className="w-full border-b border-gray-300 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-gray-400" />
+                                                                className="w-full border-b border-primary/15 py-2 text-sm focus:outline-none focus:border-primary transition-colors bg-transparent placeholder:text-text-secondary/50" />
                                                         </div>
                                                     )}
                                                 </div>
@@ -1138,9 +1148,21 @@ export default function RSVP() {
                                 });
                             })()}
                             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                                <button type="button" onClick={goBack} className={`sm:w-auto ${outlineBtn}`}>← Back</button>
+                                <button type="button" onClick={goBack} className={`sm:w-auto ${outlineBtn} inline-flex items-center justify-center gap-1.5`}>
+                                    <ArrowLeft size={14} strokeWidth={1.5} />
+                                    Back
+                                </button>
                                 <Button type="submit" className="flex-1" disabled={loading}>
-                                    {loading ? "Saving..." : anyAttending ? "Next →" : "Submit RSVP"}
+                                    {loading ? (
+                                        "Saving..."
+                                    ) : anyAttending ? (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            Next
+                                            <ArrowRight size={15} strokeWidth={1.5} />
+                                        </span>
+                                    ) : (
+                                        "Submit RSVP"
+                                    )}
                                 </Button>
                             </div>
                         </form>
@@ -1152,7 +1174,10 @@ export default function RSVP() {
                             <SongRequestField value={songRequest} onChange={setSongRequest} />
                             <AdviceField value={advice} onChange={setAdvice} />
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <button type="button" onClick={goBack} className={`sm:w-auto ${outlineBtn}`}>← Back</button>
+                                <button type="button" onClick={goBack} className={`sm:w-auto ${outlineBtn} inline-flex items-center justify-center gap-1.5`}>
+                                    <ArrowLeft size={14} strokeWidth={1.5} />
+                                    Back
+                                </button>
                                 <Button type="submit" className="flex-1" disabled={loading}>
                                     {loading ? "Sending..." : "Send RSVP"}
                                 </Button>
@@ -1206,7 +1231,10 @@ export default function RSVP() {
                                     </>
                                 ) : (
                                     <>
-                                        <button type="button" onClick={goBack} className={outlineBtn}>← Back</button>
+                                        <button type="button" onClick={goBack} className={`${outlineBtn} inline-flex items-center justify-center gap-1.5`}>
+                                            <ArrowLeft size={14} strokeWidth={1.5} />
+                                            Back
+                                        </button>
                                         <Button href="/">Return Home</Button>
                                     </>
                                 )}
@@ -1216,8 +1244,9 @@ export default function RSVP() {
                             {step4Attending && (
                                 <p className="text-sm text-text-secondary/60 pt-1">
                                     Live outside DFW?{" "}
-                                    <Link href="/travel" className="text-primary/70 underline underline-offset-2 hover:text-primary transition-colors">
-                                        Plan your trip →
+                                    <Link href="/travel" className="inline-flex items-center gap-1 text-primary/70 underline underline-offset-2 hover:text-primary transition-colors">
+                                        Plan your trip
+                                        <ArrowRight size={13} strokeWidth={1.5} />
                                     </Link>
                                 </p>
                             )}

@@ -29,7 +29,10 @@ export default async function SchedulePage() {
         return (
             <div>
                 <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16 print:py-4">
-                    <h1 className="font-heading text-5xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
+                    <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs print:hidden">
+                        The Weekend
+                    </p>
+                    <h1 className="font-heading text-4xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
                     <p className="max-w-xl mx-auto text-text-secondary tracking-wide print:text-sm">
                         Saturday, September 26, 2026 · Davis &amp; Grey Farms
                     </p>
@@ -77,7 +80,10 @@ export default async function SchedulePage() {
     return (
         <div>
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16 print:py-4">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
+                <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs print:hidden">
+                    The Weekend
+                </p>
+                <h1 className="font-heading text-4xl md:text-6xl mb-6 print:text-4xl">Wedding Day</h1>
                 <p className="max-w-xl mx-auto text-text-secondary tracking-wide print:text-sm">
                     Saturday, September 26, 2026 · Davis &amp; Grey Farms
                 </p>

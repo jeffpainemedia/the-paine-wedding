@@ -2,6 +2,8 @@
 // live in painedle-server.ts (server-only) and are reached through
 // /api/games/painedle/* endpoints.
 
+import { getCentralDateKey } from "@/lib/games/crossword-types";
+
 export const MAX_GUESSES = 6;
 export const WORD_LENGTH = 5;
 export const KEYBOARD_ROWS = [
@@ -13,10 +15,11 @@ export const KEYBOARD_ROWS = [
 export type LetterStatus = "correct" | "present" | "absent";
 
 export function getTodayKey(date = new Date()) {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, "0");
-    const day = `${date.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    // Wedding day rollover is tied to Central time, not the guest's browser
+    // timezone — matches Crossword/Connections so all daily games flip at
+    // the same moment. Format is still YYYY-MM-DD, so existing localStorage
+    // state keyed by date stays compatible.
+    return getCentralDateKey(date);
 }
 
 export function getStorageKey(dateKey: string) {

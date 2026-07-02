@@ -63,13 +63,25 @@ html.dark .text-gray-600,
 html.dark .text-gray-500 { color: #8faec5; }
 
 /*
-  Default heading weight is 600 (semi-bold).
-  Cormorant Garamond at 400 has very thin strokes;
-  600 preserves the elegance while ensuring readability.
+  Heading weight scale: h1 stays bold (700) for maximum editorial impact.
+  h2/h3 step down to 600 (semi-bold) to create clearer hierarchy against h1.
+  h4-h6 stay 600 with slightly wider tracking, since at smaller sizes extra
+  letter-spacing reads as more considered/typographic rather than just bold.
 */
-h1, h2, h3, h4, h5, h6 {
+h1 {
   font-family: var(--font-playfair), serif;
   font-weight: 700;
+}
+
+h2, h3 {
+  font-family: var(--font-playfair), serif;
+  font-weight: 600;
+}
+
+h4, h5, h6 {
+  font-family: var(--font-playfair), serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 /*

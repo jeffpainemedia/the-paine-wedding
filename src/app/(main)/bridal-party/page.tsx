@@ -24,7 +24,10 @@ export default async function BridalParty() {
     return (
         <div>
             <Section background="surface" className="text-center pb-14 pt-12 md:pb-16 md:pt-16">
-                <h1 className="font-heading text-5xl md:text-6xl mb-6">Bridal Party</h1>
+                <p className="mb-4 text-[11px] uppercase tracking-[0.3em] text-accent md:text-xs">
+                    Our People
+                </p>
+                <h1 className="font-heading text-4xl md:text-6xl mb-6">Bridal Party</h1>
                 <p className="max-w-xl mx-auto text-text-secondary tracking-wide">
                     The friends and family standing by our side on our special day.
                 </p>

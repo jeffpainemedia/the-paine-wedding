@@ -194,30 +194,33 @@ export default function GamesHubClient() {
 
             {/* Admin tools panel — only visible to admins */}
             {isAdmin && (
-                <div className="relative overflow-hidden rounded-[2rem] border border-amber-300/30 bg-amber-50/80 p-6 shadow-[0_8px_30px_rgba(251,191,36,0.10)]">
+                <div className="relative overflow-hidden rounded-[2rem] border border-secondary/25 bg-secondary/5 p-6 shadow-[0_8px_30px_rgba(124,31,40,0.08)]">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700/70">Admin Mode</p>
-                            <h3 className="mt-2 font-heading text-2xl text-amber-900">Games Admin</h3>
-                            <p className="mt-2 text-sm leading-relaxed text-amber-800/70">
+                            <p className="text-[10px] uppercase tracking-[0.3em] text-secondary/70">Admin Mode</p>
+                            <h3 className="mt-2 font-heading text-2xl text-secondary">Games Admin</h3>
+                            <p className="mt-2 text-sm leading-relaxed text-secondary/70">
                                 All games are unlocked for preview. Crossword and Trivia show as live — guests still see the real gate.
                             </p>
                         </div>
-                        <span className="mt-1 shrink-0 rounded-full border border-amber-400/40 bg-amber-400/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-amber-700">
-                            ⚑ Master
+                        <span className="mt-1 shrink-0 rounded-full border border-secondary/40 bg-secondary/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-secondary">
+                            Master
                         </span>
                     </div>
 
                     <div className="mt-5 flex flex-wrap gap-3">
                         <Link
                             href="/admin/games"
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800 transition-colors hover:bg-white hover:border-amber-400"
+                            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-secondary transition-colors hover:bg-white hover:border-secondary/60"
                         >
-                            Games Dashboard →
+                            Games Dashboard
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                <path d="M9 6l6 6-6 6" />
+                            </svg>
                         </Link>
                         <Link
                             href="/admin"
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-transparent px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-amber-700/70 transition-colors hover:bg-amber-50 hover:text-amber-800"
+                            className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-transparent px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-secondary/70 transition-colors hover:bg-secondary/5 hover:text-secondary"
                         >
                             Admin Home
                         </Link>

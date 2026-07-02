@@ -2900,3 +2900,28 @@ ALL changes are gated behind `md:hidden`. Desktop rendering is completely untouc
 - [ ] Desktop tables completely unchanged
 - [ ] TypeScript check passes: `npx tsc --noEmit`
 - [ ] Production deployment succeeds: `vercel --prod --yes`
+## Session 83 — 2026-07-01: Mobile bug fixes + editorial design polish
+
+Audited (3 parallel reviews: mobile, games, design) then fixed:
+
+**Bugs**
+- Painedle daily word now keyed to America/Chicago (was browser-local; out-of-state guests got different words). Rollover timer now checks the Central date key.
+- Crossword pause now actually blocks input and the solve check (was free untimed solving).
+- Painedle no longer re-submits the score on every reload after a win (pre-checks server like Connections/Crossword).
+- Trivia answer-check network failures now show a retry message instead of failing silently.
+- Homepage hero and RSVP flow use dvh instead of 100vh (CTAs were hidden behind mobile browser chrome).
+- Schedule: Save PDF / Sign In buttons no longer wrap mid-label at 375px; timeline time ranges stack start/end instead of breaking mid-value.
+- SignInPopover clamped to viewport width; RSVP progress dots got 44px hit areas; step labels min 10px.
+- Section component: py-* overrides passed via className were silently losing to the default py-24 (Tailwind stylesheet-order conflict). Now per-side overrides genuinely apply — restores the tighter spacing pages always intended.
+- Navbar links no longer reflow on hover (weight toggle removed); logo no longer competes for LCP priority.
+
+**Design (within existing brand)**
+- Every page header de-templated: small-caps tan eyebrow + varied scale; our-story and wedding-details are left-aligned flagships with a Bodoni italic flourish.
+- Wedding-details 5-card icon-circle grid and travel Getting Around grid replaced with editorial hairline-row lists (numbered 01/02/03 on travel). Removed the fragile negative-margin header hack on wedding-details.
+- Registry: brand gradient bars removed (2px wordmark underline instead), CTAs are palette outline buttons, crisp card corners.
+- Off-palette stock Tailwind colors purged: grays -> border-primary/10, ambers -> accent-tinted callouts, reds -> burgundy error states. Buttons squared to rounded-[3px].
+- All pictographic/dingbat glyphs removed from UI (checkmarks, sparkles, flags, arrows) in favor of thin-line SVGs or plain text. Exception intentionally kept: Painedle share-text colored squares (Wordle share convention) — flag for Jeff.
+
+Validation: npm run build clean; mobile (375px) preview pass over homepage, wedding-details, travel, registry, schedule, Painedle including a live guess round-trip.
+
+Deferred (structural, need a decision): guests without email get a name-derived synthetic identity, so renaming orphans their score history; generic /api/games/submit-score trusts client scores; no rate limiting on game check endpoints.

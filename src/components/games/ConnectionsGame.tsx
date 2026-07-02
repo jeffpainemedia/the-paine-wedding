@@ -603,8 +603,11 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                                 </div>
                             )}
                             {autoSubmitStatus === "success" && (
-                                <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 px-5 py-4 text-center text-sm text-primary">
-                                    Score submitted ✓ Your Connected score is on the leaderboard.
+                                <div className="flex items-center justify-center gap-1.5 rounded-[1.5rem] border border-accent/30 bg-accent/10 px-5 py-4 text-center text-sm text-primary">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
+                                        <path d="M20 6L9 17l-5-5" />
+                                    </svg>
+                                    Score submitted. Your Connected score is on the leaderboard.
                                 </div>
                             )}
                             {(autoSubmitStatus === "error" || autoSubmitStatus === "idle") && !scoreSubmitted && (
@@ -626,7 +629,12 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                                 />
                             )}
                             {scoreSubmitted && autoSubmitStatus !== "success" && (
-                                <p className="text-center text-sm text-text-secondary">Score submitted ✓</p>
+                                <p className="flex items-center justify-center gap-1.5 text-center text-sm text-text-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0">
+                                        <path d="M20 6L9 17l-5-5" />
+                                    </svg>
+                                    Score submitted.
+                                </p>
                             )}
                         </>
                     )}
