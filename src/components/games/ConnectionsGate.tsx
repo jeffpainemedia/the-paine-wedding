@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CONNECTIONS_UNLOCK_LABEL, getConnectionsUnlockDate, getTimeRemaining } from "@/lib/games/schedule";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 type ConnectionsGateProps = {
     children: React.ReactNode;
@@ -9,6 +10,7 @@ type ConnectionsGateProps = {
 
 export default function ConnectionsGate({ children }: ConnectionsGateProps) {
     const [remaining, setRemaining] = useState(() => getTimeRemaining(getConnectionsUnlockDate()));
+    const { isAdmin } = useAdminSession();
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -17,7 +19,7 @@ export default function ConnectionsGate({ children }: ConnectionsGateProps) {
         return () => window.clearInterval(interval);
     }, []);
 
-    if (remaining.isUnlocked) {
+    if (remaining.isUnlocked || isAdmin) {
         return <>{children}</>;
     }
 

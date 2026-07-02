@@ -287,6 +287,35 @@ export async function fetchLeaderboard(game: GameType, options?: { limit?: numbe
     })) as LeaderboardEntry[];
 }
 
+// Reuses the exact same leaderboard fetch LeaderboardPanel uses (same
+// endpoint/params via fetchLeaderboard) plus the player's own score row (via
+// fetchPlayerGameScore, same identity logic as elsewhere in this lib) to
+// locate the player's position. The leaderboard endpoint caps at 25 rows and
+// has no separate count endpoint, so this fetches the max page and looks the
+// player up by their score row id within it. Never throws — callers can
+// call this fire-and-forget after a submission.
+export async function fetchPlayerRank(
+    game: GameType,
+    puzzleKey: string,
+    player: { email?: string; username: string }
+): Promise<{ rank: number; total: number } | null> {
+    try {
+        const [entries, playerScore] = await Promise.all([
+            fetchLeaderboard(game, { limit: 25, puzzleKey }),
+            fetchPlayerGameScore(game, puzzleKey, player),
+        ]);
+
+        if (!playerScore) return null;
+
+        const rankIndex = entries.findIndex((entry) => entry.id === playerScore.id);
+        if (rankIndex === -1) return null;
+
+        return { rank: rankIndex + 1, total: entries.length };
+    } catch {
+        return null;
+    }
+}
+
 export async function fetchPlayerGameScore(game: GameType, puzzleKey: string, player: { email?: string; username: string }) {
     const params = new URLSearchParams({
         game,

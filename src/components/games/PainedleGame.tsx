@@ -15,6 +15,7 @@ import {
 import {
     captureBrowserProfile,
     fetchPlayerGameScore,
+    fetchPlayerRank,
     GAME_LEADERBOARD_REFRESH_EVENT,
     getStoredGamePlayer,
     saveStoredGamePlayer,
@@ -253,8 +254,10 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
     const [adminAnswer, setAdminAnswer] = useState<string | null>(null);
     const [showAdminAnswer, setShowAdminAnswer] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [playerRank, setPlayerRank] = useState<{ rank: number; total: number } | null>(null);
     const [shareCopied, setShareCopied] = useState(false);
     const autoSubmitAttempted = useRef(false);
+    const rankFetchAttempted = useRef(false);
 
     const { isAdmin } = useAdminSession();
 
@@ -335,6 +338,21 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status, score, guesses.length, dateKey, solution, isAdmin]);
+
+    // Fetch the player's rank once per submission success (auto-submit path)
+    // so the submitted-state message can say where they landed. Fires once —
+    // guarded by rankFetchAttempted — not on every render.
+    useEffect(() => {
+        if (autoSubmitStatus !== "success" || rankFetchAttempted.current) return;
+        const storedPlayer = getStoredGamePlayer();
+        if (!storedPlayer) return;
+
+        rankFetchAttempted.current = true;
+        void fetchPlayerRank("painedle", dateKey, {
+            email: storedPlayer.email,
+            username: storedPlayer.username,
+        }).then(setPlayerRank);
+    }, [autoSubmitStatus, dateKey]);
 
     function buildShareText() {
         const guessEmojis = guesses.map((_, idx) => {
@@ -646,24 +664,44 @@ function PainedleBoard({ dateKey }: { dateKey: string }) {
                                         </svg>
                                         Score Submitted
                                     </p>
-                                    <p className="mt-2 text-sm text-white/60">Your Painedle score is on the leaderboard.</p>
+                                    <p className="mt-2 text-sm text-white/60">
+                                        Your Painedle score is on the leaderboard.
+                                        {playerRank ? ` You're #${playerRank.rank} of ${playerRank.total}.` : ""}
+                                    </p>
                                 </div>
                             ) : autoSubmitStatus === "submitting" ? (
                                 <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-5 text-center">
                                     <p className="text-sm text-white/50">Submitting score…</p>
                                 </div>
                             ) : (
-                                <ScoreSubmissionForm
-                                    game="painedle"
-                                    score={score}
-                                    maxScore={MAX_GUESSES}
-                                    attempts={guesses.length}
-                                    solved
-                                    puzzleKey={dateKey}
-                                    metadata={{ solution: solution ?? null, word_length: WORD_LENGTH }}
-                                    buttonLabel="Submit Painedle Score"
-                                    successMessage="Painedle score submitted."
-                                />
+                                <>
+                                    <ScoreSubmissionForm
+                                        game="painedle"
+                                        score={score}
+                                        maxScore={MAX_GUESSES}
+                                        attempts={guesses.length}
+                                        solved
+                                        puzzleKey={dateKey}
+                                        metadata={{ solution: solution ?? null, word_length: WORD_LENGTH }}
+                                        buttonLabel="Submit Painedle Score"
+                                        successMessage="Painedle score submitted."
+                                        onSubmitted={() => {
+                                            if (rankFetchAttempted.current) return;
+                                            rankFetchAttempted.current = true;
+                                            const storedPlayer = getStoredGamePlayer();
+                                            if (!storedPlayer) return;
+                                            void fetchPlayerRank("painedle", dateKey, {
+                                                email: storedPlayer.email,
+                                                username: storedPlayer.username,
+                                            }).then(setPlayerRank);
+                                        }}
+                                    />
+                                    {playerRank && (
+                                        <p className="text-center text-sm text-white/60">
+                                            You&apos;re #{playerRank.rank} of {playerRank.total}.
+                                        </p>
+                                    )}
+                                </>
                             )
                         ) : (
                             <div className="rounded-[1.75rem] border border-white/12 bg-white/8 p-6">

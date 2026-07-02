@@ -2925,3 +2925,19 @@ Audited (3 parallel reviews: mobile, games, design) then fixed:
 Validation: npm run build clean; mobile (375px) preview pass over homepage, wedding-details, travel, registry, schedule, Painedle including a live guess round-trip.
 
 Deferred (structural, need a decision): guests without email get a name-derived synthetic identity, so renaming orphans their score history; generic /api/games/submit-score trusts client scores; no rate limiting on game check endpoints.
+
+## Session 84 — 2026-07-02: Painedle keyboard fix + games gap sweep (v0.2.1)
+
+Jeff reported the Painedle keyboard not coloring used letters. Root cause: one-character casing bug — getKeyboardStatusesFromHistory built its map with uppercase keys while the renderer looked up lowercase, so no key ever matched. Fixed in src/lib/games/painedle.ts; verified live in preview (guess colors keys immediately and after reload).
+
+A follow-up audit for the same bug family found and fixed:
+- Trivia had zero localStorage persistence — a reload mid-quiz wiped all progress (worst case: live wedding-day play). Now persists/restores screen, question index, answers, and check results; stale state self-invalidates if the question bank changes.
+- Crossword and Connected pause state wasn't persisted — reloading while paused counted the whole paused interval as play time. Elapsed-time snapshots now persist (backward compatible with existing saves).
+- Connected's submitted score ignored pause time entirely (pausing inflated your submitted duration even without reloading). Now subtracts paused time.
+- Crossword's "solved on server but localStorage cleared" fallback showed an empty grid under the solved banner; now shows a clean note instead.
+- Crossword and Connected gates lacked the admin preview bypass Trivia's gate has.
+- All four games now show "you're #N of M" after score submission (rank was already computed for the leaderboard panel but never surfaced; capped at top 25 — outside that, message unchanged).
+
+Intentionally NOT fixed: crossword autocheck score penalty is dead code (checks_used hardcoded to 0). Enabling it mid-competition would punish new solvers vs. everyone already on the board penalty-free — needs Jeff's call, ideally alongside a puzzle-key rollover.
+
+Validation: npm run build clean; live preview verification of keyboard coloring and Connected 375px tile fit (no overflow — audit's suspicion didn't reproduce).

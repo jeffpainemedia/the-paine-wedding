@@ -73,7 +73,7 @@ export function getKeyboardStatusesFromHistory(
         const statuses = statusHistory[gIdx];
         if (!statuses) return;
         for (let i = 0; i < guess.length; i++) {
-            const letter = guess[i].toUpperCase();
+            const letter = guess[i].toLowerCase();
             const status = statuses[i];
             const current = statusMap[letter];
             if (!current || priority[status] > priority[current]) {

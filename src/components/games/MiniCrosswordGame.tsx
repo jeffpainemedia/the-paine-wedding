@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
 import { useAdminSession } from "@/hooks/useAdminSession";
-import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerGameScore, getStoredGamePlayer, saveStoredGamePlayer, submitCrosswordScore } from "@/lib/games/leaderboard";
+import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerGameScore, fetchPlayerRank, getStoredGamePlayer, saveStoredGamePlayer, submitCrosswordScore } from "@/lib/games/leaderboard";
 import {
     computeCrosswordScore,
     getCentralDateKey,
@@ -58,6 +58,11 @@ type SavedState = {
     revealedEntryIds: string[];
     durationSeconds: number | null;
     scoreSubmitted: boolean;
+    // Elapsed-ms snapshot at save time, plus whether the game was paused when
+    // saved. Optional/backward-compatible: older saved states without these
+    // fields fall back to the previous (wall-clock-derived) behavior.
+    elapsedMsAtSave?: number;
+    pausedAtSave?: boolean;
 };
 
 function emptyLetters(puzzle: PublicBuiltCrossword): Record<string, string> {
@@ -71,6 +76,8 @@ function defaultState(puzzle: PublicBuiltCrossword): SavedState {
         revealedEntryIds: [],
         durationSeconds: null,
         scoreSubmitted: false,
+        elapsedMsAtSave: undefined,
+        pausedAtSave: undefined,
     };
 }
 
@@ -98,6 +105,8 @@ function loadState(puzzle: PublicBuiltCrossword, storageKey: string): SavedState
                         ? Math.round((new Date(parsed.completedAt).getTime() - new Date(parsed.startedAt).getTime()) / 1000)
                         : null,
             scoreSubmitted: typeof parsed.scoreSubmitted === "boolean" ? parsed.scoreSubmitted : false,
+            elapsedMsAtSave: typeof parsed.elapsedMsAtSave === "number" ? parsed.elapsedMsAtSave : undefined,
+            pausedAtSave: typeof parsed.pausedAtSave === "boolean" ? parsed.pausedAtSave : undefined,
         };
     } catch {
         window.localStorage.removeItem(storageKey);
@@ -134,7 +143,12 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
     const clueRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const clueBarRef = useRef<HTMLDivElement | null>(null);
-    const startTimestamp = useRef<number>(0);
+    // Seeded from the persisted elapsed-ms snapshot (if any) so that
+    // Date.now() - startTimestamp reproduces the truthful elapsed time
+    // immediately on load, without counting any reload gap as play time.
+    const startTimestamp = useRef<number>(
+        typeof init.elapsedMsAtSave === "number" ? Date.now() - init.elapsedMsAtSave : 0
+    );
     const pausedSinceRef = useRef<number | null>(null);
     const repeatClickCellKeyRef = useRef<string | null>(null);
     const mobileViewportAdjustRef = useRef<number | null>(null);
@@ -149,17 +163,28 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const [autoCheck, setAutoCheck] = useState(false);
     // Server-supplied "wrong cell" set. Refreshed via /api/games/crossword/check.
     const [incorrectKeys, setIncorrectKeys] = useState<Set<string>>(new Set());
-    const [elapsed, setElapsed] = useState(0);
+    // Restore elapsed time truthfully across reloads. We persist a frozen
+    // elapsed-ms snapshot (+ whether the game was paused) at save time rather
+    // than an absolute start timestamp, so a reload can never count the
+    // reload-to-resume gap — paused or otherwise — as play time.
+    const hasElapsedSnapshot = typeof init.elapsedMsAtSave === "number";
+    const [elapsed, setElapsed] = useState(() => (hasElapsedSnapshot ? Math.round(init.elapsedMsAtSave! / 1000) : 0));
     // Solved is set when the server confirms all cells correct. The initial
     // state is whatever localStorage said — we re-verify if it claimed solved.
     const [solved, setSolved] = useState(() => init.durationSeconds !== null);
-    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null);
-    const [isPaused, setIsPaused] = useState(false);
+    const [gameStarted, setGameStarted] = useState(() => init.durationSeconds !== null || hasElapsedSnapshot);
+    const [isPaused, setIsPaused] = useState(() => hasElapsedSnapshot && init.pausedAtSave === true);
     const [pausedMs, setPausedMs] = useState(0);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [playerRank, setPlayerRank] = useState<{ rank: number; total: number } | null>(null);
     const [shareCopied, setShareCopied] = useState(false);
     const [postGameUnlocked, setPostGameUnlocked] = useState(false);
+    // True when a returning player's solve was found via server lookup (their
+    // localStorage was cleared) — the grid/clues have no letters to show, so
+    // the board UI is replaced with a compact note instead of an empty grid.
+    const [solvedWithoutLocalBoard, setSolvedWithoutLocalBoard] = useState(false);
     const autoSubmitAttempted = useRef(false);
+    const rankFetchAttempted = useRef(false);
 
     const { isAdmin } = useAdminSession();
 
@@ -174,11 +199,30 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     const displayTime = durationSeconds !== null ? durationSeconds : elapsed;
 
     useEffect(() => {
+        // Freeze the current elapsed time as an ms snapshot at every save so a
+        // reload can restore truthful elapsed time in both paused and
+        // unpaused cases (see startTimestamp/elapsed init above). While
+        // paused, `elapsed` state is already frozen (the ticking interval is
+        // suspended), so we reuse it directly rather than recomputing from
+        // Date.now() — pausedMs itself isn't updated until resume, so
+        // recomputing here would leak paused wall-clock time into the
+        // snapshot, which is the exact bug this fix addresses.
+        const elapsedMsAtSave = gameStarted && durationSeconds === null
+            ? (isPaused ? elapsed * 1000 : Date.now() - startTimestamp.current - pausedMs)
+            : undefined;
         window.localStorage.setItem(
             storageKey,
-            JSON.stringify({ letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted })
+            JSON.stringify({
+                letters,
+                activeEntryId,
+                revealedEntryIds,
+                durationSeconds,
+                scoreSubmitted,
+                elapsedMsAtSave,
+                pausedAtSave: elapsedMsAtSave !== undefined ? isPaused : undefined,
+            })
         );
-    }, [letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted, storageKey]);
+    }, [letters, activeEntryId, revealedEntryIds, durationSeconds, scoreSubmitted, storageKey, gameStarted, isPaused, pausedMs, elapsed]);
 
     useEffect(() => {
         if (typeof window === "undefined" || window.matchMedia("(max-width: 767px)").matches) {
@@ -231,6 +275,22 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [solved]);
 
+    // Fetch the player's rank once per submission success (covers both the
+    // auto-submit path and the "already solved on this puzzle" lookup path,
+    // since both set scoreSubmitted). Guarded by rankFetchAttempted so it
+    // only runs once — not on every render.
+    useEffect(() => {
+        if (!scoreSubmitted || rankFetchAttempted.current) return;
+        const storedPlayer = getStoredGamePlayer();
+        if (!storedPlayer) return;
+
+        rankFetchAttempted.current = true;
+        void fetchPlayerRank("crossword", puzzle.id, {
+            email: storedPlayer.email,
+            username: storedPlayer.username,
+        }).then(setPlayerRank);
+    }, [scoreSubmitted, puzzle.id]);
+
     useEffect(() => {
         const storedPlayer = getStoredGamePlayer();
         if (!storedPlayer || solved) {
@@ -266,6 +326,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                 setScoreSubmitted(true);
                 setGameStarted(true);
                 setFocusedKey(null);
+                setSolvedWithoutLocalBoard(true);
             } catch {
                 // Keep local play available if the lookup fails.
             }
@@ -658,6 +719,7 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
         setIsPaused(false);
         setPausedMs(0);
         setPostGameUnlocked(false);
+        setSolvedWithoutLocalBoard(false);
         startTimestamp.current = 0;
         pausedSinceRef.current = null;
         window.localStorage.removeItem(storageKey);
@@ -796,173 +858,189 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                         <p className="mt-2 text-sm text-white/50">Great solve</p>
                         <p className="mt-1 text-sm font-semibold text-accent">{score} pts</p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={unlockPostGame}
-                        className="rounded-full border border-white/30 bg-white/10 px-7 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-white transition-colors hover:bg-white/16"
-                    >
-                        View Board
-                    </button>
-                </div>
-
-                <div ref={clueBarRef} className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
-                    {activeEntry ? (
-                        <p className="text-sm leading-snug text-primary">
-                            <span className="mr-1.5 font-semibold">
-                                {activeEntry.number}
-                                {activeEntry.direction === "across" ? "A" : "D"}
-                            </span>
-                            {activeEntry.clue}
-                            {revealedEntryIds.includes(activeEntry.id) && (
-                                <span className="ml-2 text-[10px] uppercase tracking-widest text-secondary opacity-70">· revealed</span>
-                            )}
-                        </p>
-                    ) : (
-                        <p className="text-sm text-text-secondary">Tap a square or clue to begin</p>
+                    {!solvedWithoutLocalBoard && (
+                        <button
+                            type="button"
+                            onClick={unlockPostGame}
+                            className="rounded-full border border-white/30 bg-white/10 px-7 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-white transition-colors hover:bg-white/16"
+                        >
+                            View Board
+                        </button>
                     )}
                 </div>
 
-                <div className="flex flex-col md:flex-row">
-                    <div className="flex items-center justify-center bg-[#fbf8f3] p-5 md:p-8">
-                        <div
-                            className="rounded-sm bg-gray-400"
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: `repeat(${puzzle.cols}, 1fr)`,
-                                gap: "1px",
-                                padding: "1px",
-                            }}
-                        >
-                            {puzzle.cells.map((cell) => {
-                                if (!cell.isFillable) {
-                                    return <div key={cell.key} className="bg-primary" style={{ width: 56, height: 56 }} />;
-                                }
-
-                                const isFocused = focusedKey === cell.key;
-                                const inWord = activeWordKeys.has(cell.key);
-                                const wrong = incorrectKeys.has(cell.key);
-
-                                return (
-                                    <label
-                                        key={cell.key}
-                                        className={`relative cursor-pointer select-none transition-colors ${
-                                            wrong ? "bg-red-100" : isFocused ? "bg-amber-200" : inWord ? "bg-sky-100" : "bg-white"
-                                        }`}
-                                        style={{ width: 56, height: 56 }}
-                                    >
-                                        {cell.number ? (
-                                            <span className="pointer-events-none absolute left-[3px] top-[2px] text-[10px] font-semibold leading-none text-primary/70">
-                                                {cell.number}
-                                            </span>
-                                        ) : null}
-                                        {wrong && (
-                                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                <svg className="absolute inset-0 h-full w-full opacity-40" viewBox="0 0 56 56">
-                                                    <line x1="4" y1="4" x2="52" y2="52" stroke="#991b1b" strokeWidth="2" />
-                                                </svg>
-                                            </span>
-                                        )}
-                                        <input
-                                            ref={(el) => {
-                                                inputRefs.current[cell.key] = el;
-                                            }}
-                                            value={letters[cell.key] ?? ""}
-                                            onChange={(e) => handleType(cell, e.target.value)}
-                                            onFocus={() => handleCellFocus(cell)}
-                                            onBlur={() => setFocusedKey(null)}
-                                            onPointerDown={() => handleCellPointerDown(cell)}
-                                            onClick={() => handleCellClick(cell)}
-                                            onKeyDown={(e) => handleKeyDown(e, cell)}
-                                            onMouseUp={(e) => e.preventDefault()}
-                                            onContextMenu={(e) => e.preventDefault()}
-                                            onSelect={(e) => e.preventDefault()}
-                                            maxLength={1}
-                                            inputMode="text"
-                                            autoComplete="off"
-                                            autoCorrect="off"
-                                            autoCapitalize="characters"
-                                            spellCheck={false}
-                                            data-form-type="other"
-                                            aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
-                                            disabled={solved || isPaused}
-                                            className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] [-webkit-touch-callout:none] select-none selection:bg-transparent ${
-                                                wrong ? "text-red-700" : "text-primary"
-                                            }`}
-                                        />
-                                    </label>
-                                );
-                            })}
-                        </div>
+                {solvedWithoutLocalBoard ? (
+                    <div className="flex flex-col items-center justify-center gap-3 bg-[#fbf8f3] px-8 py-16 text-center">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-primary/30">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <path d="M3 9h18M9 21V9" />
+                        </svg>
+                        <p className="max-w-xs text-sm leading-relaxed text-text-secondary">
+                            You solved this one on this device before, but the board isn&apos;t stored here.
+                        </p>
                     </div>
+                ) : (
+                    <>
+                        <div ref={clueBarRef} className="flex min-h-[44px] items-center border-b border-primary/8 bg-white px-5 py-3">
+                            {activeEntry ? (
+                                <p className="text-sm leading-snug text-primary">
+                                    <span className="mr-1.5 font-semibold">
+                                        {activeEntry.number}
+                                        {activeEntry.direction === "across" ? "A" : "D"}
+                                    </span>
+                                    {activeEntry.clue}
+                                    {revealedEntryIds.includes(activeEntry.id) && (
+                                        <span className="ml-2 text-[10px] uppercase tracking-widest text-secondary opacity-70">· revealed</span>
+                                    )}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-text-secondary">Tap a square or clue to begin</p>
+                            )}
+                        </div>
 
-                    <div className="flex flex-1 flex-col border-t border-primary/8 md:border-l md:border-t-0">
-                        <div className="grid flex-1 grid-cols-2 divide-x divide-primary/8">
-                            <div className="p-4">
-                                <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Across</p>
-                                <div className="space-y-0.5">
-                                    {puzzle.across.map((entry) => {
-                                        const isActive = activeEntryId === entry.id;
-                                        const isRevealed = revealedEntryIds.includes(entry.id);
+                        <div className="flex flex-col md:flex-row">
+                            <div className="flex items-center justify-center bg-[#fbf8f3] p-5 md:p-8">
+                                <div
+                                    className="rounded-sm bg-gray-400"
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: `repeat(${puzzle.cols}, 1fr)`,
+                                        gap: "1px",
+                                        padding: "1px",
+                                    }}
+                                >
+                                    {puzzle.cells.map((cell) => {
+                                        if (!cell.isFillable) {
+                                            return <div key={cell.key} className="bg-primary" style={{ width: 56, height: 56 }} />;
+                                        }
+
+                                        const isFocused = focusedKey === cell.key;
+                                        const inWord = activeWordKeys.has(cell.key);
+                                        const wrong = incorrectKeys.has(cell.key);
+
                                         return (
-                                            <button
-                                                key={entry.id}
-                                                ref={(el) => {
-                                                    clueRefs.current[entry.id] = el;
-                                                }}
-                                                onClick={() => selectEntry(entry)}
-                                                className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
-                                                    isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
+                                            <label
+                                                key={cell.key}
+                                                className={`relative cursor-pointer select-none transition-colors ${
+                                                    wrong ? "bg-red-100" : isFocused ? "bg-amber-200" : inWord ? "bg-sky-100" : "bg-white"
                                                 }`}
+                                                style={{ width: 56, height: 56 }}
                                             >
-                                                <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
-                                                    {entry.number}
-                                                </span>
-                                                {entry.clue}
-                                                {isRevealed && !isActive && (
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
-                                                        <path d="M20 6L9 17l-5-5" />
-                                                    </svg>
+                                                {cell.number ? (
+                                                    <span className="pointer-events-none absolute left-[3px] top-[2px] text-[10px] font-semibold leading-none text-primary/70">
+                                                        {cell.number}
+                                                    </span>
+                                                ) : null}
+                                                {wrong && (
+                                                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                        <svg className="absolute inset-0 h-full w-full opacity-40" viewBox="0 0 56 56">
+                                                            <line x1="4" y1="4" x2="52" y2="52" stroke="#991b1b" strokeWidth="2" />
+                                                        </svg>
+                                                    </span>
                                                 )}
-                                            </button>
+                                                <input
+                                                    ref={(el) => {
+                                                        inputRefs.current[cell.key] = el;
+                                                    }}
+                                                    value={letters[cell.key] ?? ""}
+                                                    onChange={(e) => handleType(cell, e.target.value)}
+                                                    onFocus={() => handleCellFocus(cell)}
+                                                    onBlur={() => setFocusedKey(null)}
+                                                    onPointerDown={() => handleCellPointerDown(cell)}
+                                                    onClick={() => handleCellClick(cell)}
+                                                    onKeyDown={(e) => handleKeyDown(e, cell)}
+                                                    onMouseUp={(e) => e.preventDefault()}
+                                                    onContextMenu={(e) => e.preventDefault()}
+                                                    onSelect={(e) => e.preventDefault()}
+                                                    maxLength={1}
+                                                    inputMode="text"
+                                                    autoComplete="off"
+                                                    autoCorrect="off"
+                                                    autoCapitalize="characters"
+                                                    spellCheck={false}
+                                                    data-form-type="other"
+                                                    aria-label={`Cell ${cell.row + 1}-${cell.col + 1}`}
+                                                    disabled={solved || isPaused}
+                                                    className={`h-full w-full cursor-default bg-transparent pb-0 pt-3 text-center text-[22px] font-bold uppercase outline-none [caret-color:transparent] [-webkit-touch-callout:none] select-none selection:bg-transparent ${
+                                                        wrong ? "text-red-700" : "text-primary"
+                                                    }`}
+                                                />
+                                            </label>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            <div className="p-4">
-                                <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Down</p>
-                                <div className="space-y-0.5">
-                                    {puzzle.down.map((entry) => {
-                                        const isActive = activeEntryId === entry.id;
-                                        const isRevealed = revealedEntryIds.includes(entry.id);
-                                        return (
-                                            <button
-                                                key={entry.id}
-                                                ref={(el) => {
-                                                    clueRefs.current[entry.id] = el;
-                                                }}
-                                                onClick={() => selectEntry(entry)}
-                                                className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
-                                                    isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
-                                                }`}
-                                            >
-                                                <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
-                                                    {entry.number}
-                                                </span>
-                                                {entry.clue}
-                                                {isRevealed && !isActive && (
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
-                                                        <path d="M20 6L9 17l-5-5" />
-                                                    </svg>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
+                            <div className="flex flex-1 flex-col border-t border-primary/8 md:border-l md:border-t-0">
+                                <div className="grid flex-1 grid-cols-2 divide-x divide-primary/8">
+                                    <div className="p-4">
+                                        <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Across</p>
+                                        <div className="space-y-0.5">
+                                            {puzzle.across.map((entry) => {
+                                                const isActive = activeEntryId === entry.id;
+                                                const isRevealed = revealedEntryIds.includes(entry.id);
+                                                return (
+                                                    <button
+                                                        key={entry.id}
+                                                        ref={(el) => {
+                                                            clueRefs.current[entry.id] = el;
+                                                        }}
+                                                        onClick={() => selectEntry(entry)}
+                                                        className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
+                                                            isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
+                                                        }`}
+                                                    >
+                                                        <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
+                                                            {entry.number}
+                                                        </span>
+                                                        {entry.clue}
+                                                        {isRevealed && !isActive && (
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
+                                                                <path d="M20 6L9 17l-5-5" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4">
+                                        <p className="mb-2.5 text-[10px] uppercase tracking-[0.28em] text-text-secondary">Down</p>
+                                        <div className="space-y-0.5">
+                                            {puzzle.down.map((entry) => {
+                                                const isActive = activeEntryId === entry.id;
+                                                const isRevealed = revealedEntryIds.includes(entry.id);
+                                                return (
+                                                    <button
+                                                        key={entry.id}
+                                                        ref={(el) => {
+                                                            clueRefs.current[entry.id] = el;
+                                                        }}
+                                                        onClick={() => selectEntry(entry)}
+                                                        className={`w-full rounded-lg px-2.5 py-2.5 text-left text-[13px] leading-snug transition-colors ${
+                                                            isActive ? "bg-primary text-white" : "text-primary hover:bg-primary/5"
+                                                        }`}
+                                                    >
+                                                        <span className={`mr-1.5 text-[10px] font-bold ${isActive ? "opacity-60" : "text-text-secondary"}`}>
+                                                            {entry.number}
+                                                        </span>
+                                                        {entry.clue}
+                                                        {isRevealed && !isActive && (
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-1 inline h-2.5 w-2.5 opacity-40">
+                                                                <path d="M20 6L9 17l-5-5" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
 
             {solved && (
@@ -995,7 +1073,9 @@ export default function MiniCrosswordGame({ puzzle, dateKey = getTodayKey() }: M
                             <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 px-5 py-4 text-center">
                                 <p className="text-xs uppercase tracking-[0.3em] text-primary">Score Locked In</p>
                                 <p className="mt-2 text-sm text-text-secondary">
-                                    You&apos;re on the leaderboard — check back to see how others do!
+                                    {playerRank
+                                        ? `You're #${playerRank.rank} of ${playerRank.total} on the leaderboard.`
+                                        : "You're on the leaderboard — check back to see how others do!"}
                                 </p>
                             </div>
                         ) : autoSubmitStatus === "submitting" ? (

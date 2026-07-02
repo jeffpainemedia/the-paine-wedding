@@ -16,6 +16,7 @@ import {
     saveStoredGamePlayer,
     getStoredGamePlayer,
     fetchPlayerGameScore,
+    fetchPlayerRank,
     GAME_LEADERBOARD_REFRESH_EVENT,
 } from "@/lib/games/leaderboard";
 import { useAdminSession } from "@/hooks/useAdminSession";
@@ -33,6 +34,11 @@ type SavedState = {
     startedAt: string | null;
     completedAt: string | null;
     scoreSubmitted: boolean;
+    // Elapsed-ms snapshot at save time, plus whether the game was paused when
+    // saved. Optional/backward-compatible: older saved states without these
+    // fields fall back to the previous (wall-clock-derived) behavior.
+    elapsedMsAtSave?: number;
+    pausedAtSave?: boolean;
 };
 
 type ConnectionsGameProps = {
@@ -175,7 +181,9 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
     const [elapsed, setElapsed] = useState(0);
     const [hydrated, setHydrated] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [playerRank, setPlayerRank] = useState<{ rank: number; total: number } | null>(null);
     const autoSubmitAttempted = useRef(false);
+    const rankFetchAttempted = useRef(false);
     const [gameStarted, setGameStarted] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [pausedMs, setPausedMs] = useState(0);
@@ -204,6 +212,28 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                     setGameStarted(true);
                     if (saved.startedAt && savedStatus === "playing") {
                         startTimestamp.current = new Date(saved.startedAt).getTime();
+
+                        // Restore truthful elapsed time across the reload. We
+                        // persist a frozen elapsed-ms snapshot (+ whether the
+                        // game was paused) rather than relying solely on the
+                        // absolute startedAt timestamp, so the reload-to-resume
+                        // gap is never counted as play time — in either the
+                        // paused or unpaused case. Seed pausedMs so that
+                        // (now - startedAt) - pausedMs reproduces the
+                        // snapshot at the instant of restore; if still
+                        // paused, mark the pause as having begun now so any
+                        // further time until Resume is also credited.
+                        if (typeof saved.elapsedMsAtSave === "number") {
+                            const now = Date.now();
+                            const wasPaused = saved.pausedAtSave === true;
+                            const seededPausedMs = now - startTimestamp.current - saved.elapsedMsAtSave;
+                            setPausedMs(Math.max(0, seededPausedMs));
+                            if (wasPaused) {
+                                pausedSinceRef.current = now;
+                                setIsPaused(true);
+                            }
+                            setElapsed(Math.round(saved.elapsedMsAtSave / 1000));
+                        }
                     }
                 }
             }
@@ -217,6 +247,17 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
     useEffect(() => {
         if (!hydrated) return;
         try {
+            // Freeze the current elapsed time as an ms snapshot at every save
+            // so a reload can restore truthful elapsed time in both paused
+            // and unpaused cases. While paused, `elapsed` state is already
+            // frozen (the ticking interval is suspended), so we reuse it
+            // directly rather than recomputing from Date.now() — pausedMs
+            // itself isn't updated until resume, so recomputing here would
+            // leak paused wall-clock time into the snapshot, which is the
+            // exact bug this fix addresses.
+            const elapsedMsAtSave = gameStarted && status === "playing" && startedAt
+                ? (isPaused ? elapsed * 1000 : Date.now() - startTimestamp.current - pausedMs)
+                : undefined;
             const saved: SavedState = {
                 selectedWords,
                 solvedGroups,
@@ -226,12 +267,14 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                 startedAt,
                 completedAt,
                 scoreSubmitted,
+                elapsedMsAtSave,
+                pausedAtSave: elapsedMsAtSave !== undefined ? isPaused : undefined,
             };
             window.localStorage.setItem(storageKey, JSON.stringify(saved));
         } catch {
             // ignore
         }
-    }, [hydrated, storageKey, selectedWords, solvedGroups, mistakes, shuffleOrder, status, startedAt, completedAt, scoreSubmitted]);
+    }, [hydrated, storageKey, selectedWords, solvedGroups, mistakes, shuffleOrder, status, startedAt, completedAt, scoreSubmitted, gameStarted, isPaused, pausedMs, elapsed]);
 
     // Check if player already submitted a score for today's puzzle (e.g. cleared localStorage)
     useEffect(() => {
@@ -389,7 +432,14 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
         const fullName = player.firstName && player.lastName
             ? `${player.firstName} ${player.lastName}`
             : player.username ?? "";
-        const duration = getDurationSeconds(startedAt, completedAt);
+        // Subtract accumulated paused time so the submitted duration matches
+        // actual play time (same as the on-screen timer's `durationSeconds`
+        // below) — raw wall-clock time alone would inflate the score for any
+        // player who used Pause. Also accounts for a currently-open pause
+        // interval, in case this ever fires while isPaused is still true.
+        const openPauseMs = pausedSinceRef.current !== null ? Date.now() - pausedSinceRef.current : 0;
+        const rawDuration = getDurationSeconds(startedAt, completedAt);
+        const duration = Math.max(0, rawDuration - Math.round((pausedMs + openPauseMs) / 1000));
 
         // Validated submission: server re-checks each "solved" group against
         // the puzzle's answer key and computes the score itself. Wins only.
@@ -416,6 +466,23 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
             });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status, isAdmin]);
+
+    // Fetch the player's rank once per submission success. scoreSubmitted
+    // covers the auto-submit path, the "already submitted" lookup path, and
+    // the manual ScoreSubmissionForm's onSubmitted callback below. Guarded by
+    // rankFetchAttempted so it only runs once per submission — not on every
+    // render.
+    useEffect(() => {
+        if (!scoreSubmitted || rankFetchAttempted.current) return;
+        const player = getStoredGamePlayer();
+        if (!player) return;
+
+        rankFetchAttempted.current = true;
+        void fetchPlayerRank("connections", `connections-${puzzle.id}`, {
+            email: player.email,
+            username: player.username,
+        }).then(setPlayerRank);
+    }, [scoreSubmitted, puzzle.id]);
 
     const rawDurationSeconds = getDurationSeconds(startedAt, completedAt ?? (status !== "playing" ? new Date().toISOString() : null));
     const durationSeconds = Math.max(0, rawDurationSeconds - Math.round(pausedMs / 1000));
@@ -607,7 +674,9 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
                                         <path d="M20 6L9 17l-5-5" />
                                     </svg>
-                                    Score submitted. Your Connected score is on the leaderboard.
+                                    {playerRank
+                                        ? `Score submitted - you're #${playerRank.rank} of ${playerRank.total}.`
+                                        : "Score submitted. Your Connected score is on the leaderboard."}
                                 </div>
                             )}
                             {(autoSubmitStatus === "error" || autoSubmitStatus === "idle") && !scoreSubmitted && (
@@ -633,7 +702,9 @@ export default function ConnectionsGame({ puzzle, dateKey }: ConnectionsGameProp
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0">
                                         <path d="M20 6L9 17l-5-5" />
                                     </svg>
-                                    Score submitted.
+                                    {playerRank
+                                        ? `Score submitted - you're #${playerRank.rank} of ${playerRank.total}.`
+                                        : "Score submitted."}
                                 </p>
                             )}
                         </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CROSSWORD_UNLOCK_LABEL, getCrosswordUnlockDate, getTimeRemaining } from "@/lib/games/schedule";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 type CrosswordGateProps = {
     children: React.ReactNode;
@@ -9,6 +10,7 @@ type CrosswordGateProps = {
 
 export default function CrosswordGate({ children }: CrosswordGateProps) {
     const [remaining, setRemaining] = useState(() => getTimeRemaining(getCrosswordUnlockDate()));
+    const { isAdmin } = useAdminSession();
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -18,7 +20,7 @@ export default function CrosswordGate({ children }: CrosswordGateProps) {
         return () => window.clearInterval(interval);
     }, []);
 
-    if (remaining.isUnlocked) {
+    if (remaining.isUnlocked || isAdmin) {
         return <>{children}</>;
     }
 

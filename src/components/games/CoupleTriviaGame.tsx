@@ -2,17 +2,67 @@
 
 import { useEffect, useRef, useState } from "react";
 import ScoreSubmissionForm from "@/components/games/ScoreSubmissionForm";
-import { GAME_LEADERBOARD_REFRESH_EVENT, getStoredGamePlayer, saveStoredGamePlayer, submitTriviaScore } from "@/lib/games/leaderboard";
+import { GAME_LEADERBOARD_REFRESH_EVENT, fetchPlayerRank, getStoredGamePlayer, saveStoredGamePlayer, submitTriviaScore } from "@/lib/games/leaderboard";
 import type { PublicTriviaQuestion } from "@/app/api/games/trivia-questions/route";
 import { useAdminSession } from "@/hooks/useAdminSession";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
+
+const TRIVIA_STORAGE_KEY = "wedding-trivia-state-v1";
 
 type TriviaQuestion = {
     id: string;
     prompt: string;
     answers: [string, string, string, string];
 };
+
+// Persisted mid-quiz progress. Trivia has no daily date key, so instead we
+// store the question-set length as a lightweight fingerprint — if the admin
+// changes the question bank, the length will very likely differ and we
+// safely discard the stale saved state rather than resurrect a mismatched
+// quiz.
+type SavedTriviaState = {
+    questionCount: number;
+    screen: "playing" | "results";
+    currentIndex: number;
+    selectedAnswers: number[];
+    checkResults: Record<string, CheckResult>;
+};
+
+function loadSavedTriviaState(): SavedTriviaState | null {
+    if (typeof window === "undefined") return null;
+
+    const raw = window.localStorage.getItem(TRIVIA_STORAGE_KEY);
+    if (!raw) return null;
+
+    try {
+        const parsed = JSON.parse(raw) as Partial<SavedTriviaState>;
+        if (
+            typeof parsed.questionCount !== "number" ||
+            (parsed.screen !== "playing" && parsed.screen !== "results") ||
+            typeof parsed.currentIndex !== "number" ||
+            !Array.isArray(parsed.selectedAnswers) ||
+            typeof parsed.checkResults !== "object" ||
+            parsed.checkResults === null
+        ) {
+            return null;
+        }
+        return {
+            questionCount: parsed.questionCount,
+            screen: parsed.screen,
+            currentIndex: parsed.currentIndex,
+            selectedAnswers: parsed.selectedAnswers,
+            checkResults: parsed.checkResults,
+        };
+    } catch {
+        return null;
+    }
+}
+
+function clearSavedTriviaState() {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(TRIVIA_STORAGE_KEY);
+}
 
 // Server response from /api/games/trivia/check — only available after the
 // player commits to an answer for that question.
@@ -81,14 +131,21 @@ export default function CoupleTriviaGame() {
     // Per-question response from the server — populated only after a player
     // submits an answer for that question. Keyed by question id.
     const [checkResults, setCheckResults] = useState<Record<string, CheckResult>>({});
+    // True once we've attempted to restore saved progress from localStorage
+    // (regardless of whether anything was found). Restoration happens in the
+    // questions-loaded effect below, before the "playing"/"results" screens
+    // ever render, so there's no flash of question 1 before the jump.
+    const restoredRef = useRef(false);
     // Tracks questions where the answer-check request failed, so we can show
     // a retry affordance instead of silently leaving the player stuck with
     // no fun fact and no correct-answer highlight.
     const [checkErrors, setCheckErrors] = useState<Record<string, boolean>>({});
     const [hasAccount, setHasAccount] = useState(false);
     const [autoSubmitStatus, setAutoSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [playerRank, setPlayerRank] = useState<{ rank: number; total: number } | null>(null);
     const [shareCopied, setShareCopied] = useState(false);
     const autoSubmitAttempted = useRef(false);
+    const rankFetchAttempted = useRef(false);
     const { isAdmin } = useAdminSession();
 
     useEffect(() => {
@@ -96,12 +153,49 @@ export default function CoupleTriviaGame() {
             .then((loaded) => {
                 setQuestions(loaded);
                 setLoadState("ready");
+
+                // Restore in-progress quiz state before first paint of the
+                // playing/results screens. Only trust the saved state if the
+                // question-set length still matches — a changed question
+                // bank invalidates it safely rather than risk mismatched
+                // indices or stale correct-answer data.
+                if (!restoredRef.current) {
+                    restoredRef.current = true;
+                    const saved = loadSavedTriviaState();
+                    if (saved && saved.questionCount === loaded.length) {
+                        setScreen(saved.screen);
+                        setCurrentIndex(saved.currentIndex);
+                        setSelectedAnswers(saved.selectedAnswers);
+                        setCheckResults(saved.checkResults);
+                    } else if (saved) {
+                        clearSavedTriviaState();
+                    }
+                }
             })
             .catch(() => {
                 setLoadState("error");
             });
         setHasAccount(!!getStoredGamePlayer());
     }, []);
+
+    // Persist in-progress quiz state so a reload doesn't lose it. Only saved
+    // while actively playing or on the results screen — the welcome screen
+    // has nothing worth restoring. Cleared entirely on restart (see
+    // handleRestart) so a finished quiz doesn't resurrect mid-quiz state.
+    useEffect(() => {
+        if (!restoredRef.current) return;
+        if (screen === "welcome") return;
+        if (questions.length === 0) return;
+
+        const stateToSave: SavedTriviaState = {
+            questionCount: questions.length,
+            screen,
+            currentIndex,
+            selectedAnswers,
+            checkResults,
+        };
+        window.localStorage.setItem(TRIVIA_STORAGE_KEY, JSON.stringify(stateToSave));
+    }, [screen, currentIndex, selectedAnswers, checkResults, questions.length]);
 
     const currentQuestion = questions[currentIndex];
     const selectedAnswer = selectedAnswers[currentIndex];
@@ -150,6 +244,27 @@ export default function CoupleTriviaGame() {
             });
     }, [screen, score, answeredCount, questions.length]);
 
+    // Fetch the player's rank once per submission success (auto-submit path
+    // and the manual ScoreSubmissionForm's onSubmitted below both lead here).
+    // Guarded by rankFetchAttempted so it only runs once — not on every
+    // render.
+    function fetchAndSetRank() {
+        if (rankFetchAttempted.current) return;
+        const player = getStoredGamePlayer();
+        if (!player) return;
+
+        rankFetchAttempted.current = true;
+        void fetchPlayerRank("trivia", "wedding-day-trivia", {
+            email: player.email,
+            username: player.username,
+        }).then(setPlayerRank);
+    }
+
+    useEffect(() => {
+        if (autoSubmitStatus === "success") fetchAndSetRank();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoSubmitStatus]);
+
     function buildShareText() {
         const pct = Math.round((score / (answeredCount || 1)) * 100);
         return `Couple Trivia — ${score}/${answeredCount} (${pct}%)\nthepainewedding.com/games/trivia`;
@@ -182,6 +297,7 @@ export default function CoupleTriviaGame() {
         autoSubmitAttempted.current = false;
         setAutoSubmitStatus("idle");
         setShareCopied(false);
+        clearSavedTriviaState();
     }
 
     // Check the answer server-side. The correct index and fun fact only
@@ -302,23 +418,35 @@ export default function CoupleTriviaGame() {
                     ) : autoSubmitStatus === "success" ? (
                         <div className="rounded-[1.5rem] border border-accent/30 bg-accent/10 p-5 text-center">
                             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Score Submitted</p>
-                            <p className="mt-2 text-sm text-text-secondary">Your trivia score is on the leaderboard.</p>
+                            <p className="mt-2 text-sm text-text-secondary">
+                                {playerRank
+                                    ? `You're #${playerRank.rank} of ${playerRank.total} on the leaderboard.`
+                                    : "Your trivia score is on the leaderboard."}
+                            </p>
                         </div>
                     ) : autoSubmitStatus === "submitting" ? (
                         <div className="rounded-[1.5rem] border border-primary/8 bg-white/60 p-5 text-center">
                             <p className="text-sm text-text-secondary/60">Submitting score…</p>
                         </div>
                     ) : (
-                        <ScoreSubmissionForm
-                            game="trivia"
-                            score={Math.round((score / questions.length) * answeredCount * 10)}
-                            maxScore={questions.length * 10}
-                            attempts={answeredCount}
-                            solved={score === answeredCount && answeredCount === questions.length}
-                            puzzleKey="wedding-day-trivia"
-                            metadata={{ question_count: questions.length, answered_count: answeredCount, raw_score: score }}
-                            successMessage="Trivia score submitted."
-                        />
+                        <>
+                            <ScoreSubmissionForm
+                                game="trivia"
+                                score={Math.round((score / questions.length) * answeredCount * 10)}
+                                maxScore={questions.length * 10}
+                                attempts={answeredCount}
+                                solved={score === answeredCount && answeredCount === questions.length}
+                                puzzleKey="wedding-day-trivia"
+                                metadata={{ question_count: questions.length, answered_count: answeredCount, raw_score: score }}
+                                successMessage="Trivia score submitted."
+                                onSubmitted={fetchAndSetRank}
+                            />
+                            {playerRank && (
+                                <p className="mt-3 text-center text-sm text-text-secondary">
+                                    You&apos;re #{playerRank.rank} of {playerRank.total}.
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
