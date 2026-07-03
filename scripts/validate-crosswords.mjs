@@ -38,7 +38,8 @@ const BLOCKLIST = new Set([
 const PLACEHOLDER_RE = /^\d+ letters?$/i;
 
 const src = fs.readFileSync(FILE, "utf8");
-const entryRe = /\{ word: "([A-Z]+)", clue: "([^"]*)", row: \d+, col: \d+, dir: "[AD]" \}/g;
+// Clues may contain escaped quotes (\"), so match escape sequences too.
+const entryRe = /\{ word: "([A-Z]+)", clue: "((?:[^"\\]|\\.)*)", row: \d+, col: \d+, dir: "[AD]" \}/g;
 
 const errors = [];
 let totalEntries = 0;

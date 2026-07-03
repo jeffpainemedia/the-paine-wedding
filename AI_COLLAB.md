@@ -2941,3 +2941,15 @@ A follow-up audit for the same bug family found and fixed:
 Intentionally NOT fixed: crossword autocheck score penalty is dead code (checks_used hardcoded to 0). Enabling it mid-competition would punish new solvers vs. everyone already on the board penalty-free — needs Jeff's call, ideally alongside a puzzle-key rollover.
 
 Validation: npm run build clean; live preview verification of keyboard coloring and Connected 375px tile fit (no overflow — audit's suspicion didn't reproduce).
+
+## Session 85 — 2026-07-03: Crossword clue quality pass (v0.2.2)
+
+Jeff flagged "To one side" for ASIDE as a giveaway clue. Investigation found today's puzzle is p121, not the p109 the file comments claimed — 17 puzzles were removed from the pool earlier without updating the // pNNN date comments, so every comment was ~12 days stale. All 177 date comments are now recomputed from the true rotation (start 2026-03-17, sequential pool index).
+
+Three parallel Sonnet clue editors reviewed all 68 future puzzles (p122-p194, ~680 clues) and rewrote 253 weak ones — definitional giveaways, root-sharing clues, and flat two-worders — into NYT-mini-style angles, with wedding flavor where natural ("Popped the question, e.g." for ASKED, "Take in a wedding dress" for ALTER, "Reception floor activity" for DANCE). Replacements were applied mechanically by matching puzzle id + word + position + direction; today's live board (p121) and all past puzzles untouched.
+
+Also fixed the validator regex, which silently skipped entries whose clues contain escaped quotes (it now checks all 1770 entries).
+
+Known-weak FILL WORDS (grid-locked, need puzzle regeneration to replace, reported not fixed): AERIE (p139, p142, p154), WAP (p157), ASCII (p169), TED (p157, p173), CIT/LYS (p172), GER/THO (p184), CHICO (p185), AMA (p148, p190), SLOAN (p161), CEST (p167), CHO/CHING/TRA (p145), FRA (p136), AVE/LEA (p142), ELLE (p143).
+
+Validation: validate:crosswords passes 1770/1770; npm run build clean; spot-checked p122 (tomorrow) renders the new clues.

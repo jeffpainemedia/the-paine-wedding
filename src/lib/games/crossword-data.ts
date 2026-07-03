@@ -163,7 +163,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ALTER", clue: "Change", row: 0, col: 3, dir: "D" },
     { word: "NEED", clue: "Require", row: 0, col: 4, dir: "D" },
   ] },
-  // p013 — 2026-03-29 — How They Met — template C
+  // p013 — 2026-03-28 — How They Met — template C
   { id: "p013", rows: 5, cols: 5, words: [
     { word: "CAN", clue: "Tin container", row: 0, col: 1, dir: "A" },
     { word: "ARBOR", clue: "Where he got on one knee", row: 1, col: 0, dir: "A" },
@@ -176,7 +176,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "NOVEL", clue: "Page turner", row: 0, col: 3, dir: "D" },
     { word: "RED", clue: "Warm color", row: 1, col: 4, dir: "D" },
   ] },
-  // p014 — 2026-03-30 — How They Met — template B
+  // p014 — 2026-03-29 — How They Met — template B
   { id: "p014", rows: 5, cols: 5, words: [
     { word: "SALE", clue: "Discount event", row: 0, col: 1, dir: "A" },
     { word: "SPRAY", clue: "Mist it", row: 1, col: 0, dir: "A" },
@@ -189,7 +189,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LASER", clue: "Light beam", row: 0, col: 3, dir: "D" },
     { word: "EYED", clue: "Gazed at", row: 0, col: 4, dir: "D" },
   ] },
-  // p015 — 2026-03-31 — How They Met — template A
+  // p015 — 2026-03-30 — How They Met — template A
   { id: "p015", rows: 5, cols: 5, words: [
     { word: "COAL", clue: "Fuel source", row: 0, col: 0, dir: "A" },
     { word: "ATLAS", clue: "Map book", row: 1, col: 0, dir: "A" },
@@ -202,7 +202,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LANCE", clue: "Knights weapon", row: 0, col: 3, dir: "D" },
     { word: "SEED", clue: "Plant start", row: 1, col: 4, dir: "D" },
   ] },
-  // p016 — 2026-04-01 — Long Distance — template C
+  // p016 — 2026-03-31 — Long Distance — template C
   { id: "p016", rows: 5, cols: 5, words: [
     { word: "ABU", clue: "Dhabi's lead-in", row: 0, col: 1, dir: "A" },
     { word: "FLINT", clue: "Spark stone", row: 1, col: 0, dir: "A" },
@@ -215,7 +215,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "UNCUT", clue: "In full length", row: 0, col: 3, dir: "D" },
     { word: "THE", clue: "A, more specific", row: 1, col: 4, dir: "D" },
   ] },
-  // p017 — 2026-04-02 — Long Distance — template B
+  // p017 — 2026-04-01 — Long Distance — template B
   { id: "p017", rows: 5, cols: 5, words: [
     { word: "FAIL", clue: "Not pass", row: 0, col: 1, dir: "A" },
     { word: "BORNE", clue: "Carried", row: 1, col: 0, dir: "A" },
@@ -228,7 +228,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "INNER", clue: "Inside", row: 0, col: 3, dir: "D" },
     { word: "LEER", clue: "Suggestive look", row: 0, col: 4, dir: "D" },
   ] },
-  // p018 — 2026-04-03 — Long Distance — template A
+  // p018 — 2026-04-02 — Long Distance — template A
   { id: "p018", rows: 5, cols: 5, words: [
     { word: "SPOT", clue: "See", row: 0, col: 0, dir: "A" },
     { word: "LILAC", clue: "Purple bloom", row: 1, col: 0, dir: "A" },
@@ -241,7 +241,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TAKEN", clue: "Grabbed", row: 0, col: 3, dir: "D" },
     { word: "CENT", clue: "Penny", row: 1, col: 4, dir: "D" },
   ] },
-  // p020 — 2026-04-05 — Long Distance — template B
+  // p020 — 2026-04-03 — Long Distance — template B
   { id: "p020", rows: 5, cols: 5, words: [
     { word: "TEAR", clue: "Drop of emotion", row: 0, col: 1, dir: "A" },
     { word: "SHARE", clue: "Divide among", row: 1, col: 0, dir: "A" },
@@ -254,7 +254,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARENA", clue: "Battle ground", row: 0, col: 3, dir: "D" },
     { word: "REED", clue: "Marsh grass", row: 0, col: 4, dir: "D" },
   ] },
-  // p022 — 2026-04-07 — Long Distance — template C
+  // p022 — 2026-04-04 — Long Distance — template C
   { id: "p022", rows: 5, cols: 5, words: [
     { word: "CHO", clue: "Margaret the comedian", row: 0, col: 1, dir: "A" },
     { word: "FRONT", clue: "Face side", row: 1, col: 0, dir: "A" },
@@ -267,7 +267,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ONION", clue: "Layered veggie", row: 0, col: 3, dir: "D" },
     { word: "TEN", clue: "Decimal base", row: 1, col: 4, dir: "D" },
   ] },
-  // p023 — 2026-04-08 — Long Distance — template B
+  // p023 — 2026-04-05 — Long Distance — template B
   { id: "p023", rows: 5, cols: 5, words: [
     { word: "CASS", clue: "Mama ___ Elliot", row: 0, col: 1, dir: "A" },
     { word: "CIRCA", clue: "Around (date)", row: 1, col: 0, dir: "A" },
@@ -280,7 +280,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SCENE", clue: "Take one", row: 0, col: 3, dir: "D" },
     { word: "SATE", clue: "Fully satisfy", row: 0, col: 4, dir: "D" },
   ] },
-  // p024 — 2026-04-09 — Long Distance — template A
+  // p024 — 2026-04-06 — Long Distance — template A
   { id: "p024", rows: 5, cols: 5, words: [
     { word: "VAST", clue: "Enormous", row: 0, col: 0, dir: "A" },
     { word: "ALLOW", clue: "Permit", row: 1, col: 0, dir: "A" },
@@ -293,7 +293,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TOKEN", clue: "Subway coin", row: 0, col: 3, dir: "D" },
     { word: "WENT", clue: "Traveled", row: 1, col: 4, dir: "D" },
   ] },
-  // p025 — 2026-04-10 — Long Distance — template C
+  // p025 — 2026-04-07 — Long Distance — template C
   { id: "p025", rows: 5, cols: 5, words: [
     { word: "TEC", clue: "Detective, slangily", row: 0, col: 1, dir: "A" },
     { word: "TIARA", clue: "Crown", row: 1, col: 0, dir: "A" },
@@ -306,7 +306,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "CRAVE", clue: "Want badly", row: 0, col: 3, dir: "D" },
     { word: "AYE", clue: "Sailor's yes", row: 1, col: 4, dir: "D" },
   ] },
-  // p026 — 2026-04-11 — Long Distance — template B
+  // p026 — 2026-04-08 — Long Distance — template B
   { id: "p026", rows: 5, cols: 5, words: [
     { word: "DEAR", clue: "Sweetheart", row: 0, col: 1, dir: "A" },
     { word: "DRAPE", clue: "Hang cloth", row: 1, col: 0, dir: "A" },
@@ -319,7 +319,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "APART", clue: "Separated", row: 0, col: 3, dir: "D" },
     { word: "RELY", clue: "Depend on", row: 0, col: 4, dir: "D" },
   ] },
-  // p027 — 2026-04-12 — Long Distance — template A
+  // p027 — 2026-04-09 — Long Distance — template A
   { id: "p027", rows: 5, cols: 5, words: [
     { word: "LEST", clue: "Or else", row: 0, col: 0, dir: "A" },
     { word: "INTRO", clue: "Opening", row: 1, col: 0, dir: "A" },
@@ -332,7 +332,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TRIAL", clue: "Legal hearing", row: 0, col: 3, dir: "D" },
     { word: "ONLY", clue: "Sole", row: 1, col: 4, dir: "D" },
   ] },
-  // p028 — 2026-04-13 — Long Distance — template C
+  // p028 — 2026-04-10 — Long Distance — template C
   { id: "p028", rows: 5, cols: 5, words: [
     { word: "BUS", clue: "Transit", row: 0, col: 1, dir: "A" },
     { word: "SINCE", clue: "From then", row: 1, col: 0, dir: "A" },
@@ -345,7 +345,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SCOOP", clue: "Gather up", row: 0, col: 3, dir: "D" },
     { word: "ERR", clue: "Make mistake", row: 1, col: 4, dir: "D" },
   ] },
-  // p029 — 2026-04-14 — Long Distance — template B
+  // p029 — 2026-04-11 — Long Distance — template B
   { id: "p029", rows: 5, cols: 5, words: [
     { word: "DUAL", clue: "Double", row: 0, col: 1, dir: "A" },
     { word: "PANDA", clue: "Black and white bear", row: 1, col: 0, dir: "A" },
@@ -358,7 +358,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ADOPT", clue: "Take as own", row: 0, col: 3, dir: "D" },
     { word: "LANE", clue: "Narrow road", row: 0, col: 4, dir: "D" },
   ] },
-  // p031 — 2026-04-16 — Long Distance — template C
+  // p031 — 2026-04-12 — Long Distance — template C
   { id: "p031", rows: 5, cols: 5, words: [
     { word: "ASP", clue: "Cleopatra's snake", row: 0, col: 1, dir: "A" },
     { word: "PECAN", clue: "Southern nut", row: 1, col: 0, dir: "A" },
@@ -371,7 +371,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "PANDA", clue: "Black and white bear", row: 0, col: 3, dir: "D" },
     { word: "NAY", clue: "No vote", row: 1, col: 4, dir: "D" },
   ] },
-  // p032 — 2026-04-17 — Long Distance — template B
+  // p032 — 2026-04-13 — Long Distance — template B
   { id: "p032", rows: 5, cols: 5, words: [
     { word: "TEAM", clue: "Group effort", row: 0, col: 1, dir: "A" },
     { word: "SHARE", clue: "Divide among", row: 1, col: 0, dir: "A" },
@@ -384,7 +384,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARENA", clue: "Battle ground", row: 0, col: 3, dir: "D" },
     { word: "MELD", clue: "Merge", row: 0, col: 4, dir: "D" },
   ] },
-  // p033 — 2026-04-18 — Long Distance — template A
+  // p033 — 2026-04-14 — Long Distance — template A
   { id: "p033", rows: 5, cols: 5, words: [
     { word: "WAVE", clue: "Ocean swell", row: 0, col: 0, dir: "A" },
     { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
@@ -397,7 +397,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
     { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
   ] },
-  // p034 — 2026-04-19 — Long Distance — template C
+  // p034 — 2026-04-15 — Long Distance — template C
   { id: "p034", rows: 5, cols: 5, words: [
     { word: "TIC", clue: "Nervous twitch", row: 0, col: 1, dir: "A" },
     { word: "GENUS", clue: "Classification rank", row: 1, col: 0, dir: "A" },
@@ -410,7 +410,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "CURRY", clue: "Spicy dish", row: 0, col: 3, dir: "D" },
     { word: "SAY", clue: "Speak up", row: 1, col: 4, dir: "D" },
   ] },
-  // p035 — 2026-04-20 — Long Distance — template B
+  // p035 — 2026-04-16 — Long Distance — template B
   { id: "p035", rows: 5, cols: 5, words: [
     { word: "PEST", clue: "Annoying critter", row: 0, col: 1, dir: "A" },
     { word: "TRACE", clue: "Small hint", row: 1, col: 0, dir: "A" },
@@ -423,7 +423,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SCENT", clue: "Pleasant smell", row: 0, col: 3, dir: "D" },
     { word: "TEND", clue: "Care for", row: 0, col: 4, dir: "D" },
   ] },
-  // p036 — 2026-04-21 — Long Distance — template A
+  // p036 — 2026-04-17 — Long Distance — template A
   { id: "p036", rows: 5, cols: 5, words: [
     { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "A" },
     { word: "ALTAR", clue: "End of the aisle", row: 1, col: 0, dir: "A" },
@@ -436,7 +436,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "HAZEL", clue: "Nut tree", row: 0, col: 3, dir: "D" },
     { word: "RANT", clue: "Speak loudly", row: 1, col: 4, dir: "D" },
   ] },
-  // p037 — 2026-04-22 — Long Distance — template C
+  // p037 — 2026-04-18 — Long Distance — template C
   { id: "p037", rows: 5, cols: 5, words: [
     { word: "PAD", clue: "Cushion", row: 0, col: 1, dir: "A" },
     { word: "TAROT", clue: "Fortune cards", row: 1, col: 0, dir: "A" },
@@ -449,7 +449,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "DOUBT", clue: "Uncertainty", row: 0, col: 3, dir: "D" },
     { word: "TEE", clue: "Golf stand", row: 1, col: 4, dir: "D" },
   ] },
-  // p038 — 2026-04-23 — Long Distance — template B
+  // p038 — 2026-04-19 — Long Distance — template B
   { id: "p038", rows: 5, cols: 5, words: [
     { word: "SPAM", clue: "Junk mail", row: 0, col: 1, dir: "A" },
     { word: "STAGE", clue: "Performance area", row: 1, col: 0, dir: "A" },
@@ -462,7 +462,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "AGENT", clue: "Representative", row: 0, col: 3, dir: "D" },
     { word: "MERE", clue: "Only", row: 0, col: 4, dir: "D" },
   ] },
-  // p039 — 2026-04-24 — Long Distance — template A
+  // p039 — 2026-04-20 — Long Distance — template A
   { id: "p039", rows: 5, cols: 5, words: [
     { word: "MASS", clue: "Large amount", row: 0, col: 0, dir: "A" },
     { word: "ASHES", clue: "Fire remains", row: 1, col: 0, dir: "A" },
@@ -475,7 +475,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SENSE", clue: "Feeling", row: 0, col: 3, dir: "D" },
     { word: "SEED", clue: "Plant start", row: 1, col: 4, dir: "D" },
   ] },
-  // p040 — 2026-04-25 — Long Distance — template C
+  // p040 — 2026-04-21 — Long Distance — template C
   { id: "p040", rows: 5, cols: 5, words: [
     { word: "WAR", clue: "Conflict", row: 0, col: 1, dir: "A" },
     { word: "BARON", clue: "Noble title", row: 1, col: 0, dir: "A" },
@@ -488,7 +488,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ROVER", clue: "Wanderer", row: 0, col: 3, dir: "D" },
     { word: "NET", clue: "After deductions", row: 1, col: 4, dir: "D" },
   ] },
-  // p041 — 2026-04-26 — Long Distance — template B
+  // p041 — 2026-04-22 — Long Distance — template B
   { id: "p041", rows: 5, cols: 5, words: [
     { word: "WRAP", clue: "Cover up", row: 0, col: 1, dir: "A" },
     { word: "SHORE", clue: "Waters edge", row: 1, col: 0, dir: "A" },
@@ -501,7 +501,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARISE", clue: "Come up", row: 0, col: 3, dir: "D" },
     { word: "PETE", clue: "Rose of baseball", row: 0, col: 4, dir: "D" },
   ] },
-  // p042 — 2026-04-27 — Long Distance — template A
+  // p042 — 2026-04-23 — Long Distance — template A
   { id: "p042", rows: 5, cols: 5, words: [
     { word: "MUCH", clue: "A lot", row: 0, col: 0, dir: "A" },
     { word: "APRON", clue: "Kitchen cover-up", row: 1, col: 0, dir: "A" },
@@ -514,7 +514,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "HORSE", clue: "Riding animal", row: 0, col: 3, dir: "D" },
     { word: "NEED", clue: "Require", row: 1, col: 4, dir: "D" },
   ] },
-  // p043 — 2026-04-28 — Long Distance — template C
+  // p043 — 2026-04-24 — Long Distance — template C
   { id: "p043", rows: 5, cols: 5, words: [
     { word: "AST", clue: "Pacific time zone (abbr.)", row: 0, col: 1, dir: "A" },
     { word: "ULTRA", clue: "Extreme", row: 1, col: 0, dir: "A" },
@@ -527,7 +527,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TRIED", clue: "Attempted", row: 0, col: 3, dir: "D" },
     { word: "ANN", clue: "Landers of advice columns", row: 1, col: 4, dir: "D" },
   ] },
-  // p044 — 2026-04-29 — Long Distance — template B
+  // p044 — 2026-04-25 — Long Distance — template B
   { id: "p044", rows: 5, cols: 5, words: [
     { word: "STEW", clue: "Slow cook", row: 0, col: 1, dir: "A" },
     { word: "OPERA", clue: "Sung drama", row: 1, col: 0, dir: "A" },
@@ -540,7 +540,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ERECT", clue: "Stand tall", row: 0, col: 3, dir: "D" },
     { word: "WALT", clue: "Disney's first name", row: 0, col: 4, dir: "D" },
   ] },
-  // p045 — 2026-04-30 — Long Distance — template A
+  // p045 — 2026-04-26 — Long Distance — template A
   { id: "p045", rows: 5, cols: 5, words: [
     { word: "SOLE", clue: "Only one", row: 0, col: 0, dir: "A" },
     { word: "TROLL", clue: "Bridge-dwelling foe", row: 1, col: 0, dir: "A" },
@@ -553,7 +553,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ELVES", clue: "Fantasy folk", row: 0, col: 3, dir: "D" },
     { word: "LENT", clue: "Gave temporarily", row: 1, col: 4, dir: "D" },
   ] },
-  // p046 — 2026-05-01 — Proposal Season — template C
+  // p046 — 2026-04-27 — Proposal Season — template C
   { id: "p046", rows: 5, cols: 5, words: [
     { word: "SAO", clue: "___ Paulo", row: 0, col: 1, dir: "A" },
     { word: "TODAY", clue: "This day", row: 1, col: 0, dir: "A" },
@@ -566,7 +566,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "OASIS", clue: "Desert water source", row: 0, col: 3, dir: "D" },
     { word: "YET", clue: "Nevertheless", row: 1, col: 4, dir: "D" },
   ] },
-  // p047 — 2026-05-02 — Proposal Season — template B
+  // p047 — 2026-04-28 — Proposal Season — template B
   { id: "p047", rows: 5, cols: 5, words: [
     { word: "MEAD", clue: "Honey wine", row: 0, col: 1, dir: "A" },
     { word: "HORSE", clue: "Riding animal", row: 1, col: 0, dir: "A" },
@@ -579,7 +579,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ASKED", clue: "Inquired", row: 0, col: 3, dir: "D" },
     { word: "DEER", clue: "Forest animal", row: 0, col: 4, dir: "D" },
   ] },
-  // p049 — 2026-05-04 — Proposal Season — template C
+  // p049 — 2026-04-29 — Proposal Season — template C
   { id: "p049", rows: 5, cols: 5, words: [
     { word: "PAC", clue: "Political fundraiser (abbr.)", row: 0, col: 1, dir: "A" },
     { word: "ARDOR", clue: "Passion", row: 1, col: 0, dir: "A" },
@@ -592,7 +592,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "COMMA", clue: "Pause mark", row: 0, col: 3, dir: "D" },
     { word: "RYE", clue: "Bread grain", row: 1, col: 4, dir: "D" },
   ] },
-  // p050 — 2026-05-05 — Proposal Season — template B
+  // p050 — 2026-04-30 — Proposal Season — template B
   { id: "p050", rows: 5, cols: 5, words: [
     { word: "CAST", clue: "Throw or actors", row: 0, col: 1, dir: "A" },
     { word: "NINTH", clue: "Between eighth and tenth", row: 1, col: 0, dir: "A" },
@@ -605,7 +605,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "STUNT", clue: "Daring feat", row: 0, col: 3, dir: "D" },
     { word: "THEE", clue: "Old English you", row: 0, col: 4, dir: "D" },
   ] },
-  // p051 — 2026-05-06 — Proposal Season — template A
+  // p051 — 2026-05-01 — Proposal Season — template A
   { id: "p051", rows: 5, cols: 5, words: [
     { word: "MUST", clue: "Have to", row: 0, col: 0, dir: "A" },
     { word: "ASPEN", clue: "Quaking tree", row: 1, col: 0, dir: "A" },
@@ -618,7 +618,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TENSE", clue: "Tight feeling", row: 0, col: 3, dir: "D" },
     { word: "NEED", clue: "Require", row: 1, col: 4, dir: "D" },
   ] },
-  // p052 — 2026-05-07 — Proposal Season — template C
+  // p052 — 2026-05-02 — Proposal Season — template C
   { id: "p052", rows: 5, cols: 5, words: [
     { word: "CAD", clue: "Ungentlemanly sort", row: 0, col: 1, dir: "A" },
     { word: "TODAY", clue: "This day", row: 1, col: 0, dir: "A" },
@@ -631,7 +631,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "DAVIS", clue: "California college town", row: 0, col: 3, dir: "D" },
     { word: "YET", clue: "Nevertheless", row: 1, col: 4, dir: "D" },
   ] },
-  // p053 — 2026-05-08 — Proposal Season — template B
+  // p053 — 2026-05-03 — Proposal Season — template B
   { id: "p053", rows: 5, cols: 5, words: [
     { word: "PASS", clue: "Go by", row: 0, col: 1, dir: "A" },
     { word: "ALPHA", clue: "First in Greek", row: 1, col: 0, dir: "A" },
@@ -644,7 +644,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SHONE", clue: "Past of shine", row: 0, col: 3, dir: "D" },
     { word: "SATE", clue: "Fully satisfy", row: 0, col: 4, dir: "D" },
   ] },
-  // p055 — 2026-05-10 — Proposal Season — template C
+  // p055 — 2026-05-04 — Proposal Season — template C
   { id: "p055", rows: 5, cols: 5, words: [
     { word: "VET", clue: "Animal doctor", row: 0, col: 1, dir: "A" },
     { word: "TIARA", clue: "Crown", row: 1, col: 0, dir: "A" },
@@ -657,7 +657,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TREAT", clue: "Special reward", row: 0, col: 3, dir: "D" },
     { word: "ARK", clue: "Noah's boat", row: 1, col: 4, dir: "D" },
   ] },
-  // p056 — 2026-05-11 — Proposal Season — template B
+  // p056 — 2026-05-05 — Proposal Season — template B
   { id: "p056", rows: 5, cols: 5, words: [
     { word: "SCAM", clue: "Fraud", row: 0, col: 1, dir: "A" },
     { word: "STORE", clue: "Shop", row: 1, col: 0, dir: "A" },
@@ -670,7 +670,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARISE", clue: "Come up", row: 0, col: 3, dir: "D" },
     { word: "MEET", clue: "Encounter", row: 0, col: 4, dir: "D" },
   ] },
-  // p057 — 2026-05-12 — Proposal Season — template A
+  // p057 — 2026-05-06 — Proposal Season — template A
   { id: "p057", rows: 5, cols: 5, words: [
     { word: "CASS", clue: "Mama ___ Elliot", row: 0, col: 0, dir: "A" },
     { word: "ALPHA", clue: "First in Greek", row: 1, col: 0, dir: "A" },
@@ -683,7 +683,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SHAVE", clue: "Remove hair", row: 0, col: 3, dir: "D" },
     { word: "APES", clue: "Mimics", row: 1, col: 4, dir: "D" },
   ] },
-  // p059 — 2026-05-14 — Proposal Season — template B
+  // p059 — 2026-05-07 — Proposal Season — template B
   { id: "p059", rows: 5, cols: 5, words: [
     { word: "SITH", clue: "Star Wars villain order", row: 0, col: 1, dir: "A" },
     { word: "MACRO", clue: "Big-picture", row: 1, col: 0, dir: "A" },
@@ -696,7 +696,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TRACE", clue: "Small hint", row: 0, col: 3, dir: "D" },
     { word: "HOSE", clue: "Spray device", row: 0, col: 4, dir: "D" },
   ] },
-  // p060 — 2026-05-15 — Proposal Season — template A
+  // p060 — 2026-05-08 — Proposal Season — template A
   { id: "p060", rows: 5, cols: 5, words: [
     { word: "SPAN", clue: "Bridge width", row: 0, col: 0, dir: "A" },
     { word: "CANAL", clue: "Waterway passage", row: 1, col: 0, dir: "A" },
@@ -709,7 +709,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "NAIVE", clue: "Lacking experience", row: 0, col: 3, dir: "D" },
     { word: "LEES", clue: "Wine sediment", row: 1, col: 4, dir: "D" },
   ] },
-  // p062 — 2026-05-17 — Proposal Season — template B
+  // p062 — 2026-05-09 — Proposal Season — template B
   { id: "p062", rows: 5, cols: 5, words: [
     { word: "STOP", clue: "Halt", row: 0, col: 1, dir: "A" },
     { word: "SCONE", clue: "Baked treat", row: 1, col: 0, dir: "A" },
@@ -722,7 +722,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ONSET", clue: "Beginning", row: 0, col: 3, dir: "D" },
     { word: "PEEL", clue: "Remove skin", row: 0, col: 4, dir: "D" },
   ] },
-  // p063 — 2026-05-18 — Proposal Season — template A
+  // p063 — 2026-05-10 — Proposal Season — template A
   { id: "p063", rows: 5, cols: 5, words: [
     { word: "PASS", clue: "Go by", row: 0, col: 0, dir: "A" },
     { word: "ADAPT", clue: "Adjust", row: 1, col: 0, dir: "A" },
@@ -735,7 +735,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SPEND", clue: "Use money", row: 0, col: 3, dir: "D" },
     { word: "TRAY", clue: "Serving plate", row: 1, col: 4, dir: "D" },
   ] },
-  // p064 — 2026-05-19 — Proposal Season — template C
+  // p064 — 2026-05-11 — Proposal Season — template C
   { id: "p064", rows: 5, cols: 5, words: [
     { word: "MAO", clue: "Chairman of China", row: 0, col: 1, dir: "A" },
     { word: "MERRY", clue: "Festive", row: 1, col: 0, dir: "A" },
@@ -748,7 +748,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ORDER", clue: "Arrange", row: 0, col: 3, dir: "D" },
     { word: "YES", clue: "Affirmative", row: 1, col: 4, dir: "D" },
   ] },
-  // p065 — 2026-05-20 — Proposal Season — template B
+  // p065 — 2026-05-12 — Proposal Season — template B
   { id: "p065", rows: 5, cols: 5, words: [
     { word: "PLAN", clue: "Strategy", row: 0, col: 1, dir: "A" },
     { word: "PRONE", clue: "Lying face down", row: 1, col: 0, dir: "A" },
@@ -761,7 +761,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ANGEL", clue: "Heavenly being", row: 0, col: 3, dir: "D" },
     { word: "NEED", clue: "Require", row: 0, col: 4, dir: "D" },
   ] },
-  // p066 — 2026-05-21 — Proposal Season — template A
+  // p066 — 2026-05-13 — Proposal Season — template A
   { id: "p066", rows: 5, cols: 5, words: [
     { word: "CAVE", clue: "Underground space", row: 0, col: 0, dir: "A" },
     { word: "OLIVE", clue: "Green fruit", row: 1, col: 0, dir: "A" },
@@ -774,7 +774,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
     { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
   ] },
-  // p067 — 2026-05-22 — Proposal Season — template C
+  // p067 — 2026-05-14 — Proposal Season — template C
   { id: "p067", rows: 5, cols: 5, words: [
     { word: "LAW", clue: "Legal rule", row: 0, col: 1, dir: "A" },
     { word: "AERIE", clue: "Eagle nest high", row: 1, col: 0, dir: "A" },
@@ -787,7 +787,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "WIRED", clue: "Plugged in", row: 0, col: 3, dir: "D" },
     { word: "EST", clue: "Established", row: 1, col: 4, dir: "D" },
   ] },
-  // p068 — 2026-05-23 — Proposal Season — template B
+  // p068 — 2026-05-15 — Proposal Season — template B
   { id: "p068", rows: 5, cols: 5, words: [
     { word: "PREP", clue: "Get ready", row: 0, col: 1, dir: "A" },
     { word: "FLORA", clue: "Plant life", row: 1, col: 0, dir: "A" },
@@ -800,7 +800,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ERECT", clue: "Stand tall", row: 0, col: 3, dir: "D" },
     { word: "PART", clue: "Portion", row: 0, col: 4, dir: "D" },
   ] },
-  // p069 — 2026-05-24 — Proposal Season — template A
+  // p069 — 2026-05-16 — Proposal Season — template A
   { id: "p069", rows: 5, cols: 5, words: [
     { word: "STIR", clue: "Excite", row: 0, col: 0, dir: "A" },
     { word: "ARROW", clue: "Pointed shaft", row: 1, col: 0, dir: "A" },
@@ -813,7 +813,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ROSES", clue: "Romantic flowers", row: 0, col: 3, dir: "D" },
     { word: "WENT", clue: "Traveled", row: 1, col: 4, dir: "D" },
   ] },
-  // p071 — 2026-05-26 — Proposal Season — template B
+  // p071 — 2026-05-17 — Proposal Season — template B
   { id: "p071", rows: 5, cols: 5, words: [
     { word: "SNAP", clue: "Break sharply", row: 0, col: 1, dir: "A" },
     { word: "SHALE", clue: "Layered rock", row: 1, col: 0, dir: "A" },
@@ -826,7 +826,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ALERT", clue: "On guard", row: 0, col: 3, dir: "D" },
     { word: "PEST", clue: "Annoying critter", row: 0, col: 4, dir: "D" },
   ] },
-  // p072 — 2026-05-27 — Proposal Season — template A
+  // p072 — 2026-05-18 — Proposal Season — template A
   { id: "p072", rows: 5, cols: 5, words: [
     { word: "RARE", clue: "Uncommon", row: 0, col: 0, dir: "A" },
     { word: "ALARM", clue: "Warning sound", row: 1, col: 0, dir: "A" },
@@ -839,7 +839,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ERROR", clue: "My bad", row: 0, col: 3, dir: "D" },
     { word: "MORN", clue: "Daybreak", row: 1, col: 4, dir: "D" },
   ] },
-  // p073 — 2026-05-28 — Proposal Season — template C
+  // p073 — 2026-05-19 — Proposal Season — template C
   { id: "p073", rows: 5, cols: 5, words: [
     { word: "MAE", clue: "West of old films", row: 0, col: 1, dir: "A" },
     { word: "LILAC", clue: "Purple bloom", row: 1, col: 0, dir: "A" },
@@ -852,7 +852,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "EARLY", clue: "Ahead of schedule", row: 0, col: 3, dir: "D" },
     { word: "CAT", clue: "Feline", row: 1, col: 4, dir: "D" },
   ] },
-  // p075 — 2026-05-30 — Proposal Season — template A
+  // p075 — 2026-05-20 — Proposal Season — template A
   { id: "p075", rows: 5, cols: 5, words: [
     { word: "EARL", clue: "Noble title", row: 0, col: 0, dir: "A" },
     { word: "AVOID", clue: "Stay away from", row: 1, col: 0, dir: "A" },
@@ -865,7 +865,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LINEN", clue: "Fine fabric", row: 0, col: 3, dir: "D" },
     { word: "DART", clue: "Thrown projectile", row: 1, col: 4, dir: "D" },
   ] },
-  // p076 — 2026-05-31 — Proposal Season — template C
+  // p076 — 2026-05-21 — Proposal Season — template C
   { id: "p076", rows: 5, cols: 5, words: [
     { word: "TEC", clue: "Detective, slangily", row: 0, col: 1, dir: "A" },
     { word: "SHRUB", clue: "Garden bush", row: 1, col: 0, dir: "A" },
@@ -878,7 +878,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "CUTIE", clue: "Adorable one", row: 0, col: 3, dir: "D" },
     { word: "BEN", clue: "Franklin familiarly", row: 1, col: 4, dir: "D" },
   ] },
-  // p077 — 2026-06-01 — Engagement — template B
+  // p077 — 2026-05-22 — Engagement — template B
   { id: "p077", rows: 5, cols: 5, words: [
     { word: "CEST", clue: "C'___ la vie", row: 0, col: 1, dir: "A" },
     { word: "TRACE", clue: "Small hint", row: 1, col: 0, dir: "A" },
@@ -891,7 +891,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SCENT", clue: "Pleasant smell", row: 0, col: 3, dir: "D" },
     { word: "TENT", clue: "Camping shelter", row: 0, col: 4, dir: "D" },
   ] },
-  // p078 — 2026-06-02 — Engagement — template A
+  // p078 — 2026-05-23 — Engagement — template A
   { id: "p078", rows: 5, cols: 5, words: [
     { word: "CALM", clue: "Peaceful", row: 0, col: 0, dir: "A" },
     { word: "OCEAN", clue: "Pacific or Atlantic", row: 1, col: 0, dir: "A" },
@@ -904,7 +904,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "MAINS", clue: "Power supply", row: 0, col: 3, dir: "D" },
     { word: "NEAT", clue: "Tidy", row: 1, col: 4, dir: "D" },
   ] },
-  // p079 — 2026-06-03 — Engagement — template C
+  // p079 — 2026-05-24 — Engagement — template C
   { id: "p079", rows: 5, cols: 5, words: [
     { word: "FAD", clue: "Brief craze", row: 0, col: 1, dir: "A" },
     { word: "RIDER", clue: "Horseback one", row: 1, col: 0, dir: "A" },
@@ -917,7 +917,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "DENIM", clue: "Jeans fabric", row: 0, col: 3, dir: "D" },
     { word: "REP", clue: "Sales agent", row: 1, col: 4, dir: "D" },
   ] },
-  // p080 — 2026-06-04 — Engagement — template B
+  // p080 — 2026-05-25 — Engagement — template B
   { id: "p080", rows: 5, cols: 5, words: [
     { word: "FLAG", clue: "Banner", row: 0, col: 1, dir: "A" },
     { word: "GLARE", clue: "Harsh light", row: 1, col: 0, dir: "A" },
@@ -930,7 +930,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARISE", clue: "Come up", row: 0, col: 3, dir: "D" },
     { word: "GENE", clue: "DNA unit", row: 0, col: 4, dir: "D" },
   ] },
-  // p082 — 2026-06-06 — Engagement — template C
+  // p082 — 2026-05-26 — Engagement — template C
   { id: "p082", rows: 5, cols: 5, words: [
     { word: "DIS", clue: "Knock, slangily", row: 0, col: 1, dir: "A" },
     { word: "KARMA", clue: "What goes around", row: 1, col: 0, dir: "A" },
@@ -943,7 +943,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SMILE", clue: "Happy face", row: 0, col: 3, dir: "D" },
     { word: "ALE", clue: "Pub drink", row: 1, col: 4, dir: "D" },
   ] },
-  // p083 — 2026-06-07 — Engagement — template B
+  // p083 — 2026-05-27 — Engagement — template B
   { id: "p083", rows: 5, cols: 5, words: [
     { word: "SEAM", clue: "Stitch line", row: 0, col: 1, dir: "A" },
     { word: "STAGE", clue: "Performance area", row: 1, col: 0, dir: "A" },
@@ -956,7 +956,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "AGENT", clue: "Representative", row: 0, col: 3, dir: "D" },
     { word: "MELT", clue: "Thaw", row: 0, col: 4, dir: "D" },
   ] },
-  // p084 — 2026-06-08 — Engagement — template A
+  // p084 — 2026-05-28 — Engagement — template A
   { id: "p084", rows: 5, cols: 5, words: [
     { word: "SALE", clue: "Discount event", row: 0, col: 0, dir: "A" },
     { word: "TREAD", clue: "Walk on", row: 1, col: 0, dir: "A" },
@@ -969,7 +969,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "EASEL", clue: "Painter stand", row: 0, col: 3, dir: "D" },
     { word: "DENT", clue: "Small ding", row: 1, col: 4, dir: "D" },
   ] },
-  // p085 — 2026-06-09 — Engagement — template C
+  // p085 — 2026-05-29 — Engagement — template C
   { id: "p085", rows: 5, cols: 5, words: [
     { word: "FOR", clue: "In favor of", row: 0, col: 1, dir: "A" },
     { word: "ALLEY", clue: "Bowling lane", row: 1, col: 0, dir: "A" },
@@ -982,7 +982,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "RESIN", clue: "Sticky sap", row: 0, col: 3, dir: "D" },
     { word: "YES", clue: "Affirmative", row: 1, col: 4, dir: "D" },
   ] },
-  // p086 — 2026-06-10 — Engagement — template B
+  // p086 — 2026-05-30 — Engagement — template B
   { id: "p086", rows: 5, cols: 5, words: [
     { word: "SCAM", clue: "Fraud", row: 0, col: 1, dir: "A" },
     { word: "OPERA", clue: "Sung drama", row: 1, col: 0, dir: "A" },
@@ -995,7 +995,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "AROSE", clue: "Got up", row: 0, col: 3, dir: "D" },
     { word: "MARE", clue: "Female horse", row: 0, col: 4, dir: "D" },
   ] },
-  // p087 — 2026-06-11 — Engagement — template A
+  // p087 — 2026-05-31 — Engagement — template A
   { id: "p087", rows: 5, cols: 5, words: [
     { word: "PACT", clue: "Agreement", row: 0, col: 0, dir: "A" },
     { word: "ARROW", clue: "Pointed shaft", row: 1, col: 0, dir: "A" },
@@ -1008,7 +1008,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "TOTAL", clue: "Complete sum", row: 0, col: 3, dir: "D" },
     { word: "WELL", clue: "Healthy", row: 1, col: 4, dir: "D" },
   ] },
-  // p088 — 2026-06-12 — Engagement — template C
+  // p088 — 2026-06-01 — Engagement — template C
   { id: "p088", rows: 5, cols: 5, words: [
     { word: "FAD", clue: "Brief craze", row: 0, col: 1, dir: "A" },
     { word: "LOCAL", clue: "Nearby", row: 1, col: 0, dir: "A" },
@@ -1021,7 +1021,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "DANCE", clue: "Two step", row: 0, col: 3, dir: "D" },
     { word: "LEA", clue: "Grassy meadow", row: 1, col: 4, dir: "D" },
   ] },
-  // p089 — 2026-06-13 — Engagement — template B
+  // p089 — 2026-06-02 — Engagement — template B
   { id: "p089", rows: 5, cols: 5, words: [
     { word: "CEST", clue: "C'___ la vie", row: 0, col: 1, dir: "A" },
     { word: "MARCH", clue: "Walk in step", row: 1, col: 0, dir: "A" },
@@ -1034,7 +1034,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SCRAP", clue: "Leftover bit", row: 0, col: 3, dir: "D" },
     { word: "THEN", clue: "After that", row: 0, col: 4, dir: "D" },
   ] },
-  // p090 — 2026-06-14 — Engagement — template A
+  // p090 — 2026-06-03 — Engagement — template A
   { id: "p090", rows: 5, cols: 5, words: [
     { word: "JEAN", clue: "Denim trouser", row: 0, col: 0, dir: "A" },
     { word: "ENDED", clue: "All done", row: 1, col: 0, dir: "A" },
@@ -1047,7 +1047,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "NERVE", clue: "Got some ___", row: 0, col: 3, dir: "D" },
     { word: "DEED", clue: "Action or document", row: 1, col: 4, dir: "D" },
   ] },
-  // p091 — 2026-06-15 — Engagement — template C
+  // p091 — 2026-06-04 — Engagement — template C
   { id: "p091", rows: 5, cols: 5, words: [
     { word: "CAR", clue: "Vehicle", row: 0, col: 1, dir: "A" },
     { word: "COLIN", clue: "Firth or Powell", row: 1, col: 0, dir: "A" },
@@ -1060,7 +1060,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "RIDER", clue: "Horseback one", row: 0, col: 3, dir: "D" },
     { word: "NOD", clue: "Head gesture", row: 1, col: 4, dir: "D" },
   ] },
-  // p092 — 2026-06-16 — Engagement — template B
+  // p092 — 2026-06-05 — Engagement — template B
   { id: "p092", rows: 5, cols: 5, words: [
     { word: "ABLE", clue: "Capable", row: 0, col: 1, dir: "A" },
     { word: "RELAY", clue: "Baton race", row: 1, col: 0, dir: "A" },
@@ -1073,7 +1073,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LASER", clue: "Light beam", row: 0, col: 3, dir: "D" },
     { word: "EYED", clue: "Gazed at", row: 0, col: 4, dir: "D" },
   ] },
-  // p093 — 2026-06-17 — Engagement — template A
+  // p093 — 2026-06-06 — Engagement — template A
   { id: "p093", rows: 5, cols: 5, words: [
     { word: "MESS", clue: "Disorder", row: 0, col: 0, dir: "A" },
     { word: "ENTER", clue: "Go inside", row: 1, col: 0, dir: "A" },
@@ -1086,7 +1086,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SERVE", clue: "Dish out", row: 0, col: 3, dir: "D" },
     { word: "REED", clue: "Marsh grass", row: 1, col: 4, dir: "D" },
   ] },
-  // p094 — 2026-06-18 — Engagement — template C
+  // p094 — 2026-06-07 — Engagement — template C
   { id: "p094", rows: 5, cols: 5, words: [
     { word: "WAR", clue: "Conflict", row: 0, col: 1, dir: "A" },
     { word: "TENOR", clue: "Opera voice", row: 1, col: 0, dir: "A" },
@@ -1099,7 +1099,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ROSES", clue: "Romantic flowers", row: 0, col: 3, dir: "D" },
     { word: "RED", clue: "Warm color", row: 1, col: 4, dir: "D" },
   ] },
-  // p095 — 2026-06-19 — Engagement — template B
+  // p095 — 2026-06-08 — Engagement — template B
   { id: "p095", rows: 5, cols: 5, words: [
     { word: "MERE", clue: "Only", row: 0, col: 1, dir: "A" },
     { word: "LEVEL", clue: "Flat or tier", row: 1, col: 0, dir: "A" },
@@ -1112,7 +1112,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "REACH", clue: "Extend to", row: 0, col: 3, dir: "D" },
     { word: "ELLE", clue: "She, in Paris", row: 0, col: 4, dir: "D" },
   ] },
-  // p096 — 2026-06-20 — Engagement — template A
+  // p096 — 2026-06-09 — Engagement — template A
   { id: "p096", rows: 5, cols: 5, words: [
     { word: "SPAR", clue: "Practice boxing", row: 0, col: 0, dir: "A" },
     { word: "ALLOW", clue: "Permit", row: 1, col: 0, dir: "A" },
@@ -1125,7 +1125,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ROPES", clue: "Know the ___", row: 0, col: 3, dir: "D" },
     { word: "WART", clue: "Small bump", row: 1, col: 4, dir: "D" },
   ] },
-  // p097 — 2026-06-21 — Engagement — template C
+  // p097 — 2026-06-10 — Engagement — template C
   { id: "p097", rows: 5, cols: 5, words: [
     { word: "REF", clue: "Official", row: 0, col: 1, dir: "A" },
     { word: "TONER", clue: "Printer refill", row: 1, col: 0, dir: "A" },
@@ -1138,7 +1138,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "FEAST", clue: "Grand dinner", row: 0, col: 3, dir: "D" },
     { word: "RYE", clue: "Bread grain", row: 1, col: 4, dir: "D" },
   ] },
-  // p098 — 2026-06-22 — Engagement — template B
+  // p098 — 2026-06-11 — Engagement — template B
   { id: "p098", rows: 5, cols: 5, words: [
     { word: "SLAY", clue: "Wow", row: 0, col: 1, dir: "A" },
     { word: "STORE", clue: "Shop", row: 1, col: 0, dir: "A" },
@@ -1151,7 +1151,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ARMED", clue: "Carrying a weapon", row: 0, col: 3, dir: "D" },
     { word: "YEAR", clue: "365 days", row: 0, col: 4, dir: "D" },
   ] },
-  // p099 — 2026-06-23 — Engagement — template A
+  // p099 — 2026-06-12 — Engagement — template A
   { id: "p099", rows: 5, cols: 5, words: [
     { word: "FEEL", clue: "Sense", row: 0, col: 0, dir: "A" },
     { word: "ELVES", clue: "Fantasy folk", row: 1, col: 0, dir: "A" },
@@ -1164,7 +1164,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LEVEL", clue: "Flat or tier", row: 0, col: 3, dir: "D" },
     { word: "SEND", clue: "Mail off", row: 1, col: 4, dir: "D" },
   ] },
-  // p100 — 2026-06-24 — Engagement — template C
+  // p100 — 2026-06-13 — Engagement — template C
   { id: "p100", rows: 5, cols: 5, words: [
     { word: "BOB", clue: "Short haircut", row: 0, col: 1, dir: "A" },
     { word: "ALTER", clue: "Change", row: 1, col: 0, dir: "A" },
@@ -1177,7 +1177,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "BEING", clue: "Existing", row: 0, col: 3, dir: "D" },
     { word: "ROD", clue: "Fishing pole", row: 1, col: 4, dir: "D" },
   ] },
-  // p101 — 2026-06-25 — Engagement — template B
+  // p101 — 2026-06-14 — Engagement — template B
   { id: "p101", rows: 5, cols: 5, words: [
     { word: "DAMP", clue: "A bit wet", row: 0, col: 1, dir: "A" },
     { word: "RULER", clue: "Measuring stick", row: 1, col: 0, dir: "A" },
@@ -1190,7 +1190,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "MEGAN", clue: "Proposal co-conspirator", row: 0, col: 3, dir: "D" },
     { word: "PREY", clue: "Hunted one", row: 0, col: 4, dir: "D" },
   ] },
-  // p102 — 2026-06-26 — Engagement — template A
+  // p102 — 2026-06-15 — Engagement — template A
   { id: "p102", rows: 5, cols: 5, words: [
     { word: "STAR", clue: "Shining one", row: 0, col: 0, dir: "A" },
     { word: "HABIT", clue: "Routine", row: 1, col: 0, dir: "A" },
@@ -1203,7 +1203,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "RIVAL", clue: "Competition", row: 0, col: 3, dir: "D" },
     { word: "TELL", clue: "Reveal", row: 1, col: 4, dir: "D" },
   ] },
-  // p103 — 2026-06-27 — Engagement — template C
+  // p103 — 2026-06-16 — Engagement — template C
   { id: "p103", rows: 5, cols: 5, words: [
     { word: "PSI", clue: "Greek letter", row: 0, col: 1, dir: "A" },
     { word: "GOING", clue: "Departing", row: 1, col: 0, dir: "A" },
@@ -1216,7 +1216,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "INCUR", clue: "Bring upon oneself", row: 0, col: 3, dir: "D" },
     { word: "GER", clue: "Mongolian tent", row: 1, col: 4, dir: "D" },
   ] },
-  // p104 — 2026-06-28 — Engagement — template B
+  // p104 — 2026-06-17 — Engagement — template B
   { id: "p104", rows: 5, cols: 5, words: [
     { word: "SLED", clue: "Snow racer", row: 0, col: 1, dir: "A" },
     { word: "THERE", clue: "That place", row: 1, col: 0, dir: "A" },
@@ -1229,7 +1229,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ERECT", clue: "Stand tall", row: 0, col: 3, dir: "D" },
     { word: "DENT", clue: "Small ding", row: 0, col: 4, dir: "D" },
   ] },
-  // p105 — 2026-06-29 — Engagement — template A
+  // p105 — 2026-06-18 — Engagement — template A
   { id: "p105", rows: 5, cols: 5, words: [
     { word: "DUAL", clue: "Double", row: 0, col: 0, dir: "A" },
     { word: "ATLAS", clue: "Map book", row: 1, col: 0, dir: "A" },
@@ -1242,7 +1242,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "LANCE", clue: "Knights weapon", row: 0, col: 3, dir: "D" },
     { word: "SEED", clue: "Plant start", row: 1, col: 4, dir: "D" },
   ] },
-  // p106 — 2026-06-30 — Engagement — template C
+  // p106 — 2026-06-19 — Engagement — template C
   { id: "p106", rows: 5, cols: 5, words: [
     { word: "DUB", clue: "Nickname", row: 0, col: 1, dir: "A" },
     { word: "MILES", clue: "Long-distance tax", row: 1, col: 0, dir: "A" },
@@ -1255,7 +1255,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "BERRY", clue: "Small fruit", row: 0, col: 3, dir: "D" },
     { word: "SOY", clue: "Tofu source", row: 1, col: 4, dir: "D" },
   ] },
-  // p107 — 2026-07-01 — Wedding Party — template B
+  // p107 — 2026-06-20 — Wedding Party — template B
   { id: "p107", rows: 5, cols: 5, words: [
     { word: "PEST", clue: "Annoying critter", row: 0, col: 1, dir: "A" },
     { word: "WORTH", clue: "Value of", row: 1, col: 0, dir: "A" },
@@ -1268,7 +1268,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "STRIP", clue: "Tear off", row: 0, col: 3, dir: "D" },
     { word: "THEN", clue: "After that", row: 0, col: 4, dir: "D" },
   ] },
-  // p108 — 2026-07-02 — Wedding Party — template A
+  // p108 — 2026-06-21 — Wedding Party — template A
   { id: "p108", rows: 5, cols: 5, words: [
     { word: "LAMB", clue: "Young sheep", row: 0, col: 0, dir: "A" },
     { word: "ABOUT", clue: "Concerning", row: 1, col: 0, dir: "A" },
@@ -1281,7 +1281,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "BUTTE", clue: "Flat-topped hill", row: 0, col: 3, dir: "D" },
     { word: "TOOK", clue: "Grabbed", row: 1, col: 4, dir: "D" },
   ] },
-  // p109 — 2026-07-03 — Wedding Party — template C
+  // p109 — 2026-06-22 — Wedding Party — template C
   { id: "p109", rows: 5, cols: 5, words: [
     { word: "MAC", clue: "Apple computer", row: 0, col: 1, dir: "A" },
     { word: "ROBOT", clue: "Machine worker", row: 1, col: 0, dir: "A" },
@@ -1294,7 +1294,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "COMET", clue: "Icy space rock", row: 0, col: 3, dir: "D" },
     { word: "TAR", clue: "Road surface", row: 1, col: 4, dir: "D" },
   ] },
-  // p110 — 2026-07-04 — Wedding Party — template B
+  // p110 — 2026-06-23 — Wedding Party — template B
   { id: "p110", rows: 5, cols: 5, words: [
     { word: "PLEA", clue: "Request", row: 0, col: 1, dir: "A" },
     { word: "PRISM", clue: "Rainbow maker", row: 1, col: 0, dir: "A" },
@@ -1307,7 +1307,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ESSAY", clue: "Written piece", row: 0, col: 3, dir: "D" },
     { word: "AMEN", clue: "End of a prayer", row: 0, col: 4, dir: "D" },
   ] },
-  // p111 — 2026-07-05 — Wedding Party — template A
+  // p111 — 2026-06-24 — Wedding Party — template A
   { id: "p111", rows: 5, cols: 5, words: [
     { word: "BRAD", clue: "Thin nail", row: 0, col: 0, dir: "A" },
     { word: "LADEN", clue: "Loaded down", row: 1, col: 0, dir: "A" },
@@ -1320,7 +1320,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "DENSE", clue: "Tightly packed", row: 0, col: 3, dir: "D" },
     { word: "NEED", clue: "Require", row: 1, col: 4, dir: "D" },
   ] },
-  // p112 — 2026-07-06 — Wedding Party — template C
+  // p112 — 2026-06-25 — Wedding Party — template C
   { id: "p112", rows: 5, cols: 5, words: [
     { word: "SPA", clue: "Wellness place", row: 0, col: 1, dir: "A" },
     { word: "MARSH", clue: "Wetland area", row: 1, col: 0, dir: "A" },
@@ -1333,7 +1333,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ASKED", clue: "Inquired", row: 0, col: 3, dir: "D" },
     { word: "HER", clue: "She or ___", row: 1, col: 4, dir: "D" },
   ] },
-  // p113 — 2026-07-07 — Wedding Party — template B
+  // p113 — 2026-06-26 — Wedding Party — template B
   { id: "p113", rows: 5, cols: 5, words: [
     { word: "ARCH", clue: "Ceremonial gateway", row: 0, col: 1, dir: "A" },
     { word: "SWORE", clue: "Made an oath", row: 1, col: 0, dir: "A" },
@@ -1346,7 +1346,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "CREST", clue: "Peak", row: 0, col: 3, dir: "D" },
     { word: "HERE", clue: "Present", row: 0, col: 4, dir: "D" },
   ] },
-  // p114 — 2026-07-08 — Wedding Party — template A
+  // p114 — 2026-06-27 — Wedding Party — template A
   { id: "p114", rows: 5, cols: 5, words: [
     { word: "SWAN", clue: "Graceful bird", row: 0, col: 0, dir: "A" },
     { word: "TAROT", clue: "Fortune cards", row: 1, col: 0, dir: "A" },
@@ -1359,7 +1359,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "NOISE", clue: "Loud sound", row: 0, col: 3, dir: "D" },
     { word: "TEEN", clue: "Young person", row: 1, col: 4, dir: "D" },
   ] },
-  // p115 — 2026-07-09 — Wedding Party — template C
+  // p115 — 2026-06-28 — Wedding Party — template C
   { id: "p115", rows: 5, cols: 5, words: [
     { word: "GUT", clue: "Instinct", row: 0, col: 1, dir: "A" },
     { word: "ALPHA", clue: "First in Greek", row: 1, col: 0, dir: "A" },
@@ -1372,7 +1372,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "THING", clue: "Object", row: 0, col: 3, dir: "D" },
     { word: "ACT", clue: "Perform", row: 1, col: 4, dir: "D" },
   ] },
-  // p116 — 2026-07-10 — Wedding Party — template B
+  // p116 — 2026-06-29 — Wedding Party — template B
   { id: "p116", rows: 5, cols: 5, words: [
     { word: "SLED", clue: "Snow racer", row: 0, col: 1, dir: "A" },
     { word: "FLORA", clue: "Plant life", row: 1, col: 0, dir: "A" },
@@ -1385,7 +1385,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "ERECT", clue: "Stand tall", row: 0, col: 3, dir: "D" },
     { word: "DARK", clue: "No light", row: 0, col: 4, dir: "D" },
   ] },
-  // p117 — 2026-07-11 — Wedding Party — template A
+  // p117 — 2026-06-30 — Wedding Party — template A
   { id: "p117", rows: 5, cols: 5, words: [
     { word: "PASS", clue: "Go by", row: 0, col: 0, dir: "A" },
     { word: "ATTIC", clue: "Top floor", row: 1, col: 0, dir: "A" },
@@ -1398,7 +1398,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "SIREN", clue: "Ambulance sound", row: 0, col: 3, dir: "D" },
     { word: "CENT", clue: "Penny", row: 1, col: 4, dir: "D" },
   ] },
-  // p118 — 2026-07-12 — Wedding Party — template C
+  // p118 — 2026-07-01 — Wedding Party — template C
   { id: "p118", rows: 5, cols: 5, words: [
     { word: "COS", clue: "Romaine lettuce", row: 0, col: 1, dir: "A" },
     { word: "SAUTE", clue: "Fry quickly", row: 1, col: 0, dir: "A" },
@@ -1411,7 +1411,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "STEEL", clue: "Strong metal", row: 0, col: 3, dir: "D" },
     { word: "ERR", clue: "Make mistake", row: 1, col: 4, dir: "D" },
   ] },
-  // p120 — 2026-07-14 — Wedding Party — template A
+  // p120 — 2026-07-02 — Wedding Party — template A
   { id: "p120", rows: 5, cols: 5, words: [
     { word: "SALE", clue: "Discount event", row: 0, col: 0, dir: "A" },
     { word: "TREAT", clue: "Special reward", row: 1, col: 0, dir: "A" },
@@ -1424,7 +1424,7 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "EASEL", clue: "Painter stand", row: 0, col: 3, dir: "D" },
     { word: "TEND", clue: "Care for", row: 1, col: 4, dir: "D" },
   ] },
-  // p121 — 2026-07-15 — Wedding Party — template C
+  // p121 — 2026-07-03 — Wedding Party — template C
   { id: "p121", rows: 5, cols: 5, words: [
     { word: "MAC", clue: "Apple computer", row: 0, col: 1, dir: "A" },
     { word: "CARAT", clue: "Diamond weight", row: 1, col: 0, dir: "A" },
@@ -1437,59 +1437,59 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "CADET", clue: "Military student", row: 0, col: 3, dir: "D" },
     { word: "TED", clue: "Spread to dry", row: 1, col: 4, dir: "D" },
   ] },
-  // p122 — 2026-07-16 — Wedding Party — template B
+  // p122 — 2026-07-04 — Wedding Party — template B
   { id: "p122", rows: 5, cols: 5, words: [
-    { word: "GLAD", clue: "Happy", row: 0, col: 1, dir: "A" },
-    { word: "AROMA", clue: "Pleasant smell", row: 1, col: 0, dir: "A" },
-    { word: "LEGAL", clue: "By the law", row: 2, col: 0, dir: "A" },
-    { word: "SEIZE", clue: "Grab", row: 3, col: 0, dir: "A" },
-    { word: "ONCE", clue: "One time", row: 4, col: 0, dir: "A" },
+    { word: "GLAD", clue: "Happy to help", row: 0, col: 1, dir: "A" },
+    { word: "AROMA", clue: "What hits you at the bakery door", row: 1, col: 0, dir: "A" },
+    { word: "LEGAL", clue: "Not against the rules", row: 2, col: 0, dir: "A" },
+    { word: "SEIZE", clue: "Grab and hold on tight", row: 3, col: 0, dir: "A" },
+    { word: "ONCE", clue: "___ upon a time", row: 4, col: 0, dir: "A" },
     { word: "ALSO", clue: "As well", row: 1, col: 0, dir: "D" },
     { word: "GREEN", clue: "Leaf color", row: 0, col: 1, dir: "D" },
     { word: "LOGIC", clue: "Reasoning", row: 0, col: 2, dir: "D" },
-    { word: "AMAZE", clue: "Astonish", row: 0, col: 3, dir: "D" },
-    { word: "DALE", clue: "Valley", row: 0, col: 4, dir: "D" },
+    { word: "AMAZE", clue: "Blow away with wonder", row: 0, col: 3, dir: "D" },
+    { word: "DALE", clue: "Hill's low neighbor", row: 0, col: 4, dir: "D" },
   ] },
-  // p123 — 2026-07-17 — Wedding Party — template A
+  // p123 — 2026-07-05 — Wedding Party — template A
   { id: "p123", rows: 5, cols: 5, words: [
-    { word: "VASE", clue: "Flower holder", row: 0, col: 0, dir: "A" },
-    { word: "IDEAL", clue: "Perfect", row: 1, col: 0, dir: "A" },
-    { word: "CURVE", clue: "Rounded bend", row: 2, col: 0, dir: "A" },
+    { word: "VASE", clue: "Spot for a dozen roses", row: 0, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Textbook perfect", row: 1, col: 0, dir: "A" },
+    { word: "CURVE", clue: "Road sign shape", row: 2, col: 0, dir: "A" },
     { word: "ELVES", clue: "Fantasy folk", row: 3, col: 0, dir: "A" },
     { word: "TEST", clue: "Exam", row: 4, col: 1, dir: "A" },
     { word: "VICE", clue: "Bad habit", row: 0, col: 0, dir: "D" },
-    { word: "ADULT", clue: "Grown up", row: 0, col: 1, dir: "D" },
+    { word: "ADULT", clue: "No longer a kid", row: 0, col: 1, dir: "D" },
     { word: "SERVE", clue: "Dish out", row: 0, col: 2, dir: "D" },
-    { word: "EAVES", clue: "Roof overhangs", row: 0, col: 3, dir: "D" },
+    { word: "EAVES", clue: "Where rain drips off the roof", row: 0, col: 3, dir: "D" },
     { word: "LEST", clue: "Or else", row: 1, col: 4, dir: "D" },
   ] },
-  // p124 — 2026-07-18 — Wedding Party — template C
+  // p124 — 2026-07-06 — Wedding Party — template C
   { id: "p124", rows: 5, cols: 5, words: [
     { word: "LAS", clue: "___ Vegas", row: 0, col: 1, dir: "A" },
-    { word: "WIDER", clue: "More broad", row: 1, col: 0, dir: "A" },
+    { word: "WIDER", clue: "Not as narrow", row: 1, col: 0, dir: "A" },
     { word: "IVORY", clue: "Cream white", row: 2, col: 0, dir: "A" },
     { word: "NERVE", clue: "Got some ___", row: 3, col: 0, dir: "A" },
     { word: "DEE", clue: "Letter D", row: 4, col: 1, dir: "A" },
     { word: "WIN", clue: "Victory", row: 1, col: 0, dir: "D" },
     { word: "LIVED", clue: "Experienced", row: 0, col: 1, dir: "D" },
-    { word: "ADORE", clue: "Love deeply", row: 0, col: 2, dir: "D" },
-    { word: "SERVE", clue: "Dish out", row: 0, col: 3, dir: "D" },
+    { word: "ADORE", clue: "Absolutely cherish", row: 0, col: 2, dir: "D" },
+    { word: "SERVE", clue: "Bring out the plates", row: 0, col: 3, dir: "D" },
     { word: "RYE", clue: "Bread grain", row: 1, col: 4, dir: "D" },
   ] },
-  // p126 — 2026-07-20 — Wedding Party — template A
+  // p126 — 2026-07-07 — Wedding Party — template A
   { id: "p126", rows: 5, cols: 5, words: [
-    { word: "HAVE", clue: "Possess", row: 0, col: 0, dir: "A" },
+    { word: "HAVE", clue: "Own, as a house", row: 0, col: 0, dir: "A" },
     { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
     { word: "LADEN", clue: "Loaded down", row: 2, col: 0, dir: "A" },
-    { word: "TREND", clue: "Whats hot", row: 3, col: 0, dir: "A" },
+    { word: "TREND", clue: "What's blowing up online", row: 3, col: 0, dir: "A" },
     { word: "MOSS", clue: "Green growth", row: 4, col: 1, dir: "A" },
-    { word: "HALT", clue: "Stop", row: 0, col: 0, dir: "D" },
-    { word: "ALARM", clue: "Warning sound", row: 0, col: 1, dir: "D" },
+    { word: "HALT", clue: "Screech to a stop", row: 0, col: 0, dir: "D" },
+    { word: "ALARM", clue: "Snooze-button target", row: 0, col: 1, dir: "D" },
     { word: "VIDEO", clue: "Moving pictures", row: 0, col: 2, dir: "D" },
-    { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
-    { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
+    { word: "EVENS", clue: "Squares a score", row: 0, col: 3, dir: "D" },
+    { word: "ENDS", clue: "Loose ___", row: 1, col: 4, dir: "D" },
   ] },
-  // p127 — 2026-07-21 — Wedding Party — template C
+  // p127 — 2026-07-08 — Wedding Party — template C
   { id: "p127", rows: 5, cols: 5, words: [
     { word: "GOD", clue: "Deity", row: 0, col: 1, dir: "A" },
     { word: "BONUS", clue: "Extra reward", row: 1, col: 0, dir: "A" },
@@ -1499,184 +1499,184 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "BAG", clue: "Carry all", row: 1, col: 0, dir: "D" },
     { word: "GONNA", clue: "Going to", row: 0, col: 1, dir: "D" },
     { word: "ONION", clue: "Layered veggie", row: 0, col: 2, dir: "D" },
-    { word: "DUMMY", clue: "Mannequin", row: 0, col: 3, dir: "D" },
+    { word: "DUMMY", clue: "Test crash-test rider", row: 0, col: 3, dir: "D" },
     { word: "SEE", clue: "Lay eyes on", row: 1, col: 4, dir: "D" },
   ] },
-  // p128 — 2026-07-22 — Wedding Party — template B
+  // p128 — 2026-07-09 — Wedding Party — template B
   { id: "p128", rows: 5, cols: 5, words: [
     { word: "DART", clue: "Thrown projectile", row: 0, col: 1, dir: "A" },
-    { word: "MOVIE", clue: "Film", row: 1, col: 0, dir: "A" },
+    { word: "MOVIE", clue: "Popcorn's usual companion", row: 1, col: 0, dir: "A" },
     { word: "OZONE", clue: "Earth shield", row: 2, col: 0, dir: "A" },
     { word: "REIGN", clue: "Royal rule", row: 3, col: 0, dir: "A" },
     { word: "ENDS", clue: "Conclusions", row: 4, col: 0, dir: "A" },
     { word: "MORE", clue: "Additional", row: 1, col: 0, dir: "D" },
     { word: "DOZEN", clue: "Baker's ___", row: 0, col: 1, dir: "D" },
-    { word: "AVOID", clue: "Stay away from", row: 0, col: 2, dir: "D" },
+    { word: "AVOID", clue: "Dodge on purpose", row: 0, col: 2, dir: "D" },
     { word: "RINGS", clue: "Two circles, one commitment", row: 0, col: 3, dir: "D" },
-    { word: "TEEN", clue: "Young person", row: 0, col: 4, dir: "D" },
+    { word: "TEEN", clue: "Not quite an adult", row: 0, col: 4, dir: "D" },
   ] },
-  // p129 — 2026-07-23 — Wedding Party — template A
+  // p129 — 2026-07-10 — Wedding Party — template A
   { id: "p129", rows: 5, cols: 5, words: [
     { word: "CHEW", clue: "Gnaw", row: 0, col: 0, dir: "A" },
     { word: "RURAL", clue: "Country living", row: 1, col: 0, dir: "A" },
-    { word: "IMAGE", clue: "Picture", row: 2, col: 0, dir: "A" },
-    { word: "BASES", clue: "Foundations", row: 3, col: 0, dir: "A" },
+    { word: "IMAGE", clue: "What a selfie captures", row: 2, col: 0, dir: "A" },
+    { word: "BASES", clue: "Baseball diamond stops", row: 3, col: 0, dir: "A" },
     { word: "NESS", clue: "Quality", row: 4, col: 1, dir: "A" },
     { word: "CRIB", clue: "Baby's bed", row: 0, col: 0, dir: "D" },
     { word: "HUMAN", clue: "Person", row: 0, col: 1, dir: "D" },
-    { word: "ERASE", clue: "Remove", row: 0, col: 2, dir: "D" },
+    { word: "ERASE", clue: "Wipe the whiteboard clean", row: 0, col: 2, dir: "D" },
     { word: "WAGES", clue: "Pay", row: 0, col: 3, dir: "D" },
     { word: "LESS", clue: "Without", row: 1, col: 4, dir: "D" },
   ] },
-  // p130 — 2026-07-24 — Wedding Party — template C
+  // p130 — 2026-07-11 — Wedding Party — template C
   { id: "p130", rows: 5, cols: 5, words: [
     { word: "CAR", clue: "Vehicle", row: 0, col: 1, dir: "A" },
     { word: "VOWED", clue: "Promised", row: 1, col: 0, dir: "A" },
-    { word: "ERASE", clue: "Remove", row: 2, col: 0, dir: "A" },
-    { word: "TAKEN", clue: "Grabbed", row: 3, col: 0, dir: "A" },
+    { word: "ERASE", clue: "Undo a pencil mistake", row: 2, col: 0, dir: "A" },
+    { word: "TAKEN", clue: "No longer available", row: 3, col: 0, dir: "A" },
     { word: "LET", clue: "Allow", row: 4, col: 1, dir: "A" },
     { word: "VET", clue: "Animal doctor", row: 1, col: 0, dir: "D" },
     { word: "CORAL", clue: "Reef stuff", row: 0, col: 1, dir: "D" },
     { word: "AWAKE", clue: "Not asleep", row: 0, col: 2, dir: "D" },
-    { word: "RESET", clue: "Start over", row: 0, col: 3, dir: "D" },
+    { word: "RESET", clue: "Start the clock over", row: 0, col: 3, dir: "D" },
     { word: "DEN", clue: "Private room", row: 1, col: 4, dir: "D" },
   ] },
-  // p131 — 2026-07-25 — Wedding Party — template B
+  // p131 — 2026-07-12 — Wedding Party — template B
   { id: "p131", rows: 5, cols: 5, words: [
     { word: "DASH", clue: "Sprint", row: 0, col: 1, dir: "A" },
-    { word: "VILLA", clue: "Vacation house", row: 1, col: 0, dir: "A" },
-    { word: "ATTIC", clue: "Top floor", row: 2, col: 0, dir: "A" },
-    { word: "STACK", clue: "Pile up", row: 3, col: 0, dir: "A" },
-    { word: "TORE", clue: "Ripped", row: 4, col: 0, dir: "A" },
-    { word: "VAST", clue: "Enormous", row: 1, col: 0, dir: "D" },
+    { word: "VILLA", clue: "Rental with a pool, maybe", row: 1, col: 0, dir: "A" },
+    { word: "ATTIC", clue: "Where old boxes collect dust", row: 2, col: 0, dir: "A" },
+    { word: "STACK", clue: "Pancake pileup", row: 3, col: 0, dir: "A" },
+    { word: "TORE", clue: "Ripped the wrapping paper", row: 4, col: 0, dir: "A" },
+    { word: "VAST", clue: "Ocean-sized", row: 1, col: 0, dir: "D" },
     { word: "DITTO", clue: "Same here", row: 0, col: 1, dir: "D" },
     { word: "ALTAR", clue: "End of the aisle", row: 0, col: 2, dir: "D" },
-    { word: "SLICE", clue: "Cut thin", row: 0, col: 3, dir: "D" },
+    { word: "SLICE", clue: "Pizza math: one of eight", row: 0, col: 3, dir: "D" },
     { word: "HACK", clue: "Taxi or shortcut", row: 0, col: 4, dir: "D" },
   ] },
-  // p132 — 2026-07-26 — Wedding Party — template A
+  // p132 — 2026-07-13 — Wedding Party — template A
   { id: "p132", rows: 5, cols: 5, words: [
     { word: "WALT", clue: "Disney's first name", row: 0, col: 0, dir: "A" },
-    { word: "AVAIL", clue: "Benefit", row: 1, col: 0, dir: "A" },
+    { word: "AVAIL", clue: "Use, as in \"to no ___\"", row: 1, col: 0, dir: "A" },
     { word: "NORMA", clue: "Opera by Bellini", row: 2, col: 0, dir: "A" },
     { word: "TIGER", clue: "Striped cat", row: 3, col: 0, dir: "A" },
-    { word: "DESK", clue: "Office staple", row: 4, col: 1, dir: "A" },
-    { word: "WANT", clue: "Desire", row: 0, col: 0, dir: "D" },
-    { word: "AVOID", clue: "Stay away from", row: 0, col: 1, dir: "D" },
-    { word: "LARGE", clue: "Big", row: 0, col: 2, dir: "D" },
+    { word: "DESK", clue: "Where the inbox pile lives", row: 4, col: 1, dir: "A" },
+    { word: "WANT", clue: "Wish list verb", row: 0, col: 0, dir: "D" },
+    { word: "AVOID", clue: "Steer clear of", row: 0, col: 1, dir: "D" },
+    { word: "LARGE", clue: "Coffee-cup size choice", row: 0, col: 2, dir: "D" },
     { word: "TIMES", clue: "Multiplication", row: 0, col: 3, dir: "D" },
     { word: "LARK", clue: "Fun adventure", row: 1, col: 4, dir: "D" },
   ] },
-  // p133 — 2026-07-27 — Wedding Party — template C
+  // p133 — 2026-07-14 — Wedding Party — template C
   { id: "p133", rows: 5, cols: 5, words: [
     { word: "BAT", clue: "Swing", row: 0, col: 1, dir: "A" },
     { word: "BONUS", clue: "Extra reward", row: 1, col: 0, dir: "A" },
-    { word: "EXILE", clue: "Cast out", row: 2, col: 0, dir: "A" },
-    { word: "REMIT", clue: "Send back", row: 3, col: 0, dir: "A" },
+    { word: "EXILE", clue: "Banish from the kingdom", row: 2, col: 0, dir: "A" },
+    { word: "REMIT", clue: "Send a payment", row: 3, col: 0, dir: "A" },
     { word: "REP", clue: "Sales agent", row: 4, col: 1, dir: "A" },
     { word: "BER", clue: "Number suffix", row: 1, col: 0, dir: "D" },
     { word: "BOXER", clue: "Prizefighter", row: 0, col: 1, dir: "D" },
     { word: "ANIME", clue: "Japanese cartoons", row: 0, col: 2, dir: "D" },
-    { word: "TULIP", clue: "Spring bulb", row: 0, col: 3, dir: "D" },
+    { word: "TULIP", clue: "Dutch garden favorite", row: 0, col: 3, dir: "D" },
     { word: "SET", clue: "Group", row: 1, col: 4, dir: "D" },
   ] },
-  // p134 — 2026-07-28 — Wedding Party — template B
+  // p134 — 2026-07-15 — Wedding Party — template B
   { id: "p134", rows: 5, cols: 5, words: [
-    { word: "PEER", clue: "Equal", row: 0, col: 1, dir: "A" },
+    { word: "PEER", clue: "Classmate or colleague", row: 0, col: 1, dir: "A" },
     { word: "BRAVO", clue: "Shout of praise", row: 1, col: 0, dir: "A" },
     { word: "ROSES", clue: "Romantic flowers", row: 2, col: 0, dir: "A" },
     { word: "EVENS", clue: "Makes level", row: 3, col: 0, dir: "A" },
     { word: "WELT", clue: "Raised mark", row: 4, col: 0, dir: "A" },
     { word: "BREW", clue: "Make coffee", row: 1, col: 0, dir: "D" },
-    { word: "PROVE", clue: "Show truth", row: 0, col: 1, dir: "D" },
+    { word: "PROVE", clue: "Back it up with evidence", row: 0, col: 1, dir: "D" },
     { word: "EASEL", clue: "Painter stand", row: 0, col: 2, dir: "D" },
-    { word: "EVENT", clue: "Happening", row: 0, col: 3, dir: "D" },
+    { word: "EVENT", clue: "Circle it on the calendar", row: 0, col: 3, dir: "D" },
     { word: "ROSS", clue: "Friends' paleontologist", row: 0, col: 4, dir: "D" },
   ] },
-  // p135 — 2026-07-29 — Wedding Party — template A
+  // p135 — 2026-07-16 — Wedding Party — template A
   { id: "p135", rows: 5, cols: 5, words: [
-    { word: "PEAT", clue: "Bog soil", row: 0, col: 0, dir: "A" },
-    { word: "ELBOW", clue: "Arm joint", row: 1, col: 0, dir: "A" },
-    { word: "EVOKE", clue: "Call up", row: 2, col: 0, dir: "A" },
+    { word: "PEAT", clue: "Whisky-smoking bog fuel", row: 0, col: 0, dir: "A" },
+    { word: "ELBOW", clue: "Funny bone location", row: 1, col: 0, dir: "A" },
+    { word: "EVOKE", clue: "Bring a memory flooding back", row: 2, col: 0, dir: "A" },
     { word: "LEVEL", clue: "Flat or tier", row: 3, col: 0, dir: "A" },
     { word: "SEND", clue: "Mail off", row: 4, col: 1, dir: "A" },
     { word: "PEEL", clue: "Remove skin", row: 0, col: 0, dir: "D" },
     { word: "ELVES", clue: "Fantasy folk", row: 0, col: 1, dir: "D" },
-    { word: "ABOVE", clue: "Higher up", row: 0, col: 2, dir: "D" },
-    { word: "TOKEN", clue: "Subway coin", row: 0, col: 3, dir: "D" },
-    { word: "WELD", clue: "Fuse metal", row: 1, col: 4, dir: "D" },
+    { word: "ABOVE", clue: "See ___ (footnote phrase)", row: 0, col: 2, dir: "D" },
+    { word: "TOKEN", clue: "Arcade prize currency", row: 0, col: 3, dir: "D" },
+    { word: "WELD", clue: "Torch two metals together", row: 1, col: 4, dir: "D" },
   ] },
-  // p136 — 2026-07-30 — Wedding Party — template C
+  // p136 — 2026-07-17 — Wedding Party — template C
   { id: "p136", rows: 5, cols: 5, words: [
     { word: "FRA", clue: "Monk's title", row: 0, col: 1, dir: "A" },
-    { word: "WOULD", clue: "Past will", row: 1, col: 0, dir: "A" },
-    { word: "ARRAY", clue: "Ordered group", row: 2, col: 0, dir: "A" },
-    { word: "SCARE", clue: "Jump moment", row: 3, col: 0, dir: "A" },
+    { word: "WOULD", clue: "If I ___...", row: 1, col: 0, dir: "A" },
+    { word: "ARRAY", clue: "A dazzling lineup", row: 2, col: 0, dir: "A" },
+    { word: "SCARE", clue: "Halloween's whole point", row: 3, col: 0, dir: "A" },
     { word: "ELM", clue: "Shade tree", row: 4, col: 1, dir: "A" },
     { word: "WAS", clue: "Existed", row: 1, col: 0, dir: "D" },
-    { word: "FORCE", clue: "Power or push", row: 0, col: 1, dir: "D" },
+    { word: "FORCE", clue: "May the ___ be with you", row: 0, col: 1, dir: "D" },
     { word: "RURAL", clue: "Country living", row: 0, col: 2, dir: "D" },
     { word: "ALARM", clue: "Warning sound", row: 0, col: 3, dir: "D" },
     { word: "DYE", clue: "Add color", row: 1, col: 4, dir: "D" },
   ] },
-  // p137 — 2026-07-31 — Wedding Party — template B
+  // p137 — 2026-07-18 — Wedding Party — template B
   { id: "p137", rows: 5, cols: 5, words: [
     { word: "SILL", clue: "Window base", row: 0, col: 1, dir: "A" },
-    { word: "SPREE", clue: "Shopping trip", row: 1, col: 0, dir: "A" },
-    { word: "WEAVE", clue: "Intertwine", row: 2, col: 0, dir: "A" },
-    { word: "ALTER", clue: "Change", row: 3, col: 0, dir: "A" },
-    { word: "GLEE", clue: "Delight", row: 4, col: 0, dir: "A" },
+    { word: "SPREE", clue: "Mall marathon", row: 1, col: 0, dir: "A" },
+    { word: "WEAVE", clue: "Basket-making technique", row: 2, col: 0, dir: "A" },
+    { word: "ALTER", clue: "Take in a wedding dress", row: 3, col: 0, dir: "A" },
+    { word: "GLEE", clue: "Pure joy", row: 4, col: 0, dir: "A" },
     { word: "SWAG", clue: "Drape", row: 1, col: 0, dir: "D" },
     { word: "SPELL", clue: "Cast a ___", row: 0, col: 1, dir: "D" },
-    { word: "IRATE", clue: "Angry", row: 0, col: 2, dir: "D" },
+    { word: "IRATE", clue: "Fuming mad", row: 0, col: 2, dir: "D" },
     { word: "LEVEE", clue: "Flood embankment", row: 0, col: 3, dir: "D" },
-    { word: "LEER", clue: "Suggestive look", row: 0, col: 4, dir: "D" },
+    { word: "LEER", clue: "Creepy stare", row: 0, col: 4, dir: "D" },
   ] },
-  // p138 — 2026-08-01 — Countdown — template A
+  // p138 — 2026-07-19 — Countdown — template A
   { id: "p138", rows: 5, cols: 5, words: [
-    { word: "MAST", clue: "Ship pole", row: 0, col: 0, dir: "A" },
+    { word: "MAST", clue: "Sailboat's tall pole", row: 0, col: 0, dir: "A" },
     { word: "IDEAL", clue: "Perfect", row: 1, col: 0, dir: "A" },
-    { word: "SMILE", clue: "Happy face", row: 2, col: 0, dir: "A" },
-    { word: "SIZES", clue: "Shirt options", row: 3, col: 0, dir: "A" },
+    { word: "SMILE", clue: "Say cheese for the camera", row: 2, col: 0, dir: "A" },
+    { word: "SIZES", clue: "Small, medium, large", row: 3, col: 0, dir: "A" },
     { word: "TEST", clue: "Exam", row: 4, col: 1, dir: "A" },
-    { word: "MISS", clue: "Long for", row: 0, col: 0, dir: "D" },
+    { word: "MISS", clue: "Wish you were here", row: 0, col: 0, dir: "D" },
     { word: "ADMIT", clue: "Confess", row: 0, col: 1, dir: "D" },
     { word: "SEIZE", clue: "Grab", row: 0, col: 2, dir: "D" },
-    { word: "TALES", clue: "Told stories", row: 0, col: 3, dir: "D" },
+    { word: "TALES", clue: "Bedtime stories", row: 0, col: 3, dir: "D" },
     { word: "LEST", clue: "Or else", row: 1, col: 4, dir: "D" },
   ] },
-  // p139 — 2026-08-02 — Countdown — template C
+  // p139 — 2026-07-20 — Countdown — template C
   { id: "p139", rows: 5, cols: 5, words: [
     { word: "DEV", clue: "Software ___", row: 0, col: 1, dir: "A" },
-    { word: "AERIE", clue: "Eagle nest high", row: 1, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Cliffside eagle's nest", row: 1, col: 0, dir: "A" },
     { word: "PLANE", clue: "Aircraft", row: 2, col: 0, dir: "A" },
     { word: "EASEL", clue: "Painter stand", row: 3, col: 0, dir: "A" },
     { word: "YES", clue: "Affirmative", row: 4, col: 1, dir: "A" },
     { word: "APE", clue: "Primate", row: 1, col: 0, dir: "D" },
-    { word: "DELAY", clue: "Put off", row: 0, col: 1, dir: "D" },
+    { word: "DELAY", clue: "Flight board's least favorite word", row: 0, col: 1, dir: "D" },
     { word: "ERASE", clue: "Remove", row: 0, col: 2, dir: "D" },
-    { word: "VINES", clue: "Dinner spot", row: 0, col: 3, dir: "D" },
+    { word: "VINES", clue: "Grapes grow on these", row: 0, col: 3, dir: "D" },
     { word: "EEL", clue: "Slippery fish", row: 1, col: 4, dir: "D" },
   ] },
-  // p140 — 2026-08-03 — Countdown — template B
+  // p140 — 2026-07-21 — Countdown — template B
   { id: "p140", rows: 5, cols: 5, words: [
-    { word: "DEEP", clue: "Far down", row: 0, col: 1, dir: "A" },
-    { word: "HEAVE", clue: "Lift hard", row: 1, col: 0, dir: "A" },
+    { word: "DEEP", clue: "In over your head, literally", row: 0, col: 1, dir: "A" },
+    { word: "HEAVE", clue: "Tug-of-war effort", row: 1, col: 0, dir: "A" },
     { word: "ELVES", clue: "Fantasy folk", row: 2, col: 0, dir: "A" },
-    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
+    { word: "EVENT", clue: "Thing on the wedding itinerary", row: 3, col: 0, dir: "A" },
     { word: "LESS", clue: "Without", row: 4, col: 0, dir: "A" },
-    { word: "HEEL", clue: "Shoe bottom", row: 1, col: 0, dir: "D" },
+    { word: "HEEL", clue: "Stiletto's bottom part", row: 1, col: 0, dir: "D" },
     { word: "DELVE", clue: "Dig deep", row: 0, col: 1, dir: "D" },
-    { word: "EAVES", clue: "Roof overhangs", row: 0, col: 2, dir: "D" },
-    { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
+    { word: "EAVES", clue: "Icicles hang from these", row: 0, col: 2, dir: "D" },
+    { word: "EVENS", clue: "Gets the score tied up", row: 0, col: 3, dir: "D" },
     { word: "PEST", clue: "Annoying critter", row: 0, col: 4, dir: "D" },
   ] },
-  // p141 — 2026-08-04 — Countdown — template A
+  // p141 — 2026-07-22 — Countdown — template A
   { id: "p141", rows: 5, cols: 5, words: [
-    { word: "PORK", clue: "Pig meat", row: 0, col: 0, dir: "A" },
-    { word: "AMONG", clue: "In the middle", row: 1, col: 0, dir: "A" },
-    { word: "REBEL", clue: "Rule breaker", row: 2, col: 0, dir: "A" },
-    { word: "AGILE", clue: "Light footed", row: 3, col: 0, dir: "A" },
+    { word: "PORK", clue: "Bacon's source", row: 0, col: 0, dir: "A" },
+    { word: "AMONG", clue: "Surrounded by", row: 1, col: 0, dir: "A" },
+    { word: "REBEL", clue: "Teen who dyes their hair blue", row: 2, col: 0, dir: "A" },
+    { word: "AGILE", clue: "Nimble on your feet", row: 3, col: 0, dir: "A" },
     { word: "ANTE", clue: "Up the ___", row: 4, col: 1, dir: "A" },
     { word: "PARA", clue: "Prefix for chute", row: 0, col: 0, dir: "D" },
     { word: "OMEGA", clue: "Last Greek letter", row: 0, col: 1, dir: "D" },
@@ -1684,310 +1684,310 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "KNELT", clue: "Got down", row: 0, col: 3, dir: "D" },
     { word: "GLEE", clue: "Delight", row: 1, col: 4, dir: "D" },
   ] },
-  // p142 — 2026-08-05 — Countdown — template C
+  // p142 — 2026-07-23 — Countdown — template C
   { id: "p142", rows: 5, cols: 5, words: [
     { word: "AVE", clue: "Roman greeting", row: 0, col: 1, dir: "A" },
-    { word: "SHELL", clue: "Beach treasure", row: 1, col: 0, dir: "A" },
-    { word: "AERIE", clue: "Eagle nest high", row: 2, col: 0, dir: "A" },
-    { word: "PASTA", clue: "Italian noodles", row: 3, col: 0, dir: "A" },
+    { word: "SHELL", clue: "Souvenir from the shore", row: 1, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Perch atop a cliff", row: 2, col: 0, dir: "A" },
+    { word: "PASTA", clue: "Spaghetti or penne", row: 3, col: 0, dir: "A" },
     { word: "DEE", clue: "Letter D", row: 4, col: 1, dir: "A" },
     { word: "SAP", clue: "Tree fluid", row: 1, col: 0, dir: "D" },
-    { word: "AHEAD", clue: "In front", row: 0, col: 1, dir: "D" },
+    { word: "AHEAD", clue: "Winning, on the scoreboard", row: 0, col: 1, dir: "D" },
     { word: "VERSE", clue: "Poem lines", row: 0, col: 2, dir: "D" },
-    { word: "ELITE", clue: "Top tier", row: 0, col: 3, dir: "D" },
+    { word: "ELITE", clue: "The cream of the crop", row: 0, col: 3, dir: "D" },
     { word: "LEA", clue: "Grassy meadow", row: 1, col: 4, dir: "D" },
   ] },
-  // p143 — 2026-08-06 — Countdown — template B
+  // p143 — 2026-07-24 — Countdown — template B
   { id: "p143", rows: 5, cols: 5, words: [
     { word: "HOME", clue: "Where the heart is", row: 0, col: 1, dir: "A" },
-    { word: "PETAL", clue: "Flower part", row: 1, col: 0, dir: "A" },
-    { word: "UNTIL", clue: "Up to when", row: 2, col: 0, dir: "A" },
-    { word: "SCENE", clue: "Take one", row: 3, col: 0, dir: "A" },
+    { word: "PETAL", clue: "Rose bit you might pluck", row: 1, col: 0, dir: "A" },
+    { word: "UNTIL", clue: "Save the date ___ then", row: 2, col: 0, dir: "A" },
+    { word: "SCENE", clue: "Director's \"cut!\" moment", row: 3, col: 0, dir: "A" },
     { word: "HERS", clue: "Belonging to her", row: 4, col: 0, dir: "A" },
-    { word: "PUSH", clue: "Shove", row: 1, col: 0, dir: "D" },
+    { word: "PUSH", clue: "Opposite of pull", row: 1, col: 0, dir: "D" },
     { word: "HENCE", clue: "From here", row: 0, col: 1, dir: "D" },
-    { word: "OTTER", clue: "River playmate", row: 0, col: 2, dir: "D" },
-    { word: "MAINS", clue: "Power supply", row: 0, col: 3, dir: "D" },
+    { word: "OTTER", clue: "Holds hands with its raft while sleeping", row: 0, col: 2, dir: "D" },
+    { word: "MAINS", clue: "Entrees on the menu", row: 0, col: 3, dir: "D" },
     { word: "ELLE", clue: "She, in Paris", row: 0, col: 4, dir: "D" },
   ] },
-  // p144 — 2026-08-07 — Countdown — template A
+  // p144 — 2026-07-25 — Countdown — template A
   { id: "p144", rows: 5, cols: 5, words: [
-    { word: "ROAD", clue: "Street", row: 0, col: 0, dir: "A" },
+    { word: "ROAD", clue: "What the trip is named after", row: 0, col: 0, dir: "A" },
     { word: "ATLAS", clue: "Map book", row: 1, col: 0, dir: "A" },
-    { word: "SHONE", clue: "Past of shine", row: 2, col: 0, dir: "A" },
+    { word: "SHONE", clue: "The sun did this all day", row: 2, col: 0, dir: "A" },
     { word: "HENCE", clue: "From here", row: 3, col: 0, dir: "A" },
     { word: "REED", clue: "Marsh grass", row: 4, col: 1, dir: "A" },
-    { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "D" },
+    { word: "RASH", clue: "Hive-inducing skin reaction", row: 0, col: 0, dir: "D" },
     { word: "OTHER", clue: "Different one", row: 0, col: 1, dir: "D" },
-    { word: "ALONE", clue: "By oneself", row: 0, col: 2, dir: "D" },
-    { word: "DANCE", clue: "Two step", row: 0, col: 3, dir: "D" },
-    { word: "SEED", clue: "Plant start", row: 1, col: 4, dir: "D" },
+    { word: "ALONE", clue: "Just you, no company", row: 0, col: 2, dir: "D" },
+    { word: "DANCE", clue: "Reception floor activity", row: 0, col: 3, dir: "D" },
+    { word: "SEED", clue: "Tiny start of a sunflower", row: 1, col: 4, dir: "D" },
   ] },
-  // p145 — 2026-08-08 — Countdown — template C
+  // p145 — 2026-07-26 — Countdown — template C
   { id: "p145", rows: 5, cols: 5, words: [
     { word: "CHO", clue: "Margaret the comedian", row: 0, col: 1, dir: "A" },
-    { word: "THING", clue: "Object", row: 1, col: 0, dir: "A" },
-    { word: "RINSE", clue: "Wash lightly", row: 2, col: 0, dir: "A" },
-    { word: "ANGER", clue: "Fury", row: 3, col: 0, dir: "A" },
+    { word: "THING", clue: "Whatchamacallit", row: 1, col: 0, dir: "A" },
+    { word: "RINSE", clue: "Shampoo, then ___", row: 2, col: 0, dir: "A" },
+    { word: "ANGER", clue: "Steam-coming-out-of-ears feeling", row: 3, col: 0, dir: "A" },
     { word: "GET", clue: "Obtain", row: 4, col: 1, dir: "A" },
     { word: "TRA", clue: "La-la lead-in", row: 1, col: 0, dir: "D" },
     { word: "CHING", clue: "I ___ (ancient text)", row: 0, col: 1, dir: "D" },
-    { word: "HINGE", clue: "Door swinger", row: 0, col: 2, dir: "D" },
-    { word: "ONSET", clue: "Beginning", row: 0, col: 3, dir: "D" },
+    { word: "HINGE", clue: "What a door swings on", row: 0, col: 2, dir: "D" },
+    { word: "ONSET", clue: "Kickoff point", row: 0, col: 3, dir: "D" },
     { word: "GER", clue: "Mongolian tent", row: 1, col: 4, dir: "D" },
   ] },
-  // p146 — 2026-08-09 — Countdown — template B
+  // p146 — 2026-07-27 — Countdown — template B
   { id: "p146", rows: 5, cols: 5, words: [
     { word: "ALAS", clue: "Sigh of regret", row: 0, col: 1, dir: "A" },
-    { word: "DROVE", clue: "Past of drive", row: 1, col: 0, dir: "A" },
-    { word: "ROYAL", clue: "Kingly", row: 2, col: 0, dir: "A" },
+    { word: "DROVE", clue: "Took the wheel, once", row: 1, col: 0, dir: "A" },
+    { word: "ROYAL", clue: "Fit for a crown", row: 2, col: 0, dir: "A" },
     { word: "EMAIL", clue: "Digital letter", row: 3, col: 0, dir: "A" },
     { word: "WALL", clue: "Room divider", row: 4, col: 0, dir: "A" },
-    { word: "DREW", clue: "Past of draw", row: 1, col: 0, dir: "D" },
+    { word: "DREW", clue: "Sketched, once", row: 1, col: 0, dir: "D" },
     { word: "AROMA", clue: "Pleasant smell", row: 0, col: 1, dir: "D" },
     { word: "LOYAL", clue: "Faithful", row: 0, col: 2, dir: "D" },
-    { word: "AVAIL", clue: "Benefit", row: 0, col: 3, dir: "D" },
+    { word: "AVAIL", clue: "Use, as to no ___", row: 0, col: 3, dir: "D" },
     { word: "SELL", clue: "Exchange", row: 0, col: 4, dir: "D" },
   ] },
-  // p147 — 2026-08-10 — Countdown — template A
+  // p147 — 2026-07-28 — Countdown — template A
   { id: "p147", rows: 5, cols: 5, words: [
     { word: "NASH", clue: "Ogden the poet", row: 0, col: 0, dir: "A" },
     { word: "ETHER", clue: "Anesthetic of old", row: 1, col: 0, dir: "A" },
-    { word: "ALONE", clue: "By oneself", row: 2, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Flying solo", row: 2, col: 0, dir: "A" },
     { word: "LANCE", clue: "Knights weapon", row: 3, col: 0, dir: "A" },
     { word: "SEED", clue: "Plant start", row: 4, col: 1, dir: "A" },
     { word: "NEAL", clue: "Patrick Harris of stage", row: 0, col: 0, dir: "D" },
-    { word: "ATLAS", clue: "Map book", row: 0, col: 1, dir: "D" },
+    { word: "ATLAS", clue: "Shrugged guy, in a novel title", row: 0, col: 1, dir: "D" },
     { word: "SHONE", clue: "Past of shine", row: 0, col: 2, dir: "D" },
-    { word: "HENCE", clue: "From here", row: 0, col: 3, dir: "D" },
+    { word: "HENCE", clue: "For this reason", row: 0, col: 3, dir: "D" },
     { word: "REED", clue: "Marsh grass", row: 1, col: 4, dir: "D" },
   ] },
-  // p148 — 2026-08-11 — Countdown — template C
+  // p148 — 2026-07-29 — Countdown — template C
   { id: "p148", rows: 5, cols: 5, words: [
-    { word: "AMA", clue: "Japanese pearl diver", row: 0, col: 1, dir: "A" },
-    { word: "AGING", clue: "Getting older", row: 1, col: 0, dir: "A" },
+    { word: "AMA", clue: "Reddit Q&A session, for short", row: 0, col: 1, dir: "A" },
+    { word: "AGING", clue: "Like fine wine", row: 1, col: 0, dir: "A" },
     { word: "MERGE", clue: "Come together", row: 2, col: 0, dir: "A" },
     { word: "INTRO", clue: "Opening", row: 3, col: 0, dir: "A" },
     { word: "THY", clue: "Your, old-style", row: 4, col: 1, dir: "A" },
-    { word: "AMI", clue: "French pal", row: 1, col: 0, dir: "D" },
+    { word: "AMI", clue: "Buddy, en francais", row: 1, col: 0, dir: "D" },
     { word: "AGENT", clue: "Representative", row: 0, col: 1, dir: "D" },
     { word: "MIRTH", clue: "Merriment", row: 0, col: 2, dir: "D" },
     { word: "ANGRY", clue: "Furious", row: 0, col: 3, dir: "D" },
     { word: "GEO", clue: "Prefix for graphy", row: 1, col: 4, dir: "D" },
   ] },
-  // p149 — 2026-08-12 — Countdown — template B
+  // p149 — 2026-07-30 — Countdown — template B
   { id: "p149", rows: 5, cols: 5, words: [
     { word: "DEBT", clue: "Money owed", row: 0, col: 1, dir: "A" },
-    { word: "TIARA", clue: "Crown", row: 1, col: 0, dir: "A" },
+    { word: "TIARA", clue: "Pageant queen's headgear", row: 1, col: 0, dir: "A" },
     { word: "HOTEL", clue: "Place to stay", row: 2, col: 0, dir: "A" },
     { word: "IDEAL", clue: "Perfect", row: 3, col: 0, dir: "A" },
     { word: "SEND", clue: "Mail off", row: 4, col: 0, dir: "A" },
-    { word: "THIS", clue: "Right here", row: 1, col: 0, dir: "D" },
+    { word: "THIS", clue: "Not that, but ___", row: 1, col: 0, dir: "D" },
     { word: "DIODE", clue: "One-way circuit part", row: 0, col: 1, dir: "D" },
     { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
     { word: "BREAD", clue: "Loaf food", row: 0, col: 3, dir: "D" },
-    { word: "TALL", clue: "High", row: 0, col: 4, dir: "D" },
+    { word: "TALL", clue: "Like a giraffe", row: 0, col: 4, dir: "D" },
   ] },
-  // p150 — 2026-08-13 — Countdown — template A
+  // p150 — 2026-07-31 — Countdown — template A
   { id: "p150", rows: 5, cols: 5, words: [
     { word: "SHAM", clue: "Fake thing", row: 0, col: 0, dir: "A" },
     { word: "CIGAR", clue: "Celebration smoke", row: 1, col: 0, dir: "A" },
-    { word: "ARISE", clue: "Come up", row: 2, col: 0, dir: "A" },
+    { word: "ARISE", clue: "Get out of bed", row: 2, col: 0, dir: "A" },
     { word: "MELON", clue: "Juicy fruit", row: 3, col: 0, dir: "A" },
     { word: "DENT", clue: "Small ding", row: 4, col: 1, dir: "A" },
     { word: "SCAM", clue: "Fraud", row: 0, col: 0, dir: "D" },
-    { word: "HIRED", clue: "Brought on board", row: 0, col: 1, dir: "D" },
+    { word: "HIRED", clue: "Given the job", row: 0, col: 1, dir: "D" },
     { word: "AGILE", clue: "Light footed", row: 0, col: 2, dir: "D" },
     { word: "MASON", clue: "Bricklayer", row: 0, col: 3, dir: "D" },
     { word: "RENT", clue: "Pay to use", row: 1, col: 4, dir: "D" },
   ] },
-  // p151 — 2026-08-14 — Countdown — template C
+  // p151 — 2026-08-01 — Countdown — template C
   { id: "p151", rows: 5, cols: 5, words: [
     { word: "GAS", clue: "Pump fill-up", row: 0, col: 1, dir: "A" },
     { word: "JENNA", clue: "Bush of the Bush family", row: 1, col: 0, dir: "A" },
-    { word: "ANGER", clue: "Fury", row: 2, col: 0, dir: "A" },
+    { word: "ANGER", clue: "Steam-out-the-ears feeling", row: 2, col: 0, dir: "A" },
     { word: "BREAK", clue: "Snap apart", row: 3, col: 0, dir: "A" },
     { word: "ELK", clue: "Large deer", row: 4, col: 1, dir: "A" },
     { word: "JAB", clue: "Quick punch", row: 1, col: 0, dir: "D" },
     { word: "GENRE", clue: "Book category", row: 0, col: 1, dir: "D" },
-    { word: "ANGEL", clue: "Heavenly being", row: 0, col: 2, dir: "D" },
+    { word: "ANGEL", clue: "Halo wearer", row: 0, col: 2, dir: "D" },
     { word: "SNEAK", clue: "Move quietly", row: 0, col: 3, dir: "D" },
     { word: "ARK", clue: "Noah's boat", row: 1, col: 4, dir: "D" },
   ] },
-  // p152 — 2026-08-15 — Countdown — template B
+  // p152 — 2026-08-02 — Countdown — template B
   { id: "p152", rows: 5, cols: 5, words: [
     { word: "FLEW", clue: "Took wing", row: 0, col: 1, dir: "A" },
     { word: "OLIVE", clue: "Green fruit", row: 1, col: 0, dir: "A" },
-    { word: "PANEL", clue: "Discussion group", row: 2, col: 0, dir: "A" },
+    { word: "PANEL", clue: "Talking heads on a stage", row: 2, col: 0, dir: "A" },
     { word: "AMEND", clue: "Correct text", row: 3, col: 0, dir: "A" },
     { word: "LENS", clue: "Camera part", row: 4, col: 0, dir: "A" },
     { word: "OPAL", clue: "October birthstone", row: 1, col: 0, dir: "D" },
     { word: "FLAME", clue: "Fire tongue", row: 0, col: 1, dir: "D" },
-    { word: "LINEN", clue: "Fine fabric", row: 0, col: 2, dir: "D" },
+    { word: "LINEN", clue: "Crisp summer suit fabric", row: 0, col: 2, dir: "D" },
     { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
     { word: "WELD", clue: "Fuse metal", row: 0, col: 4, dir: "D" },
   ] },
-  // p154 — 2026-08-17 — Countdown — template C
+  // p154 — 2026-08-03 — Countdown — template C
   { id: "p154", rows: 5, cols: 5, words: [
     { word: "THO", clue: "Though, shortened", row: 0, col: 1, dir: "A" },
     { word: "SHOWN", clue: "Displayed", row: 1, col: 0, dir: "A" },
-    { word: "AERIE", clue: "Eagle nest high", row: 2, col: 0, dir: "A" },
-    { word: "DIDNT", clue: "Failed to do", row: 3, col: 0, dir: "A" },
+    { word: "AERIE", clue: "Eagle's high-rise home", row: 2, col: 0, dir: "A" },
+    { word: "DIDNT", clue: "Left it undone", row: 3, col: 0, dir: "A" },
     { word: "REG", clue: "Standard, for short", row: 4, col: 1, dir: "A" },
     { word: "SAD", clue: "Feeling blue", row: 1, col: 0, dir: "D" },
-    { word: "THEIR", clue: "Belonging to them", row: 0, col: 1, dir: "D" },
-    { word: "HORDE", clue: "Large crowd", row: 0, col: 2, dir: "D" },
-    { word: "OWING", clue: "Because of", row: 0, col: 3, dir: "D" },
+    { word: "THEIR", clue: "Not mine or yours", row: 0, col: 1, dir: "D" },
+    { word: "HORDE", clue: "Zombie movie mob", row: 0, col: 2, dir: "D" },
+    { word: "OWING", clue: "Still on the tab", row: 0, col: 3, dir: "D" },
     { word: "NET", clue: "After deductions", row: 1, col: 4, dir: "D" },
   ] },
-  // p155 — 2026-08-18 — Countdown — template B
+  // p155 — 2026-08-04 — Countdown — template B
   { id: "p155", rows: 5, cols: 5, words: [
     { word: "MACK", clue: "Big rig brand", row: 0, col: 1, dir: "A" },
     { word: "SEDAN", clue: "Four-door car", row: 1, col: 0, dir: "A" },
-    { word: "WROTE", clue: "Past wrote", row: 2, col: 0, dir: "A" },
-    { word: "AGREE", clue: "Come to terms", row: 3, col: 0, dir: "A" },
+    { word: "WROTE", clue: "Penned a letter", row: 2, col: 0, dir: "A" },
+    { word: "AGREE", clue: "See eye to eye", row: 3, col: 0, dir: "A" },
     { word: "PEER", clue: "Equal", row: 4, col: 0, dir: "A" },
     { word: "SWAP", clue: "Trade", row: 1, col: 0, dir: "D" },
     { word: "MERGE", clue: "Come together", row: 0, col: 1, dir: "D" },
-    { word: "ADORE", clue: "Love deeply", row: 0, col: 2, dir: "D" },
+    { word: "ADORE", clue: "Love to bits", row: 0, col: 2, dir: "D" },
     { word: "CATER", clue: "Feed a party", row: 0, col: 3, dir: "D" },
     { word: "KNEE", clue: "Leg joint", row: 0, col: 4, dir: "D" },
   ] },
-  // p156 — 2026-08-19 — Countdown — template A
+  // p156 — 2026-08-05 — Countdown — template A
   { id: "p156", rows: 5, cols: 5, words: [
     { word: "LAMP", clue: "Light source", row: 0, col: 0, dir: "A" },
-    { word: "ALIAS", clue: "AKA", row: 1, col: 0, dir: "A" },
+    { word: "ALIAS", clue: "Undercover name", row: 1, col: 0, dir: "A" },
     { word: "VENUE", clue: "Event location", row: 2, col: 0, dir: "A" },
-    { word: "AROSE", clue: "Got up", row: 3, col: 0, dir: "A" },
+    { word: "AROSE", clue: "Got out of bed", row: 3, col: 0, dir: "A" },
     { word: "TREK", clue: "Long hike", row: 4, col: 1, dir: "A" },
     { word: "LAVA", clue: "Molten rock", row: 0, col: 0, dir: "D" },
     { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
-    { word: "MINOR", clue: "Not major", row: 0, col: 2, dir: "D" },
+    { word: "MINOR", clue: "Not old enough to vote", row: 0, col: 2, dir: "D" },
     { word: "PAUSE", clue: "Brief stop", row: 0, col: 3, dir: "D" },
     { word: "SEEK", clue: "Search for", row: 1, col: 4, dir: "D" },
   ] },
-  // p157 — 2026-08-20 — Countdown — template C
+  // p157 — 2026-08-06 — Countdown — template C
   { id: "p157", rows: 5, cols: 5, words: [
     { word: "SPA", clue: "Wellness place", row: 0, col: 1, dir: "A" },
-    { word: "WORST", clue: "Most bad", row: 1, col: 0, dir: "A" },
-    { word: "ALIKE", clue: "Similar", row: 2, col: 0, dir: "A" },
+    { word: "WORST", clue: "Bottom of the barrel", row: 1, col: 0, dir: "A" },
+    { word: "ALIKE", clue: "Two peas in a pod", row: 2, col: 0, dir: "A" },
     { word: "PACED", clue: "Walked nervously", row: 3, col: 0, dir: "A" },
     { word: "RED", clue: "Warm color", row: 4, col: 1, dir: "A" },
-    { word: "WAP", clue: "Early mobile web protocol", row: 1, col: 0, dir: "D" },
+    { word: "WAP", clue: "Old flip-phone web standard", row: 1, col: 0, dir: "D" },
     { word: "SOLAR", clue: "Sun powered", row: 0, col: 1, dir: "D" },
     { word: "PRICE", clue: "Cost tag", row: 0, col: 2, dir: "D" },
-    { word: "ASKED", clue: "Inquired", row: 0, col: 3, dir: "D" },
+    { word: "ASKED", clue: "Popped the question, e.g.", row: 0, col: 3, dir: "D" },
     { word: "TED", clue: "Spread to dry", row: 1, col: 4, dir: "D" },
   ] },
-  // p158 — 2026-08-21 — Countdown — template B
+  // p158 — 2026-08-07 — Countdown — template B
   { id: "p158", rows: 5, cols: 5, words: [
     { word: "CREW", clue: "Team", row: 0, col: 1, dir: "A" },
-    { word: "SHORE", clue: "Waters edge", row: 1, col: 0, dir: "A" },
-    { word: "TIMES", clue: "Multiplication", row: 2, col: 0, dir: "A" },
+    { word: "SHORE", clue: "Where the waves land", row: 1, col: 0, dir: "A" },
+    { word: "TIMES", clue: "The ___, they are a-changin'", row: 2, col: 0, dir: "A" },
     { word: "ENACT", clue: "Put into law", row: 3, col: 0, dir: "A" },
-    { word: "PANT", clue: "Breathe hard", row: 4, col: 0, dir: "A" },
+    { word: "PANT", clue: "Dog on a hot day, maybe", row: 4, col: 0, dir: "A" },
     { word: "STEP", clue: "Footfall", row: 1, col: 0, dir: "D" },
     { word: "CHINA", clue: "Tea set material", row: 0, col: 1, dir: "D" },
     { word: "ROMAN", clue: "Groomsman name", row: 0, col: 2, dir: "D" },
-    { word: "ERECT", clue: "Stand tall", row: 0, col: 3, dir: "D" },
+    { word: "ERECT", clue: "Build, as a monument", row: 0, col: 3, dir: "D" },
     { word: "WEST", clue: "Sunset direction", row: 0, col: 4, dir: "D" },
   ] },
-  // p159 — 2026-08-22 — Countdown — template A
+  // p159 — 2026-08-08 — Countdown — template A
   { id: "p159", rows: 5, cols: 5, words: [
     { word: "CASH", clue: "Greenbacks", row: 0, col: 0, dir: "A" },
     { word: "OTTER", clue: "River playmate", row: 1, col: 0, dir: "A" },
-    { word: "ALONE", clue: "By oneself", row: 2, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Home ___ (Culkin film)", row: 2, col: 0, dir: "A" },
     { word: "LANCE", clue: "Knights weapon", row: 3, col: 0, dir: "A" },
     { word: "SEED", clue: "Plant start", row: 4, col: 1, dir: "A" },
     { word: "COAL", clue: "Fuel source", row: 0, col: 0, dir: "D" },
-    { word: "ATLAS", clue: "Map book", row: 0, col: 1, dir: "D" },
+    { word: "ATLAS", clue: "Shrugged guy, in a novel title", row: 0, col: 1, dir: "D" },
     { word: "STONE", clue: "Rock", row: 0, col: 2, dir: "D" },
-    { word: "HENCE", clue: "From here", row: 0, col: 3, dir: "D" },
+    { word: "HENCE", clue: "For this reason", row: 0, col: 3, dir: "D" },
     { word: "REED", clue: "Marsh grass", row: 1, col: 4, dir: "D" },
   ] },
-  // p160 — 2026-08-23 — Countdown — template C
+  // p160 — 2026-08-09 — Countdown — template C
   { id: "p160", rows: 5, cols: 5, words: [
-    { word: "ALA", clue: "In the style of", row: 0, col: 1, dir: "A" },
+    { word: "ALA", clue: "Menu phrase, ___ carte", row: 0, col: 1, dir: "A" },
     { word: "SLOPE", clue: "Incline", row: 1, col: 0, dir: "A" },
-    { word: "ULTRA", clue: "Extreme", row: 2, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "Way over the top", row: 2, col: 0, dir: "A" },
     { word: "MOTOR", clue: "Engine", row: 3, col: 0, dir: "A" },
     { word: "TON", clue: "Heavy weight", row: 4, col: 1, dir: "A" },
     { word: "SUM", clue: "Total", row: 1, col: 0, dir: "D" },
     { word: "ALLOT", clue: "Assign", row: 0, col: 1, dir: "D" },
     { word: "LOTTO", clue: "Numbers game", row: 0, col: 2, dir: "D" },
-    { word: "APRON", clue: "Kitchen cover-up", row: 0, col: 3, dir: "D" },
+    { word: "APRON", clue: "Chef's splatter shield", row: 0, col: 3, dir: "D" },
     { word: "EAR", clue: "Listen well", row: 1, col: 4, dir: "D" },
   ] },
-  // p161 — 2026-08-24 — Countdown — template B
+  // p161 — 2026-08-10 — Countdown — template B
   { id: "p161", rows: 5, cols: 5, words: [
     { word: "ACME", clue: "Peak", row: 0, col: 1, dir: "A" },
     { word: "SLOAN", clue: "Kettering's partner", row: 1, col: 0, dir: "A" },
-    { word: "TIMID", clue: "Shy", row: 2, col: 0, dir: "A" },
-    { word: "EVENS", clue: "Makes level", row: 3, col: 0, dir: "A" },
+    { word: "TIMID", clue: "Mouse-like, personality-wise", row: 2, col: 0, dir: "A" },
+    { word: "EVENS", clue: "2, 4, 6, and 8", row: 3, col: 0, dir: "A" },
     { word: "MESS", clue: "Disorder", row: 4, col: 0, dir: "A" },
     { word: "STEM", clue: "Plant stalk", row: 1, col: 0, dir: "D" },
     { word: "ALIVE", clue: "Living", row: 0, col: 1, dir: "D" },
     { word: "COMES", clue: "Shows up", row: 0, col: 2, dir: "D" },
-    { word: "MAINS", clue: "Power supply", row: 0, col: 3, dir: "D" },
+    { word: "MAINS", clue: "Entrees on a menu", row: 0, col: 3, dir: "D" },
     { word: "ENDS", clue: "Conclusions", row: 0, col: 4, dir: "D" },
   ] },
-  // p162 — 2026-08-25 — Countdown — template A
+  // p162 — 2026-08-11 — Countdown — template A
   { id: "p162", rows: 5, cols: 5, words: [
     { word: "SONS", clue: "Male offspring", row: 0, col: 0, dir: "A" },
     { word: "TRAIT", clue: "Characteristic", row: 1, col: 0, dir: "A" },
-    { word: "ABIDE", clue: "Stay with", row: 2, col: 0, dir: "A" },
+    { word: "ABIDE", clue: "Put up with", row: 2, col: 0, dir: "A" },
     { word: "GIVEN", clue: "Granted", row: 3, col: 0, dir: "A" },
     { word: "TEST", clue: "Exam", row: 4, col: 1, dir: "A" },
     { word: "STAG", clue: "Bachelor ___", row: 0, col: 0, dir: "D" },
     { word: "ORBIT", clue: "Circle path", row: 0, col: 1, dir: "D" },
-    { word: "NAIVE", clue: "Lacking experience", row: 0, col: 2, dir: "D" },
-    { word: "SIDES", clue: "Menu extras", row: 0, col: 3, dir: "D" },
+    { word: "NAIVE", clue: "Wide-eyed and trusting", row: 0, col: 2, dir: "D" },
+    { word: "SIDES", clue: "Fries and slaw, say", row: 0, col: 3, dir: "D" },
     { word: "TENT", clue: "Camping shelter", row: 1, col: 4, dir: "D" },
   ] },
-  // p163 — 2026-08-26 — Countdown — template C
+  // p163 — 2026-08-12 — Countdown — template C
   { id: "p163", rows: 5, cols: 5, words: [
     { word: "HAN", clue: "Solo of Star Wars", row: 0, col: 1, dir: "A" },
     { word: "CIGAR", clue: "Celebration smoke", row: 1, col: 0, dir: "A" },
-    { word: "ARISE", clue: "Come up", row: 2, col: 0, dir: "A" },
+    { word: "ARISE", clue: "Get out of bed", row: 2, col: 0, dir: "A" },
     { word: "RELAX", clue: "Calm down", row: 3, col: 0, dir: "A" },
     { word: "DEL", clue: "Delete key", row: 4, col: 1, dir: "A" },
     { word: "CAR", clue: "Vehicle", row: 1, col: 0, dir: "D" },
-    { word: "HIRED", clue: "Brought on board", row: 0, col: 1, dir: "D" },
+    { word: "HIRED", clue: "Given the job", row: 0, col: 1, dir: "D" },
     { word: "AGILE", clue: "Light footed", row: 0, col: 2, dir: "D" },
-    { word: "NASAL", clue: "Through the nose", row: 0, col: 3, dir: "D" },
-    { word: "REX", clue: "King, in Latin", row: 1, col: 4, dir: "D" },
+    { word: "NASAL", clue: "Stuffy-nose sounding", row: 0, col: 3, dir: "D" },
+    { word: "REX", clue: "T. ___ (dino nickname)", row: 1, col: 4, dir: "D" },
   ] },
-  // p164 — 2026-08-27 — Countdown — template B
+  // p164 — 2026-08-13 — Countdown — template B
   { id: "p164", rows: 5, cols: 5, words: [
     { word: "SEPT", clue: "Autumn start (abbr.)", row: 0, col: 1, dir: "A" },
-    { word: "STARE", clue: "Long look", row: 1, col: 0, dir: "A" },
+    { word: "STARE", clue: "Fixed, wide-eyed look", row: 1, col: 0, dir: "A" },
     { word: "LOGIN", clue: "Access entry", row: 2, col: 0, dir: "A" },
-    { word: "ERECT", clue: "Stand tall", row: 3, col: 0, dir: "A" },
-    { word: "WERE", clue: "Past plural be", row: 4, col: 0, dir: "A" },
+    { word: "ERECT", clue: "Build, as a monument", row: 3, col: 0, dir: "A" },
+    { word: "WERE", clue: "\"We ___ young once\"", row: 4, col: 0, dir: "A" },
     { word: "SLEW", clue: "Great number", row: 1, col: 0, dir: "D" },
     { word: "STORE", clue: "Shop", row: 0, col: 1, dir: "D" },
-    { word: "EAGER", clue: "Keen", row: 0, col: 2, dir: "D" },
-    { word: "PRICE", clue: "Cost tag", row: 0, col: 3, dir: "D" },
+    { word: "EAGER", clue: "Raring to go", row: 0, col: 2, dir: "D" },
+    { word: "PRICE", clue: "What's on the sticker", row: 0, col: 3, dir: "D" },
     { word: "TENT", clue: "Camping shelter", row: 0, col: 4, dir: "D" },
   ] },
-  // p165 — 2026-08-28 — Countdown — template A
+  // p165 — 2026-08-14 — Countdown — template A
   { id: "p165", rows: 5, cols: 5, words: [
-    { word: "DARE", clue: "Be bold", row: 0, col: 0, dir: "A" },
+    { word: "DARE", clue: "Truth or ___", row: 0, col: 0, dir: "A" },
     { word: "ALARM", clue: "Warning sound", row: 1, col: 0, dir: "A" },
     { word: "METRO", clue: "City train", row: 2, col: 0, dir: "A" },
-    { word: "PRIOR", clue: "Before", row: 3, col: 0, dir: "A" },
+    { word: "PRIOR", clue: "Coming before", row: 3, col: 0, dir: "A" },
     { word: "TORN", clue: "Ripped apart", row: 4, col: 1, dir: "A" },
     { word: "DAMP", clue: "A bit wet", row: 0, col: 0, dir: "D" },
     { word: "ALERT", clue: "On guard", row: 0, col: 1, dir: "D" },
     { word: "RATIO", clue: "Proportion", row: 0, col: 2, dir: "D" },
-    { word: "ERROR", clue: "My bad", row: 0, col: 3, dir: "D" },
+    { word: "ERROR", clue: "Oops moment", row: 0, col: 3, dir: "D" },
     { word: "MORN", clue: "Daybreak", row: 1, col: 4, dir: "D" },
   ] },
-  // p166 — 2026-08-29 — Countdown — template C
+  // p166 — 2026-08-15 — Countdown — template C
   { id: "p166", rows: 5, cols: 5, words: [
     { word: "JAB", clue: "Quick punch", row: 0, col: 1, dir: "A" },
-    { word: "LEGAL", clue: "By the law", row: 1, col: 0, dir: "A" },
-    { word: "ELITE", clue: "Top tier", row: 2, col: 0, dir: "A" },
+    { word: "LEGAL", clue: "On the right side of the law", row: 1, col: 0, dir: "A" },
+    { word: "ELITE", clue: "Cream of the crop", row: 2, col: 0, dir: "A" },
     { word: "ALLOT", clue: "Assign", row: 3, col: 0, dir: "A" },
     { word: "YEN", clue: "Japanese currency", row: 4, col: 1, dir: "A" },
     { word: "LEA", clue: "Grassy meadow", row: 1, col: 0, dir: "D" },
@@ -1996,59 +1996,59 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "BATON", clue: "Relay passer", row: 0, col: 3, dir: "D" },
     { word: "LET", clue: "Allow", row: 1, col: 4, dir: "D" },
   ] },
-  // p167 — 2026-08-30 — Countdown — template B
+  // p167 — 2026-08-16 — Countdown — template B
   { id: "p167", rows: 5, cols: 5, words: [
     { word: "CEST", clue: "C'___ la vie", row: 0, col: 1, dir: "A" },
-    { word: "SHAME", clue: "Embarrassment", row: 1, col: 0, dir: "A" },
+    { word: "SHAME", clue: "Red-faced feeling", row: 1, col: 0, dir: "A" },
     { word: "TITAN", clue: "Giant", row: 2, col: 0, dir: "A" },
-    { word: "ALERT", clue: "On guard", row: 3, col: 0, dir: "A" },
+    { word: "ALERT", clue: "Eyes-open and watchful", row: 3, col: 0, dir: "A" },
     { word: "RENT", clue: "Pay to use", row: 4, col: 0, dir: "A" },
     { word: "STAR", clue: "Shining one", row: 1, col: 0, dir: "D" },
     { word: "CHILE", clue: "South American country", row: 0, col: 1, dir: "D" },
     { word: "EATEN", clue: "Consumed", row: 0, col: 2, dir: "D" },
-    { word: "SMART", clue: "Clever", row: 0, col: 3, dir: "D" },
+    { word: "SMART", clue: "Sharp as a tack", row: 0, col: 3, dir: "D" },
     { word: "TENT", clue: "Camping shelter", row: 0, col: 4, dir: "D" },
   ] },
-  // p168 — 2026-08-31 — Countdown — template A
+  // p168 — 2026-08-17 — Countdown — template A
   { id: "p168", rows: 5, cols: 5, words: [
-    { word: "FACT", clue: "Truth", row: 0, col: 0, dir: "A" },
+    { word: "FACT", clue: "Not fiction", row: 0, col: 0, dir: "A" },
     { word: "ASHEN", clue: "Pale", row: 1, col: 0, dir: "A" },
     { word: "RHINO", clue: "Horned beast", row: 2, col: 0, dir: "A" },
-    { word: "MELON", clue: "Juicy fruit", row: 3, col: 0, dir: "A" },
+    { word: "MELON", clue: "Picnic slice, seeds and all", row: 3, col: 0, dir: "A" },
     { word: "SIRE", clue: "Father of a foal", row: 4, col: 1, dir: "A" },
     { word: "FARM", clue: "Grow crops", row: 0, col: 0, dir: "D" },
     { word: "ASHES", clue: "Fire remains", row: 0, col: 1, dir: "D" },
     { word: "CHILI", clue: "Spicy dish", row: 0, col: 2, dir: "D" },
-    { word: "TENOR", clue: "Opera voice", row: 0, col: 3, dir: "D" },
+    { word: "TENOR", clue: "High male opera voice", row: 0, col: 3, dir: "D" },
     { word: "NONE", clue: "Zero", row: 1, col: 4, dir: "D" },
   ] },
-  // p169 — 2026-09-01 — Final Countdown — template C
+  // p169 — 2026-08-18 — Final Countdown — template C
   { id: "p169", rows: 5, cols: 5, words: [
     { word: "CAD", clue: "Ungentlemanly sort", row: 0, col: 1, dir: "A" },
     { word: "BASES", clue: "Foundations", row: 1, col: 0, dir: "A" },
     { word: "UNCLE", clue: "Parent's brother", row: 2, col: 0, dir: "A" },
-    { word: "NAIVE", clue: "Lacking experience", row: 3, col: 0, dir: "A" },
+    { word: "NAIVE", clue: "Wide-eyed and trusting", row: 3, col: 0, dir: "A" },
     { word: "LIE", clue: "Fib", row: 4, col: 1, dir: "A" },
     { word: "BUN", clue: "Bread roll", row: 1, col: 0, dir: "D" },
     { word: "CANAL", clue: "Waterway passage", row: 0, col: 1, dir: "D" },
-    { word: "ASCII", clue: "Basic text code", row: 0, col: 2, dir: "D" },
-    { word: "DELVE", clue: "Dig deep", row: 0, col: 3, dir: "D" },
+    { word: "ASCII", clue: "Old text-encoding standard", row: 0, col: 2, dir: "D" },
+    { word: "DELVE", clue: "Dig into research", row: 0, col: 3, dir: "D" },
     { word: "SEE", clue: "Lay eyes on", row: 1, col: 4, dir: "D" },
   ] },
-  // p170 — 2026-09-02 — Final Countdown — template B
+  // p170 — 2026-08-19 — Final Countdown — template B
   { id: "p170", rows: 5, cols: 5, words: [
     { word: "CASE", clue: "Container", row: 0, col: 1, dir: "A" },
     { word: "ALPHA", clue: "First in Greek", row: 1, col: 0, dir: "A" },
     { word: "ROPES", clue: "Know the ___", row: 2, col: 0, dir: "A" },
     { word: "INLET", clue: "Narrow waterway", row: 3, col: 0, dir: "A" },
     { word: "DEER", clue: "Forest animal", row: 4, col: 0, dir: "A" },
-    { word: "ARID", clue: "Very dry", row: 1, col: 0, dir: "D" },
-    { word: "CLONE", clue: "Copy of", row: 0, col: 1, dir: "D" },
+    { word: "ARID", clue: "Desert-dry", row: 1, col: 0, dir: "D" },
+    { word: "CLONE", clue: "Genetic duplicate, say", row: 0, col: 1, dir: "D" },
     { word: "APPLE", clue: "iPhone maker", row: 0, col: 2, dir: "D" },
     { word: "SHEER", clue: "See through", row: 0, col: 3, dir: "D" },
     { word: "EAST", clue: "Direction", row: 0, col: 4, dir: "D" },
   ] },
-  // p171 — 2026-09-03 — Final Countdown — template A
+  // p171 — 2026-08-20 — Final Countdown — template A
   { id: "p171", rows: 5, cols: 5, words: [
     { word: "SODA", clue: "Fizzy drink", row: 0, col: 0, dir: "A" },
     { word: "CRIED", clue: "Shed tears", row: 1, col: 0, dir: "A" },
@@ -2061,263 +2061,263 @@ export const RAW_PUZZLES: RawPuzzleData[] = [
     { word: "AERIE", clue: "Eagle nest high", row: 0, col: 3, dir: "D" },
     { word: "DEAL", clue: "Bargain", row: 1, col: 4, dir: "D" },
   ] },
-  // p172 — 2026-09-04 — Final Countdown — template C
+  // p172 — 2026-08-21 — Final Countdown — template C
   { id: "p172", rows: 5, cols: 5, words: [
     { word: "FIG", clue: "Sweet fruit", row: 0, col: 1, dir: "A" },
     { word: "CAROL", clue: "Joyful song", row: 1, col: 0, dir: "A" },
-    { word: "IVORY", clue: "Cream white", row: 2, col: 0, dir: "A" },
+    { word: "IVORY", clue: "Piano key color", row: 2, col: 0, dir: "A" },
     { word: "TONGS", clue: "Salad grabbers", row: 3, col: 0, dir: "A" },
     { word: "RYE", clue: "Bread grain", row: 4, col: 1, dir: "A" },
-    { word: "CIT", clue: "Mention, briefly", row: 1, col: 0, dir: "D" },
+    { word: "CIT", clue: "Ref an old article, briefly", row: 1, col: 0, dir: "D" },
     { word: "FAVOR", clue: "Wedding gift", row: 0, col: 1, dir: "D" },
     { word: "IRONY", clue: "Contradiction", row: 0, col: 2, dir: "D" },
     { word: "GORGE", clue: "Deep ravine", row: 0, col: 3, dir: "D" },
     { word: "LYS", clue: "Fleur-de-___", row: 1, col: 4, dir: "D" },
   ] },
-  // p173 — 2026-09-05 — Final Countdown — template B
+  // p173 — 2026-08-22 — Final Countdown — template B
   { id: "p173", rows: 5, cols: 5, words: [
     { word: "THAN", clue: "Comparison word", row: 0, col: 1, dir: "A" },
     { word: "FRAME", clue: "Picture holder", row: 1, col: 0, dir: "A" },
     { word: "EAVES", clue: "Roof overhangs", row: 2, col: 0, dir: "A" },
     { word: "SCENT", clue: "Pleasant smell", row: 3, col: 0, dir: "A" },
-    { word: "TEND", clue: "Care for", row: 4, col: 0, dir: "A" },
-    { word: "FEST", clue: "Celebration", row: 1, col: 0, dir: "D" },
+    { word: "TEND", clue: "Look after the garden", row: 4, col: 0, dir: "A" },
+    { word: "FEST", clue: "Beer ___ (Oktoberfest cousin)", row: 1, col: 0, dir: "D" },
     { word: "TRACE", clue: "Small hint", row: 0, col: 1, dir: "D" },
     { word: "HAVEN", clue: "Safe harbor", row: 0, col: 2, dir: "D" },
     { word: "AMEND", clue: "Correct text", row: 0, col: 3, dir: "D" },
     { word: "NEST", clue: "Bird home", row: 0, col: 4, dir: "D" },
   ] },
-  // p174 — 2026-09-06 — Final Countdown — template A
+  // p174 — 2026-08-23 — Final Countdown — template A
   { id: "p174", rows: 5, cols: 5, words: [
     { word: "LISP", clue: "Speech quirk", row: 0, col: 0, dir: "A" },
-    { word: "INTER", clue: "Bury", row: 1, col: 0, dir: "A" },
+    { word: "INTER", clue: "Lay to rest", row: 1, col: 0, dir: "A" },
     { word: "STATE", clue: "Condition", row: 2, col: 0, dir: "A" },
     { word: "TRIAL", clue: "Legal hearing", row: 3, col: 0, dir: "A" },
     { word: "ONLY", clue: "Sole", row: 4, col: 1, dir: "A" },
-    { word: "LIST", clue: "Enumeration", row: 0, col: 0, dir: "D" },
+    { word: "LIST", clue: "Grocery rundown", row: 0, col: 0, dir: "D" },
     { word: "INTRO", clue: "Opening", row: 0, col: 1, dir: "D" },
     { word: "STAIN", clue: "Hard to remove", row: 0, col: 2, dir: "D" },
     { word: "PETAL", clue: "Flower part", row: 0, col: 3, dir: "D" },
     { word: "RELY", clue: "Depend on", row: 1, col: 4, dir: "D" },
   ] },
-  // p175 — 2026-09-07 — Final Countdown — template C
+  // p175 — 2026-08-24 — Final Countdown — template C
   { id: "p175", rows: 5, cols: 5, words: [
     { word: "AMP", clue: "Guitar booster", row: 0, col: 1, dir: "A" },
     { word: "CHEAT", clue: "Break the rules", row: 1, col: 0, dir: "A" },
     { word: "AERIE", clue: "Eagle nest high", row: 2, col: 0, dir: "A" },
     { word: "LARGE", clue: "Big", row: 3, col: 0, dir: "A" },
     { word: "DYE", clue: "Add color", row: 4, col: 1, dir: "A" },
-    { word: "CAL", clue: "Bears' school (abbr.)", row: 1, col: 0, dir: "D" },
-    { word: "AHEAD", clue: "In front", row: 0, col: 1, dir: "D" },
+    { word: "CAL", clue: "Golden Bears' state, briefly", row: 1, col: 0, dir: "D" },
+    { word: "AHEAD", clue: "Winning, on a scoreboard", row: 0, col: 1, dir: "D" },
     { word: "MERRY", clue: "Festive", row: 0, col: 2, dir: "D" },
     { word: "PAIGE", clue: "Wedding party member", row: 0, col: 3, dir: "D" },
     { word: "TEE", clue: "Golf stand", row: 1, col: 4, dir: "D" },
   ] },
-  // p176 — 2026-09-08 — Final Countdown — template B
+  // p176 — 2026-08-25 — Final Countdown — template B
   { id: "p176", rows: 5, cols: 5, words: [
-    { word: "ARID", clue: "Very dry", row: 0, col: 1, dir: "A" },
-    { word: "CLONE", clue: "Copy of", row: 1, col: 0, dir: "A" },
+    { word: "ARID", clue: "Like the Sahara", row: 0, col: 1, dir: "A" },
+    { word: "CLONE", clue: "Dolly the sheep, notably", row: 1, col: 0, dir: "A" },
     { word: "ROUTE", clue: "Travel path", row: 2, col: 0, dir: "A" },
-    { word: "ANGER", clue: "Fury", row: 3, col: 0, dir: "A" },
+    { word: "ANGER", clue: "See red", row: 3, col: 0, dir: "A" },
     { word: "BEER", clue: "Malt drink", row: 4, col: 0, dir: "A" },
     { word: "CRAB", clue: "Pinchy crustacean", row: 1, col: 0, dir: "D" },
-    { word: "ALONE", clue: "By oneself", row: 0, col: 1, dir: "D" },
+    { word: "ALONE", clue: "Without company", row: 0, col: 1, dir: "D" },
     { word: "ROUGE", clue: "Red cosmetic", row: 0, col: 2, dir: "D" },
-    { word: "INTER", clue: "Bury", row: 0, col: 3, dir: "D" },
+    { word: "INTER", clue: "Lay to rest", row: 0, col: 3, dir: "D" },
     { word: "DEER", clue: "Forest animal", row: 0, col: 4, dir: "D" },
   ] },
-  // p177 — 2026-09-09 — Final Countdown — template A
+  // p177 — 2026-08-26 — Final Countdown — template A
   { id: "p177", rows: 5, cols: 5, words: [
     { word: "STAG", clue: "Bachelor ___", row: 0, col: 0, dir: "A" },
     { word: "PILOT", clue: "Fly the plane", row: 1, col: 0, dir: "A" },
     { word: "ADORE", clue: "Love deeply", row: 2, col: 0, dir: "A" },
-    { word: "MANGA", clue: "Japanese comic", row: 3, col: 0, dir: "A" },
+    { word: "MANGA", clue: "Comic genre with big eyes and speed lines", row: 3, col: 0, dir: "A" },
     { word: "LEER", clue: "Suggestive look", row: 4, col: 1, dir: "A" },
-    { word: "SPAM", clue: "Junk mail", row: 0, col: 0, dir: "D" },
+    { word: "SPAM", clue: "Inbox clutter", row: 0, col: 0, dir: "D" },
     { word: "TIDAL", clue: "Wave like", row: 0, col: 1, dir: "D" },
-    { word: "ALONE", clue: "By oneself", row: 0, col: 2, dir: "D" },
+    { word: "ALONE", clue: "Solo, no plus-one", row: 0, col: 2, dir: "D" },
     { word: "GORGE", clue: "Deep ravine", row: 0, col: 3, dir: "D" },
     { word: "TEAR", clue: "Drop of emotion", row: 1, col: 4, dir: "D" },
   ] },
-  // p178 — 2026-09-10 — Final Countdown — template C
+  // p178 — 2026-08-27 — Final Countdown — template C
   { id: "p178", rows: 5, cols: 5, words: [
     { word: "MAO", clue: "Chairman of China", row: 0, col: 1, dir: "A" },
     { word: "JERRY", clue: "Tom's mouse foe", row: 1, col: 0, dir: "A" },
-    { word: "ADOBE", clue: "Clay brick", row: 2, col: 0, dir: "A" },
+    { word: "ADOBE", clue: "Sun-dried building block", row: 2, col: 0, dir: "A" },
     { word: "BASIN", clue: "Wash bowl", row: 3, col: 0, dir: "A" },
     { word: "LET", clue: "Allow", row: 4, col: 1, dir: "A" },
     { word: "JAB", clue: "Quick punch", row: 1, col: 0, dir: "D" },
     { word: "MEDAL", clue: "Gold silver bronze", row: 0, col: 1, dir: "D" },
-    { word: "AROSE", clue: "Got up", row: 0, col: 2, dir: "D" },
+    { word: "AROSE", clue: "Got out of bed", row: 0, col: 2, dir: "D" },
     { word: "ORBIT", clue: "Circle path", row: 0, col: 3, dir: "D" },
     { word: "YEN", clue: "Japanese currency", row: 1, col: 4, dir: "D" },
   ] },
-  // p179 — 2026-09-11 — Final Countdown — template B
+  // p179 — 2026-08-28 — Final Countdown — template B
   { id: "p179", rows: 5, cols: 5, words: [
     { word: "PUSH", clue: "Shove", row: 0, col: 1, dir: "A" },
     { word: "HENCE", clue: "From here", row: 1, col: 0, dir: "A" },
-    { word: "UTTER", clue: "Complete", row: 2, col: 0, dir: "A" },
+    { word: "UTTER", clue: "Total, as nonsense", row: 2, col: 0, dir: "A" },
     { word: "GAINS", clue: "Earnings", row: 3, col: 0, dir: "A" },
     { word: "ELLE", clue: "She, in Paris", row: 4, col: 0, dir: "A" },
-    { word: "HUGE", clue: "Enormous", row: 1, col: 0, dir: "D" },
+    { word: "HUGE", clue: "Larger than life", row: 1, col: 0, dir: "D" },
     { word: "PETAL", clue: "Flower part", row: 0, col: 1, dir: "D" },
-    { word: "UNTIL", clue: "Up to when", row: 0, col: 2, dir: "D" },
+    { word: "UNTIL", clue: "Waiting for the day when", row: 0, col: 2, dir: "D" },
     { word: "SCENE", clue: "Take one", row: 0, col: 3, dir: "D" },
     { word: "HERS", clue: "Belonging to her", row: 0, col: 4, dir: "D" },
   ] },
-  // p180 — 2026-09-12 — Final Countdown — template A
+  // p180 — 2026-08-29 — Final Countdown — template A
   { id: "p180", rows: 5, cols: 5, words: [
-    { word: "RASH", clue: "Hasty", row: 0, col: 0, dir: "A" },
+    { word: "RASH", clue: "Acting without thinking", row: 0, col: 0, dir: "A" },
     { word: "OTTER", clue: "River playmate", row: 1, col: 0, dir: "A" },
-    { word: "ALONE", clue: "By oneself", row: 2, col: 0, dir: "A" },
+    { word: "ALONE", clue: "Flying solo", row: 2, col: 0, dir: "A" },
     { word: "DANCE", clue: "Two step", row: 3, col: 0, dir: "A" },
     { word: "SEED", clue: "Plant start", row: 4, col: 1, dir: "A" },
-    { word: "ROAD", clue: "Street", row: 0, col: 0, dir: "D" },
+    { word: "ROAD", clue: "Route 66, e.g.", row: 0, col: 0, dir: "D" },
     { word: "ATLAS", clue: "Map book", row: 0, col: 1, dir: "D" },
     { word: "STONE", clue: "Rock", row: 0, col: 2, dir: "D" },
-    { word: "HENCE", clue: "From here", row: 0, col: 3, dir: "D" },
+    { word: "HENCE", clue: "Therefore", row: 0, col: 3, dir: "D" },
     { word: "REED", clue: "Marsh grass", row: 1, col: 4, dir: "D" },
   ] },
-  // p182 — 2026-09-14 — Final Countdown — template B
+  // p182 — 2026-08-30 — Final Countdown — template B
   { id: "p182", rows: 5, cols: 5, words: [
     { word: "CASE", clue: "Container", row: 0, col: 1, dir: "A" },
     { word: "ALPHA", clue: "First in Greek", row: 1, col: 0, dir: "A" },
     { word: "ROPES", clue: "Know the ___", row: 2, col: 0, dir: "A" },
     { word: "INLET", clue: "Narrow waterway", row: 3, col: 0, dir: "A" },
     { word: "DEEP", clue: "Far down", row: 4, col: 0, dir: "A" },
-    { word: "ARID", clue: "Very dry", row: 1, col: 0, dir: "D" },
-    { word: "CLONE", clue: "Copy of", row: 0, col: 1, dir: "D" },
+    { word: "ARID", clue: "Cactus-country climate", row: 1, col: 0, dir: "D" },
+    { word: "CLONE", clue: "Carbon copy of an organism", row: 0, col: 1, dir: "D" },
     { word: "APPLE", clue: "iPhone maker", row: 0, col: 2, dir: "D" },
-    { word: "SHEEP", clue: "Woolly animal", row: 0, col: 3, dir: "D" },
+    { word: "SHEEP", clue: "Flock member", row: 0, col: 3, dir: "D" },
     { word: "EAST", clue: "Direction", row: 0, col: 4, dir: "D" },
   ] },
-  // p183 — 2026-09-15 — Final Countdown — template A
+  // p183 — 2026-08-31 — Final Countdown — template A
   { id: "p183", rows: 5, cols: 5, words: [
-    { word: "SAVE", clue: "Keep safe", row: 0, col: 0, dir: "A" },
-    { word: "ALIVE", clue: "Living", row: 1, col: 0, dir: "A" },
+    { word: "SAVE", clue: "Ctrl+S action", row: 0, col: 0, dir: "A" },
+    { word: "ALIVE", clue: "Not just surviving, but thriving", row: 1, col: 0, dir: "A" },
     { word: "LADEN", clue: "Loaded down", row: 2, col: 0, dir: "A" },
-    { word: "TREND", clue: "Whats hot", row: 3, col: 0, dir: "A" },
+    { word: "TREND", clue: "Going viral thing", row: 3, col: 0, dir: "A" },
     { word: "MOSS", clue: "Green growth", row: 4, col: 1, dir: "A" },
     { word: "SALT", clue: "Seasoning", row: 0, col: 0, dir: "D" },
-    { word: "ALARM", clue: "Warning sound", row: 0, col: 1, dir: "D" },
+    { word: "ALARM", clue: "Snooze button's target", row: 0, col: 1, dir: "D" },
     { word: "VIDEO", clue: "Moving pictures", row: 0, col: 2, dir: "D" },
     { word: "EVENS", clue: "Makes level", row: 0, col: 3, dir: "D" },
     { word: "ENDS", clue: "Conclusions", row: 1, col: 4, dir: "D" },
   ] },
-  // p184 — 2026-09-16 — Final Countdown — template C
+  // p184 — 2026-09-01 — Final Countdown — template C
   { id: "p184", rows: 5, cols: 5, words: [
     { word: "THO", clue: "Though, shortened", row: 0, col: 1, dir: "A" },
-    { word: "WRONG", clue: "Incorrect", row: 1, col: 0, dir: "A" },
+    { word: "WRONG", clue: "Not right", row: 1, col: 0, dir: "A" },
     { word: "HORSE", clue: "Riding animal", row: 2, col: 0, dir: "A" },
-    { word: "OLDER", clue: "More aged", row: 3, col: 0, dir: "A" },
+    { word: "OLDER", clue: "Like a big sibling", row: 3, col: 0, dir: "A" },
     { word: "LET", clue: "Allow", row: 4, col: 1, dir: "A" },
-    { word: "WHO", clue: "Which person", row: 1, col: 0, dir: "D" },
+    { word: "WHO", clue: "Doctor ___ (sci-fi show)", row: 1, col: 0, dir: "D" },
     { word: "TROLL", clue: "Bridge-dwelling foe", row: 0, col: 1, dir: "D" },
     { word: "HORDE", clue: "Large crowd", row: 0, col: 2, dir: "D" },
-    { word: "ONSET", clue: "Beginning", row: 0, col: 3, dir: "D" },
+    { word: "ONSET", clue: "Start of symptoms", row: 0, col: 3, dir: "D" },
     { word: "GER", clue: "Mongolian tent", row: 1, col: 4, dir: "D" },
   ] },
-  // p185 — 2026-09-17 — Final Countdown — template B
+  // p185 — 2026-09-02 — Final Countdown — template B
   { id: "p185", rows: 5, cols: 5, words: [
-    { word: "SWIM", clue: "Water sport", row: 0, col: 1, dir: "A" },
+    { word: "SWIM", clue: "Pool activity", row: 0, col: 1, dir: "A" },
     { word: "CHICO", clue: "A Marx brother", row: 1, col: 0, dir: "A" },
     { word: "RADIO", clue: "Broadcast box", row: 2, col: 0, dir: "A" },
-    { word: "AMEND", clue: "Correct text", row: 3, col: 0, dir: "A" },
+    { word: "AMEND", clue: "Fix, as a law", row: 3, col: 0, dir: "A" },
     { word: "BERG", clue: "Ice mass", row: 4, col: 0, dir: "A" },
     { word: "CRAB", clue: "Pinchy crustacean", row: 1, col: 0, dir: "D" },
-    { word: "SHAME", clue: "Embarrassment", row: 0, col: 1, dir: "D" },
+    { word: "SHAME", clue: "\"What a waste\" feeling", row: 0, col: 1, dir: "D" },
     { word: "WIDER", clue: "More broad", row: 0, col: 2, dir: "D" },
     { word: "ICING", clue: "Cake topper", row: 0, col: 3, dir: "D" },
-    { word: "MOOD", clue: "Feeling", row: 0, col: 4, dir: "D" },
+    { word: "MOOD", clue: "Vibe check result", row: 0, col: 4, dir: "D" },
   ] },
-  // p186 — 2026-09-18 — Final Countdown — template A
+  // p186 — 2026-09-03 — Final Countdown — template A
   { id: "p186", rows: 5, cols: 5, words: [
-    { word: "STUB", clue: "Blunt end", row: 0, col: 0, dir: "A" },
+    { word: "STUB", clue: "Ticket remnant", row: 0, col: 0, dir: "A" },
     { word: "CANAL", clue: "Waterway passage", row: 1, col: 0, dir: "A" },
-    { word: "ARISE", clue: "Come up", row: 2, col: 0, dir: "A" },
+    { word: "ARISE", clue: "Get out of bed", row: 2, col: 0, dir: "A" },
     { word: "MOTIF", clue: "Recurring theme", row: 3, col: 0, dir: "A" },
     { word: "TENT", clue: "Camping shelter", row: 4, col: 1, dir: "A" },
-    { word: "SCAM", clue: "Fraud", row: 0, col: 0, dir: "D" },
+    { word: "SCAM", clue: "Phishing attempt", row: 0, col: 0, dir: "D" },
     { word: "TAROT", clue: "Fortune cards", row: 0, col: 1, dir: "D" },
-    { word: "UNITE", clue: "Join as one", row: 0, col: 2, dir: "D" },
+    { word: "UNITE", clue: "Come together as one", row: 0, col: 2, dir: "D" },
     { word: "BASIN", clue: "Wash bowl", row: 0, col: 3, dir: "D" },
     { word: "LEFT", clue: "Opposite of right", row: 1, col: 4, dir: "D" },
   ] },
-  // p187 — 2026-09-19 — Final Countdown — template C
+  // p187 — 2026-09-04 — Final Countdown — template C
   { id: "p187", rows: 5, cols: 5, words: [
-    { word: "MET", clue: "Encountered", row: 0, col: 1, dir: "A" },
+    { word: "MET", clue: "Bumped into", row: 0, col: 1, dir: "A" },
     { word: "MIXER", clue: "Kitchen gadget", row: 1, col: 0, dir: "A" },
-    { word: "ULTRA", clue: "Extreme", row: 2, col: 0, dir: "A" },
-    { word: "MERRY", clue: "Festive", row: 3, col: 0, dir: "A" },
+    { word: "ULTRA", clue: "Way over the top", row: 2, col: 0, dir: "A" },
+    { word: "MERRY", clue: "In high spirits", row: 3, col: 0, dir: "A" },
     { word: "SAY", clue: "Speak up", row: 4, col: 1, dir: "A" },
-    { word: "MUM", clue: "Silent", row: 1, col: 0, dir: "D" },
-    { word: "MILES", clue: "Long-distance tax", row: 0, col: 1, dir: "D" },
-    { word: "EXTRA", clue: "Additional", row: 0, col: 2, dir: "D" },
+    { word: "MUM", clue: "Keeping quiet, as \"the word\"", row: 1, col: 0, dir: "D" },
+    { word: "MILES", clue: "Odometer units", row: 0, col: 1, dir: "D" },
+    { word: "EXTRA", clue: "Bit much, as drama", row: 0, col: 2, dir: "D" },
     { word: "TERRY", clue: "Cloth for towels", row: 0, col: 3, dir: "D" },
     { word: "RAY", clue: "Beam of light", row: 1, col: 4, dir: "D" },
   ] },
-  // p188 — 2026-09-20 — Final Countdown — template B
+  // p188 — 2026-09-05 — Final Countdown — template B
   { id: "p188", rows: 5, cols: 5, words: [
     { word: "GEAR", clue: "Equipment", row: 0, col: 1, dir: "A" },
-    { word: "BLAME", clue: "Accuse", row: 1, col: 0, dir: "A" },
+    { word: "BLAME", clue: "Point the finger", row: 1, col: 0, dir: "A" },
     { word: "ROSES", clue: "Romantic flowers", row: 2, col: 0, dir: "A" },
-    { word: "EVENT", clue: "Happening", row: 3, col: 0, dir: "A" },
-    { word: "WELD", clue: "Fuse metal", row: 4, col: 0, dir: "A" },
-    { word: "BREW", clue: "Make coffee", row: 1, col: 0, dir: "D" },
+    { word: "EVENT", clue: "Big to-do on the calendar", row: 3, col: 0, dir: "A" },
+    { word: "WELD", clue: "Torch-join two metal pieces", row: 4, col: 0, dir: "A" },
+    { word: "BREW", clue: "Start a pot of coffee", row: 1, col: 0, dir: "D" },
     { word: "GLOVE", clue: "Hand cover", row: 0, col: 1, dir: "D" },
-    { word: "EASEL", clue: "Painter stand", row: 0, col: 2, dir: "D" },
+    { word: "EASEL", clue: "Holds the canvas", row: 0, col: 2, dir: "D" },
     { word: "AMEND", clue: "Correct text", row: 0, col: 3, dir: "D" },
-    { word: "REST", clue: "Take a break", row: 0, col: 4, dir: "D" },
+    { word: "REST", clue: "Kick back for a bit", row: 0, col: 4, dir: "D" },
   ] },
-  // p189 — 2026-09-21 — Final Countdown — template A
+  // p189 — 2026-09-06 — Final Countdown — template A
   { id: "p189", rows: 5, cols: 5, words: [
     { word: "MANE", clue: "Horse hair", row: 0, col: 0, dir: "A" },
-    { word: "IDEAL", clue: "Perfect", row: 1, col: 0, dir: "A" },
-    { word: "CURVE", clue: "Rounded bend", row: 2, col: 0, dir: "A" },
-    { word: "ELVES", clue: "Fantasy folk", row: 3, col: 0, dir: "A" },
+    { word: "IDEAL", clue: "Textbook perfect", row: 1, col: 0, dir: "A" },
+    { word: "CURVE", clue: "Road sign shape", row: 2, col: 0, dir: "A" },
+    { word: "ELVES", clue: "Santa's helpers", row: 3, col: 0, dir: "A" },
     { word: "TEST", clue: "Exam", row: 4, col: 1, dir: "A" },
-    { word: "MICE", clue: "Cat's targets", row: 0, col: 0, dir: "D" },
-    { word: "ADULT", clue: "Grown up", row: 0, col: 1, dir: "D" },
+    { word: "MICE", clue: "Computer clickers", row: 0, col: 0, dir: "D" },
+    { word: "ADULT", clue: "Old enough to vote", row: 0, col: 1, dir: "D" },
     { word: "NERVE", clue: "Got some ___", row: 0, col: 2, dir: "D" },
     { word: "EAVES", clue: "Roof overhangs", row: 0, col: 3, dir: "D" },
     { word: "LEST", clue: "Or else", row: 1, col: 4, dir: "D" },
   ] },
-  // p190 — 2026-09-22 — Final Countdown — template C
+  // p190 — 2026-09-07 — Final Countdown — template C
   { id: "p190", rows: 5, cols: 5, words: [
     { word: "TAB", clue: "Small bill", row: 0, col: 1, dir: "A" },
     { word: "AISLE", clue: "Wedding walkway", row: 1, col: 0, dir: "A" },
-    { word: "MAKER", clue: "Creator", row: 2, col: 0, dir: "A" },
-    { word: "ARENA", clue: "Battle ground", row: 3, col: 0, dir: "A" },
+    { word: "MAKER", clue: "One who builds it", row: 2, col: 0, dir: "A" },
+    { word: "ARENA", clue: "Where the home team plays", row: 3, col: 0, dir: "A" },
     { word: "ADD", clue: "Sum up", row: 4, col: 1, dir: "A" },
     { word: "AMA", clue: "Japanese pearl diver", row: 1, col: 0, dir: "D" },
     { word: "TIARA", clue: "Crown", row: 0, col: 1, dir: "D" },
-    { word: "ASKED", clue: "Inquired", row: 0, col: 2, dir: "D" },
+    { word: "ASKED", clue: "Popped the question, e.g.", row: 0, col: 2, dir: "D" },
     { word: "BLEND", clue: "Smoothie step", row: 0, col: 3, dir: "D" },
     { word: "ERA", clue: "Chapter", row: 1, col: 4, dir: "D" },
   ] },
-  // p192 — 2026-09-24 — Final Countdown — template A
+  // p192 — 2026-09-08 — Final Countdown — template A
   { id: "p192", rows: 5, cols: 5, words: [
-    { word: "EASE", clue: "Comfort", row: 0, col: 0, dir: "A" },
+    { word: "EASE", clue: "Take it easy", row: 0, col: 0, dir: "A" },
     { word: "ALTAR", clue: "End of the aisle", row: 1, col: 0, dir: "A" },
-    { word: "SLATE", clue: "Dark stone", row: 2, col: 0, dir: "A" },
-    { word: "TOKEN", clue: "Subway coin", row: 3, col: 0, dir: "A" },
+    { word: "SLATE", clue: "Roofing material", row: 2, col: 0, dir: "A" },
+    { word: "TOKEN", clue: "Arcade machine currency", row: 3, col: 0, dir: "A" },
     { word: "TENT", clue: "Camping shelter", row: 4, col: 1, dir: "A" },
     { word: "EAST", clue: "Direction", row: 0, col: 0, dir: "D" },
-    { word: "ALLOT", clue: "Assign", row: 0, col: 1, dir: "D" },
+    { word: "ALLOT", clue: "Divide up the budget", row: 0, col: 1, dir: "D" },
     { word: "STAKE", clue: "Claim or post", row: 0, col: 2, dir: "D" },
-    { word: "EATEN", clue: "Consumed", row: 0, col: 3, dir: "D" },
+    { word: "EATEN", clue: "Finished, as a meal", row: 0, col: 3, dir: "D" },
     { word: "RENT", clue: "Pay to use", row: 1, col: 4, dir: "D" },
   ] },
-  // p194 — 2026-09-26 — Wedding Day — template B
+  // p194 — 2026-09-09 — Wedding Day — template B
   { id: "p194", rows: 5, cols: 5, words: [
     { word: "LIAR", clue: "Fibber", row: 0, col: 1, dir: "A" },
     { word: "MANGA", clue: "Japanese comic", row: 1, col: 0, dir: "A" },
-    { word: "UNDER", clue: "Below", row: 2, col: 0, dir: "A" },
+    { word: "UNDER", clue: "Down there", row: 2, col: 0, dir: "A" },
     { word: "SCENE", clue: "Take one", row: 3, col: 0, dir: "A" },
     { word: "TEXT", clue: "Message", row: 4, col: 0, dir: "A" },
-    { word: "MUST", clue: "Have to", row: 1, col: 0, dir: "D" },
-    { word: "LANCE", clue: "Knights weapon", row: 0, col: 1, dir: "D" },
+    { word: "MUST", clue: "Absolute requirement", row: 1, col: 0, dir: "D" },
+    { word: "LANCE", clue: "Jousting pole", row: 0, col: 1, dir: "D" },
     { word: "INDEX", clue: "List guide", row: 0, col: 2, dir: "D" },
-    { word: "AGENT", clue: "Representative", row: 0, col: 3, dir: "D" },
-    { word: "RARE", clue: "Uncommon", row: 0, col: 4, dir: "D" },  ] },
+    { word: "AGENT", clue: "007, for one", row: 0, col: 3, dir: "D" },
+    { word: "RARE", clue: "Barely cooked, as steak", row: 0, col: 4, dir: "D" },  ] },
 ];
