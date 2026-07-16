@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
             },
         ],
     },
+    async rewrites() {
+        return [
+            {
+                source: "/seatingchartdesigner",
+                destination: "/seatingchartdesigner.html",
+            },
+        ];
+    },
 };
 
 export default nextConfig;

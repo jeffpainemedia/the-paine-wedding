@@ -1,0 +1,1451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>Seating Chart Designer &middot; Ashlyn &amp; Jeffrey</title>
+<style>
+  :root{
+    --navy:#163865; --burg:#7c1f28; --tan:#c89a73; --cream:#f5f1eb;
+    --muted:#657791; --ink:#1d2733; --line:#e2dcd0; --panel:#fffdf9;
+    --going:#2f7d4f; --maybe:#c08a2d; --invited:#5b7599; --declined:#a05050;
+    --shadow:0 1px 2px rgba(22,56,101,.08),0 8px 24px rgba(22,56,101,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink); background:var(--cream); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  input,textarea{-webkit-user-select:text;user-select:text}
+  img{-webkit-user-drag:none}
+  h1,h2,.serif{font-family:"Bodoni Moda","Didot",Georgia,"Times New Roman",serif;}
+  .app{display:flex;height:100vh;width:100vw}
+
+  /* ---------- Sidebar ---------- */
+  .side{
+    width:320px;min-width:320px;height:100%;background:var(--panel);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:20;
+    padding-left:env(safe-area-inset-left);transition:width .15s;
+  }
+  .side.collapsed{width:0;min-width:0;border-right:none;overflow:hidden}
+  .side-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);position:relative}
+  .side-head .kicker{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--tan);font-weight:600}
+  .side-head h1{font-size:22px;margin:2px 0 0;color:var(--navy);font-weight:600;letter-spacing:.01em}
+  .side-close{display:none;position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;
+    border:1px solid var(--line);background:#fff;color:var(--navy);align-items:center;justify-content:center;cursor:pointer}
+  .stat-row{display:flex;gap:8px;margin-top:12px}
+  .stat{flex:1;background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:center}
+  .stat b{display:block;font-size:19px;color:var(--navy);font-family:"Bodoni Moda",Georgia,serif;line-height:1}
+  .stat span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+  .search-wrap{padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+  .search{position:relative}
+  .search input{
+    width:100%;padding:9px 12px 9px 32px;border:1px solid var(--line);border-radius:9px;
+    font:inherit;font-size:13px;background:#fff;color:var(--ink);outline:none;
+  }
+  .search input:focus{border-color:var(--tan);box-shadow:0 0 0 3px rgba(200,154,115,.16)}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+  .side-filters{display:flex;gap:6px;margin-top:9px}
+  .chipbtn{
+    flex:1;font:inherit;font-size:11px;font-weight:600;padding:5px 4px;border-radius:7px;
+    border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;letter-spacing:.02em;
+  }
+  .chipbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .bank{flex:1;overflow-y:auto;padding:6px 10px 20px}
+  .acc{margin-top:6px}
+  .acc-head{
+    display:flex;align-items:center;gap:8px;width:100%;padding:8px 8px;border:none;background:none;
+    cursor:pointer;font:inherit;color:var(--ink);border-radius:8px;
+  }
+  .acc-head:hover{background:var(--cream)}
+  .acc-head .tw{transition:transform .15s;color:var(--muted);display:flex}
+  .acc.closed .tw{transform:rotate(-90deg)}
+  .acc-head .lbl{font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .acc-head .dot{width:8px;height:8px;border-radius:50%}
+  .acc-head .ct{margin-left:auto;font-size:11px;color:var(--muted);background:var(--cream);
+    border:1px solid var(--line);border-radius:20px;padding:1px 8px;font-weight:600}
+  .acc-body{padding:2px 2px 8px}
+  .acc.closed .acc-body{display:none}
+
+  .guest{
+    display:flex;align-items:center;gap:8px;padding:7px 9px;margin:3px 0;border-radius:9px;
+    background:#fff;border:1px solid var(--line);cursor:grab;user-select:none;touch-action:pan-y;
+    box-shadow:0 1px 1px rgba(22,56,101,.04);transition:border-color .12s,box-shadow .12s;
+  }
+  .guest:hover{border-color:var(--tan)}
+  .guest:active{cursor:grabbing}
+  .guest .side-bar{width:3px;align-self:stretch;border-radius:3px;margin:-1px 0}
+  .guest .nm{font-size:13px;font-weight:500;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .guest .sub{font-size:10px;color:var(--muted);line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .guest .txt{min-width:0;flex:1}
+  .guest .po{font-size:8.5px;letter-spacing:.1em;color:var(--tan);border:1px solid var(--tan);border-radius:4px;padding:0 4px;font-weight:700}
+  .guest.placed{opacity:.4;filter:saturate(.5)}
+  .empty-note{font-size:12px;color:var(--muted);text-align:center;padding:14px 8px;font-style:italic}
+
+  /* ---------- Canvas ---------- */
+  .main{flex:1;position:relative;overflow:hidden;background:
+      radial-gradient(circle at 1px 1px, rgba(22,56,101,.09) 1px, transparent 0);
+    background-size:26px 26px;background-color:#faf7f1;}
+  .toolbar{
+    position:absolute;top:calc(12px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));
+    right:calc(12px + env(safe-area-inset-right));z-index:12;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;
+    pointer-events:none;
+  }
+  .toolbar>*{pointer-events:auto}
+  .tgroup{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:4px;box-shadow:var(--shadow)}
+  .tgroup.rel{position:relative}
+  .tbtn{
+    display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;font-weight:600;
+    border:none;background:none;color:var(--navy);padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;
+  }
+  .tbtn:hover{background:var(--cream)}
+  .tbtn.primary{background:var(--navy);color:#fff}
+  .tbtn.primary:hover{background:#1f4a80}
+  .tbtn svg{flex:none}
+  .tbtn.danger:hover{background:#f6e9e9;color:var(--burg)}
+  .tbtn.active{background:var(--navy);color:#fff}
+  .tbtn:disabled{opacity:.32;cursor:default;pointer-events:none}
+  .spacer{flex:1}
+
+  #world{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+  .canvas-host{position:absolute;inset:0;touch-action:none;cursor:default}
+  .canvas-host.panning{cursor:grabbing}
+  .canvas-host.panmode{cursor:grab}
+
+  #bgImg{-webkit-user-select:none;user-select:none;touch-action:none}
+
+  .table{
+    position:absolute;transform-origin:center center;z-index:2;touch-action:none;
+  }
+  .table .surface{
+    position:absolute;inset:0;background:radial-gradient(circle at 38% 32%,#ffffff,#f2ece1);
+    border:2px solid var(--navy);box-shadow:0 3px 14px rgba(22,56,101,.14);
+  }
+  .table.round .surface{border-radius:50%}
+  .table.rect .surface{border-radius:16px}
+  .table.selected .surface{border-color:var(--burg);box-shadow:0 0 0 3px rgba(124,31,40,.18),0 3px 14px rgba(22,56,101,.14)}
+  .table .stubs{position:absolute;inset:0;pointer-events:none}
+  .table .stub{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;
+    border:1.5px solid var(--navy);transform:translate(-50%,-50%)}
+  .table .stub.filled{background:var(--navy)}
+  .table .tlabel{
+    position:absolute;left:50%;top:50%;text-align:center;
+    pointer-events:none;width:80%;
+  }
+  .table .tlabel .nm{font-family:"Bodoni Moda",Georgia,serif;color:var(--navy);font-weight:600;line-height:1.1}
+  .table .tlabel .cap{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .table .tlabel .cap.full{color:var(--going)}
+  .table .tlabel .cap.over{color:var(--burg)}
+  .table .grip{position:absolute;inset:0;cursor:move}
+  .table .tgear{
+    position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:50%;background:#fff;
+    border:1px solid var(--line);display:none;align-items:center;justify-content:center;cursor:pointer;
+    color:var(--navy);box-shadow:var(--shadow);z-index:3;
+  }
+  .table:hover .tgear,.table.selected .tgear{display:flex}
+  .table .tgear:hover{background:var(--cream)}
+
+  .mag{
+    position:absolute;transform:translate(-50%,-50%);z-index:5;touch-action:none;
+    display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:20px;
+    background:#fff;border:1.5px solid var(--line);box-shadow:0 2px 6px rgba(22,56,101,.16);
+    font-size:12px;font-weight:600;color:var(--ink);cursor:grab;user-select:none;white-space:nowrap;
+    max-width:150px;
+  }
+  .mag .mdot{width:7px;height:7px;border-radius:50%;flex:none}
+  .mag .mnm{overflow:hidden;text-overflow:ellipsis}
+  .mag:active{cursor:grabbing}
+  .mag.free{border-style:dashed}
+  .mag.selected{border-color:var(--burg);box-shadow:0 0 0 3px rgba(124,31,40,.22),0 2px 6px rgba(22,56,101,.16)}
+  .mag.dragging{z-index:60;box-shadow:0 8px 22px rgba(22,56,101,.28)}
+
+  .marquee{position:absolute;border:1.5px solid var(--burg);background:rgba(124,31,40,.08);z-index:40;pointer-events:none;border-radius:3px}
+
+  /* selection action bar */
+  .selbar{
+    position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:30;
+    background:var(--navy);color:#fff;border-radius:12px;padding:8px 10px;display:none;gap:6px;align-items:center;
+    box-shadow:0 8px 28px rgba(22,56,101,.35);
+  }
+  .selbar.show{display:flex}
+  .selbar .cnt{font-weight:700;padding:0 8px 0 4px;font-family:"Bodoni Moda",Georgia,serif;font-size:15px}
+  .selbar button{font:inherit;font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);
+    border:none;border-radius:8px;padding:7px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .selbar button:hover{background:rgba(255,255,255,.24)}
+  .selbar select{font:inherit;font-size:12px;font-weight:600;color:var(--navy);border:none;border-radius:8px;padding:7px 9px;cursor:pointer}
+
+  /* scale legend */
+  .scalepill{position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right));
+    z-index:11;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 13px;
+    box-shadow:var(--shadow);font-size:11px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:9px}
+  .scalepill .bar{height:4px;background:var(--navy);border-radius:2px;display:block}
+
+  /* modal */
+  .scrim{position:fixed;inset:0;background:rgba(22,56,101,.28);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+  .scrim.show{display:flex}
+  .modal{background:var(--panel);border-radius:16px;box-shadow:0 20px 60px rgba(22,56,101,.35);width:340px;max-width:100%;
+    max-height:88vh;overflow-y:auto;padding:20px}
+  .modal h2{margin:0 0 4px;font-size:19px;color:var(--navy);font-weight:600}
+  .modal .fld{margin-top:13px}
+  .modal label{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:5px}
+  .modal input[type=text],.modal input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:14px;outline:none}
+  .modal input:focus{border-color:var(--tan);box-shadow:0 0 0 3px rgba(200,154,115,.16)}
+  .seatstep{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content}
+  .seatstep button{width:38px;height:38px;border:none;background:#fff;font-size:20px;color:var(--navy);cursor:pointer}
+  .seatstep button:hover{background:var(--cream)}
+  .seatstep span{width:52px;text-align:center;font-size:16px;font-weight:600;font-family:"Bodoni Moda",Georgia,serif}
+  .shape-row{display:flex;gap:8px}
+  .shape-opt{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+  .shape-opt.on{border-color:var(--navy);color:var(--navy);background:var(--cream)}
+  .preset-row{display:flex;gap:6px;margin-bottom:8px}
+  .preset-opt{flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 4px;text-align:center;cursor:pointer;
+    font-size:10.5px;font-weight:600;color:var(--muted);background:#fff;line-height:1.3}
+  .preset-opt.on{border-color:var(--navy);color:var(--navy);background:var(--cream)}
+  .dimrow{display:flex;align-items:center;gap:8px}
+  .dimrow span{color:var(--muted);font-size:12px}
+  .rotrow{display:flex;align-items:center;gap:12px}
+  .rotrow button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--navy);
+    cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .rotrow button:hover{background:var(--cream)}
+  .rotrow .rotval{font-family:"Bodoni Moda",Georgia,serif;font-size:15px;font-weight:600;min-width:44px;text-align:center}
+  .modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .modal-actions button{flex:1 1 45%;font:inherit;font-size:13px;font-weight:600;padding:10px;border-radius:9px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .modal-actions .save{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .modal-actions .del{color:var(--burg);border-color:transparent}
+  .modal-actions .del:hover{background:#f6e9e9}
+
+  /* floor plan popover */
+  .popover{position:absolute;top:calc(100% + 8px);left:0;width:236px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);padding:14px;display:none;z-index:50}
+  .popover.show{display:block}
+  .popover .pop-head{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .popover .fld{margin-top:11px}
+  .popover .fld:first-child{margin-top:0}
+  .popover label{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:5px}
+  .popover input[type=file]{font-size:11px;width:100%}
+  .popover input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px}
+  .popover input[type=range]{width:100%}
+  .pop-row{display:flex;gap:6px;margin-top:12px}
+  .pop-row button{flex:1;font:inherit;font-size:11.5px;font-weight:600;padding:8px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .pop-row button.danger{color:var(--burg)}
+  .pop-row button.danger:hover{background:#f6e9e9}
+
+  .hint{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:calc(14px + env(safe-area-inset-left));z-index:11;
+    font-size:11px;color:var(--muted);background:rgba(255,253,249,.86);
+    border:1px solid var(--line);border-radius:9px;padding:6px 11px;box-shadow:var(--shadow);pointer-events:none;max-width:280px;line-height:1.5}
+  .hint b{color:var(--navy)}
+
+  .drop-hot{outline:3px dashed var(--tan);outline-offset:3px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);z-index:200;
+    background:var(--ink);color:#fff;font-size:13px;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;
+    max-width:80vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:900px){
+    .side{position:absolute;left:0;top:0;bottom:0;transition:transform .2s;width:320px;min-width:320px}
+    .side.collapsed{width:320px;min-width:320px;transform:translateX(-100%);border-right:1px solid var(--line)}
+    .side:not(.collapsed){box-shadow:8px 0 28px rgba(22,56,101,.28)}
+    .side-close{display:flex}
+  }
+  @media (max-width:760px){
+    .hint{display:none}
+  }
+  @media (max-width:480px){
+    .scalepill span:last-child{display:none}
+  }
+  @media (pointer:coarse){
+    .tbtn{min-height:40px;padding:9px 11px}
+    .guest{padding:10px 9px}
+    .chipbtn{padding:8px 4px}
+  }
+  /* file input hidden */
+  #importFile{display:none}
+  @media print{
+    .side,.toolbar,.selbar,.hint,.tgear{display:none!important}
+    .main{position:static}
+    body{overflow:visible}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="side" id="side">
+    <div class="side-head">
+      <div class="kicker">Ashlyn &amp; Jeffrey</div>
+      <h1>Seating Chart</h1>
+      <button class="side-close" id="sideClose" aria-label="Close guest list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="stat-row">
+        <div class="stat"><b id="stSeated">0</b><span>Seated</span></div>
+        <div class="stat"><b id="stTables">0</b><span>Tables</span></div>
+        <div class="stat"><b id="stBank">0</b><span>In bank</span></div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Search guests&hellip;" autocomplete="off" />
+      </div>
+      <div class="side-filters" id="sideFilters">
+        <button class="chipbtn on" data-side="all">All</button>
+        <button class="chipbtn" data-side="Jeff">Jeff</button>
+        <button class="chipbtn" data-side="Ash">Ash</button>
+      </div>
+    </div>
+    <div class="bank" id="bank"></div>
+  </aside>
+
+  <!-- CANVAS -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="tgroup">
+        <button class="tbtn" id="sidebarBtn" title="Toggle guest list"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn" id="undoBtn" title="Undo (Ctrl/Cmd+Z)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="tbtn" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn primary" id="addRound"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>Round table</button>
+        <button class="tbtn" id="addHead"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>Head table</button>
+      </div>
+      <div class="tgroup rel">
+        <button class="tbtn" id="bgBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-3-3-6 6"/></svg>Floor plan</button>
+        <div class="popover" id="bgPanel">
+          <div class="pop-head">Floor plan image</div>
+          <div class="fld">
+            <label>Upload image</label>
+            <input type="file" id="bgFile" accept="image/*" />
+          </div>
+          <div id="bgControls" style="display:none">
+            <div class="fld">
+              <label>Width (feet)</label>
+              <input type="number" id="bgWidthFt" min="1" max="500" step="1" />
+            </div>
+            <div class="fld">
+              <label>Opacity</label>
+              <input type="range" id="bgOpacity" min="20" max="100" step="5" />
+            </div>
+            <div class="pop-row">
+              <button type="button" id="bgLockBtn">Lock</button>
+              <button type="button" id="bgRemoveBtn" class="danger">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn" id="selectModeBtn" title="Box-select tool (for touch)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg></button>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn" id="zoomOutBtn" title="Zoom out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6"/></svg></button>
+        <button class="tbtn" id="zoomInBtn" title="Zoom in"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg></button>
+        <button class="tbtn" id="fitBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>Fit</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="tgroup">
+        <button class="tbtn" id="exportBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>Save file</button>
+        <button class="tbtn" id="importBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0L8 13m4-4l4 4M5 3h14"/></svg>Load</button>
+        <button class="tbtn" id="printBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>Print</button>
+        <button class="tbtn danger" id="resetBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>Clear</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" />
+    </div>
+
+    <div class="canvas-host" id="host">
+      <div id="world"></div>
+      <div class="marquee" id="marquee" style="display:none"></div>
+    </div>
+
+    <div class="selbar" id="selbar">
+      <span class="cnt" id="selCnt">0</span>
+      <select id="selAssign"><option value="">Assign to table&hellip;</option></select>
+      <button id="selBank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4M5 10h11a4 4 0 0 1 0 8h-3"/></svg>Return to bank</button>
+    </div>
+
+    <div class="scalepill" id="scalePill">
+      <span class="bar" id="scaleBar"></span>
+      <span id="scaleLbl">10 ft</span>
+    </div>
+
+    <div class="hint">
+      <b>Drag names</b> onto tables to seat them &middot; pinch to zoom &middot; one finger pans &middot; use <b>Select</b> for box-select.
+    </div>
+  </div>
+</div>
+
+<!-- TABLE MODAL -->
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <h2 id="mTitle">Edit table</h2>
+    <div class="fld">
+      <label>Table name</label>
+      <input type="text" id="mName" maxlength="40" />
+    </div>
+    <div class="fld">
+      <label>Shape</label>
+      <div class="shape-row">
+        <div class="shape-opt" data-shape="round">Round</div>
+        <div class="shape-opt" data-shape="rect">Long / head</div>
+      </div>
+    </div>
+
+    <div class="fld" id="roundSizeFld">
+      <label>Table diameter</label>
+      <div class="preset-row">
+        <div class="preset-opt" data-dia="48">48 in</div>
+        <div class="preset-opt" data-dia="60">60 in</div>
+        <div class="preset-opt" data-dia="72">72 in</div>
+      </div>
+      <input type="number" id="mDiaCustom" min="24" max="120" step="1" />
+    </div>
+
+    <div class="fld" id="rectSizeFld">
+      <label>Table dimensions</label>
+      <div class="preset-row">
+        <div class="preset-opt" data-len="72" data-wid="30">6 ft banquet</div>
+        <div class="preset-opt" data-len="96" data-wid="30">8 ft banquet</div>
+        <div class="preset-opt" data-len="48" data-wid="30">Sweetheart</div>
+      </div>
+      <div class="dimrow">
+        <input type="number" id="mLenCustom" min="24" max="240" step="1" placeholder="Length in" />
+        <span>&times;</span>
+        <input type="number" id="mWidCustom" min="18" max="72" step="1" placeholder="Width in" />
+      </div>
+    </div>
+
+    <div class="fld" id="rotFld">
+      <label>Rotation</label>
+      <div class="rotrow">
+        <button type="button" id="mRotCCW" title="Rotate counter-clockwise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 3v5h5"/></svg></button>
+        <span class="rotval" id="mRotVal">0&deg;</span>
+        <button type="button" id="mRotCW" title="Rotate clockwise" style="transform:scaleX(-1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 3v5h5"/></svg></button>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>Seats</label>
+      <div class="seatstep">
+        <button id="mMinus">&minus;</button><span id="mSeats">8</span><button id="mPlus">+</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="del" id="mDelete">Delete</button>
+      <button id="mDup">Duplicate</button>
+      <button id="mCancel">Cancel</button>
+      <button class="save" id="mSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const GUESTS = /*__GUESTS__*/[{"id": "475dae45", "name": "Emma Adams", "household": "The Adams Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "312c124b", "name": "Sarah Adams", "household": "The Adams Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "15b6cdde", "name": "Liz Alvarez", "household": "The Alvarez Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "3390a52f", "name": "Cade Argenbright", "household": "The Santillan Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "c4398050", "name": "Becky Armstrong", "household": "The Armstrong Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "93cc7c10", "name": "Meichell Arnold", "household": "The Arnold Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "f902c6bd", "name": "Brad Bardin", "household": "The Bardin Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "bd6de9be", "name": "Brent Bardin", "household": "The Bardin Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "81c135d4", "name": "Dylan Bardin", "household": "The Bardin Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "9081e27b", "name": "Emily Bardin", "household": "The Bardin Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "d4d907a0", "name": "Blake Bimmerle", "household": "The Bimmerle Family 1", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "94c6d316", "name": "John Bimmerle", "household": "The Bimmerle Family 1", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "be2828bf", "name": "Katie Bimmerle", "household": "The Bimmerle Family 1", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "0fa6baf1", "name": "Paige Bimmerle", "household": "The Bimmerle Family 1", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "62fec915", "name": "Rachel Bimmerle", "household": "The Bimmerle Family 2", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "0400138e", "name": "Tom Bimmerle", "household": "The Bimmerle Family 3", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "07567cac", "name": "Angie Bishop", "household": "The Bishop Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "32522e80", "name": "Mike Bishop", "household": "The Bishop Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "8e8aecc4", "name": "Kim Blackwood", "household": "The Blackwood Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "d94360fe", "name": "Nathan Blackwood", "household": "The Blackwood Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "8166f329", "name": "Abby Boyd", "household": "The Boyd Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "b2e0774d", "name": "Hudson Boyd", "household": "The Boyd Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "78a87b45", "name": "Katey Brown", "household": "The Brown Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "f876ade8", "name": "Jenny Byler", "household": "The Byler McPherson Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "480ca6e5", "name": "Amy Cary", "household": "The Cary Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "e705e551", "name": "Jeff Cary", "household": "The Cary Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": false}, {"id": "ff5fea3c", "name": "Olivia Cary", "household": "The Cary Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": false}, {"id": "477ab89e", "name": "Tyler Cary", "household": "The Cary Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "e6a19605", "name": "Ethan Cavagnaro", "household": "The Cavagnaro Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "4b03f246", "name": "Allen Chiu", "household": "The Chiu Family", "affiliation": "Their Friends", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "95c5a324", "name": "Callie Chiu", "household": "The Chiu Family", "affiliation": "Their Friends", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "2467021b", "name": "Carter Coffey", "household": "The Coffey Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "0e659635", "name": "Alan Cornelison", "household": "The Cornelison Family", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "be067c8e", "name": "Heather Cornelison", "household": "The Cornelison Family", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "6eb5ec27", "name": "Kyla Crawford", "household": "The Crawford Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "5ed2bc21", "name": "Chacory Demart", "household": "The Demart Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "771d2fed", "name": "Maliaki Demart", "household": "The Demart Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "17b29c5e", "name": "Maxwell Dodd", "household": "The Jwanouskos Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "6419b5fa", "name": "Clay Dover", "household": "The Dover Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "cf27c9fb", "name": "Rebecca Dover", "household": "The Dover Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "d0769cc2", "name": "Chris Dyer", "household": "The Wilson Family 1", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "ba2996e0", "name": "Tandra Eaton", "household": "The Eaton Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "0426b377", "name": "Dani Edwards", "household": "The Edwards Family", "affiliation": "Our Friends", "side": "Both", "status": "maybe", "plusOne": false}, {"id": "c1f4be04", "name": "Josh Edwards", "household": "The Edwards Family", "affiliation": "Our Friends", "side": "Both", "status": "maybe", "plusOne": false}, {"id": "42b763d3", "name": "Paul Finforck", "household": "The Finforck Family 1", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "8d4035fa", "name": "Duane Finfrock", "household": "The Finforck Family 2", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "546369aa", "name": "Kathy Finfrock", "household": "The Finforck Family 2", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "2d4851fa", "name": "Patricia Finfrock", "household": "The Finforck Family 1", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "24cca6e9", "name": "Ethan Francis", "household": "The Francis Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "7756ba11", "name": "Julie Francis", "household": "The Francis Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "cb534c7e", "name": "Hannah Franks", "household": "The Franks Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "72b1f627", "name": "Shelby Gerner", "household": "The Gerner Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "aa20ddbc", "name": "Cameron Gipson", "household": "The Franks Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "98d4d93f", "name": "Jeremy Gonzales", "household": "The Gonzales Family", "affiliation": "Our Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "2e4533ea", "name": "Sam Gonzales", "household": "The Gonzales Family", "affiliation": "Our Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "6000ccf6", "name": "Abigail Gribnitz", "household": "The Gribnitz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "e18f9c90", "name": "Hannah Gribnitz", "household": "The Gribnitz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "464190d2", "name": "Jim Gribnitz", "household": "The Gribnitz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "59f3d04e", "name": "Nikki Gribnitz", "household": "The Gribnitz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "07d9d627", "name": "Seth Gribnitz", "household": "The Gribnitz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "7f789c76", "name": "Collin Groezinger", "household": "The Groezinger Family 2", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "fd694d90", "name": "Jason Groezinger", "household": "The Groezinger Family 1", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "4e8ad295", "name": "Julanne Groezinger", "household": "The Groezinger Family 1", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "52a16903", "name": "Megan Groezinger", "household": "The Groezinger Family 2", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "d69cc3f2", "name": "Moises Groezinger", "household": "The Groezinger Family 3", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "967e50e2", "name": "Marissa Halverson", "household": "The Halverson Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "cae8a408", "name": "Donna Handcock", "household": "The Handcock Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "c4af351c", "name": "Rick Handcock", "household": "The Handcock Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "ae1f7ef3", "name": "Brent Hearn", "household": "The Hearn Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": false}, {"id": "efe87600", "name": "Kathy Hearn", "household": "The Hearn Family", "affiliation": "Their Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "dfdd772f", "name": "Cary Hoops", "household": "The Hoops Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "aedf7a33", "name": "Rocki Hoops", "household": "The Hoops Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "6c41a456", "name": "Amanda Horne", "household": "The Horne Family", "affiliation": "Our Friends", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "92d59cd8", "name": "Ryan Horne", "household": "The Horne Family", "affiliation": "Our Friends", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "8b55a48a", "name": "Chris Horton", "household": "The Horton Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "fca3472e", "name": "Susan Horton", "household": "The Horton Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "ee907218", "name": "Les Howard", "household": "The Howard Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "f5e3c3df", "name": "David Howe", "household": "The Howe Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "4642d95d", "name": "Emma Isom", "household": "The Isom Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "d2be9580", "name": "Samantha Jwanouskos", "household": "The Jwanouskos Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "985b0bf1", "name": "Madison Kaiser", "household": "The Groezinger Family 3", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "06d6d7ff", "name": "Casey Kassady", "household": "The Kassady Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "b71584bf", "name": "Colin Kemper", "household": "The Wilson Family 2", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "6a18cc0f", "name": "Dakota Knight", "household": "The Howe Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "5a2466d1", "name": "Greg Lawson", "household": "The Lawson Family", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "49f109fe", "name": "Natalie Lawson", "household": "The Lawson Family", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "b2cbd340", "name": "Whitney Lawson", "household": "The Lawson Family", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "51148d6e", "name": "Jackson Lord", "household": "The Lawson Family", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "33949dd3", "name": "Carlos Luna", "household": "The Luna Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "2fa0130e", "name": "Zayda Luna", "household": "The Luna Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "df70cbb7", "name": "Justin Luurtsema", "household": "The Luurtsema Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "d502f50f", "name": "Kate Lynch", "household": "The Lynch Family", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "d5a32dd0", "name": "John Mailler", "household": "The Mailler Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": false}, {"id": "3384ca50", "name": "Patty Mailler", "household": "The Mailler Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": false}, {"id": "c8aa82f3", "name": "Caitlyn Marshall", "household": "The Marshall Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "3e4c8df9", "name": "Duncan Marshall", "household": "The Marshall Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "e742a61a", "name": "Izzy May", "household": "The May Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "e7f7609e", "name": "Jake McPherson", "household": "The Byler McPherson Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "292340a8", "name": "Katie McPherson", "household": "The Byler McPherson Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "e99bea7c", "name": "Casey Meirovitz", "household": "The Meirovitz Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "8478705c", "name": "Jolynn Meirovitz", "household": "The Meirovitz Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "2fe5d818", "name": "Becky Mitchell", "household": "The Mitchell Family", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "f1be2d20", "name": "Jacob Mueller", "household": "The Bimmerle Family 1", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "bdfbd043", "name": "Janice Muldoon", "household": "The Muldoon Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "faddd4f3", "name": "Plus One", "household": "The Robertson Family 1", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "0a2dfeb0", "name": "Plus One", "household": "The Taylor Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "c3eeac70", "name": "Alice Ostryzniuk", "household": "The Ostryzniuk Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "42488b5b", "name": "Bernie Ostryzniuk", "household": "The Ostryzniuk Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "da2e921f", "name": "Jerry Ouska", "household": "The Ouska Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "0672e967", "name": "Nancy Ouska", "household": "The Ouska Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "75baf1db", "name": "Bruce Owen", "household": "The Owen Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "2cef1784", "name": "Lori Owen", "household": "The Owen Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "ac017139", "name": "Hillary Paine", "household": "The Paine Family 5", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "cc4b162f", "name": "Jennifer Paine", "household": "The Paine Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "a7579d44", "name": "John Paine", "household": "The Paine Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "8418d11a", "name": "John Paine", "household": "The Paine Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "6cddd7c0", "name": "Josh Paine", "household": "The Paine Family 2", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "e38ffa3e", "name": "Joshua Paine", "household": "The Paine Family 3", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "14167804", "name": "Margret Paine", "household": "The Paine Family 4", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "cb84010f", "name": "Sam Paine", "household": "The Paine Family 3", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "552c8a8f", "name": "Sandy Paine", "household": "The Paine Family 3", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "9b479d0c", "name": "Schyler Paine", "household": "The Paine Family 2", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "1c0aca25", "name": "Bill Pauly", "household": "The Pauly Family", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "6ef4ab2d", "name": "Iris Pizzarello", "household": "The Pizzarello Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "7c0654c1", "name": "Nico Pizzarello", "household": "The Pizzarello Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "ce686ec2", "name": "Connor Preston", "household": "The Preston Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "441e9e73", "name": "Angie Proctor", "household": "The Proctor Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "a5c1cfa2", "name": "Richard Proctor", "household": "The Proctor Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "c0794b59", "name": "Aimee Proulx", "household": "The Proulx Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "66103c5f", "name": "Dave Proulx", "household": "The Proulx Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "ccd11348", "name": "Jasper Purvis", "household": "The Purvis Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "a4fe5a86", "name": "Jessica Purvis", "household": "The Purvis Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "92e19e99", "name": "Kayla Raines", "household": "The Raines Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "37d23649", "name": "Will Raines", "household": "The Raines Family", "affiliation": "Our Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "868df154", "name": "Dustin Ray", "household": "The Ray Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "a26e9707", "name": "Eddie Ray", "household": "The Ray Family 1", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "429c8084", "name": "Glen Ray", "household": "The Ray Family 3", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "343260d7", "name": "Jimmy Ray", "household": "The Ray Family 5", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "04fc8038", "name": "Joann Ray", "household": "The Ray Family 2", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "b9cde864", "name": "Kim Ray", "household": "The Ray Family 5", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "1d65710a", "name": "Megan Ray", "household": "The Ray Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "b4f3a99f", "name": "Rodney Ray", "household": "The Ray Family 4", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "19fcec39", "name": "Shawn Ray", "household": "The Ray Family 3", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "a338635d", "name": "Vicki Ray", "household": "The Ray Family 4", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "6046e13a", "name": "Vickie Ray", "household": "The Ray Family 1", "affiliation": "Family", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "df32c21a", "name": "Brendan Redell", "household": "The Redell Family", "affiliation": "Our Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "f28e9376", "name": "Caroline Redell", "household": "The Redell Family", "affiliation": "Our Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "e2b5db7f", "name": "Kalina Redell", "household": "The Redell Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "44e28bb4", "name": "Lisa Redell", "household": "The Redell Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "f35bbc1e", "name": "Macie Redell", "household": "The Redell Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "b694d8ca", "name": "Ron Redell", "household": "The Redell Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "464d2e98", "name": "John Reece", "household": "The Reece Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "0fefc1e1", "name": "Kimberly Reece", "household": "The Reece Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "58997229", "name": "Elaine Reid", "household": "The Reid Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "a5c1a0ff", "name": "Jeff Reid", "household": "The Reid Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "104824fe", "name": "Kate Renz", "household": "The Renz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "8a900aa4", "name": "Sam Renz", "household": "The Renz Family", "affiliation": "Their Friends", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "438680ea", "name": "Olivia Richichi", "household": "The Richichi Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "a0d3f395", "name": "Roman Richichi", "household": "The Richichi Family", "affiliation": "Our Friends", "side": "Both", "status": "going", "plusOne": false}, {"id": "891f78e3", "name": "Alyse Robertson", "household": "The Robertson Family 1", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "b90130c6", "name": "Christy Robertson", "household": "The Robertson Family 1", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "8ab777ed", "name": "Keith Robertson", "household": "The Robertson Family 1", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "bc98673d", "name": "Ryan Robertson", "household": "The Robertson Family 2", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "e14d9891", "name": "Sydney Robertson", "household": "The Robertson Family 2", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "92b22f86", "name": "Tyler Robertson", "household": "The Robertson Family 1", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "8e536647", "name": "Maggie Runyon", "household": "The Runyon Family 2", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "b0bb4a39", "name": "Mary Beth Runyon", "household": "The Runyon Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "24226c83", "name": "Matthew Runyon", "household": "The Runyon Family 3", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "3a53b697", "name": "Megan Runyon", "household": "The Runyon Family 3", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "e367a0a4", "name": "Tom Runyon", "household": "The Runyon Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "2bf05f3f", "name": "Tommy Runyon", "household": "The Runyon Family 2", "affiliation": "Family", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "6c4ee9ed", "name": "Alondra Santillan", "household": "The Santillan Family", "affiliation": "Our Friends", "side": "Ash", "status": "going", "plusOne": false}, {"id": "8089313d", "name": "Brian Simpson", "household": "The Simpson Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": false}, {"id": "66802d58", "name": "Jen Simpson", "household": "The Simpson Family", "affiliation": "Our Friend", "side": "Ash", "status": "going", "plusOne": false}, {"id": "2174610f", "name": "Nathan Sinclair", "household": "The Redell Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "091a7040", "name": "Greg Smith", "household": "The Smith Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "cfdf06a1", "name": "Heidi Smith", "household": "The Smith Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "fda02b99", "name": "Holly Smith", "household": "The Smith Family", "affiliation": "Their Friends", "side": "Jeff", "status": "declined", "plusOne": false}, {"id": "3858339b", "name": "Lisa Smith", "household": "The Smith Family", "affiliation": "Their Friends", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "8cc08250", "name": "Carley Stevenson", "household": "The Stevenson Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "67b19c62", "name": "Jason Stevenson", "household": "The Stevenson Family", "affiliation": "Their Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "7565a098", "name": "Bryan Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "24623e6c", "name": "Brylan Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "6971007c", "name": "Jennifer Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "91dc3697", "name": "Kailey Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "d3d8c575", "name": "Nathan Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "3e408915", "name": "Trent Taylor", "household": "The Taylor Family", "affiliation": "Their Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "23e21342", "name": "Anna Tekell", "household": "The Cary Family", "affiliation": "Their Friends", "side": "Ash", "status": "maybe", "plusOne": false}, {"id": "9202f483", "name": "Joe Tesfaye", "household": "The Tesfaye Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "9e0be467", "name": "Nate Tippett", "household": "The Alvarez Family", "affiliation": "Other", "side": "Both", "status": "going", "plusOne": true}, {"id": "d42cb73a", "name": "Steven Turner", "household": "The Brown Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": true}, {"id": "6d605cf4", "name": "John Walker", "household": "The Walker Family", "affiliation": "Other", "side": "Both", "status": "invited", "plusOne": false}, {"id": "4f3a269e", "name": "Renee Walker", "household": "The Walker Family", "affiliation": "Our Friend", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "7cfa4ad2", "name": "Sydney Washburn", "household": "The Washburn Family", "affiliation": "Our Friends", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "67d564b9", "name": "Frank Welling", "household": "The Welling Family", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "6bb456f1", "name": "Renee Welling", "household": "The Welling Family", "affiliation": "Family", "side": "Ash", "status": "going", "plusOne": false}, {"id": "8defe148", "name": "Kaden Westbrook", "household": "The Westbrook Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "e8c89ff4", "name": "Kaitlyn Westbrook", "household": "The Westbrook Family", "affiliation": "Our Friends", "side": "Jeff", "status": "invited", "plusOne": false}, {"id": "7c67cec6", "name": "Ainsley Wilson", "household": "The Wilson Family 3", "affiliation": "Family", "side": "Jeff", "status": "maybe", "plusOne": false}, {"id": "b9a4cdeb", "name": "Brynn Wilson", "household": "The Wilson Family 2", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "2b65155a", "name": "Emma Wilson", "household": "The Wilson Family 1", "affiliation": "Family", "side": "Jeff", "status": "going", "plusOne": false}, {"id": "14189d70", "name": "Gay Word", "household": "The Word Family", "affiliation": "Family", "side": "Ash", "status": "invited", "plusOne": false}, {"id": "048b67c5", "name": "Donna Young", "household": "The Young Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}, {"id": "07d0be73", "name": "Peter Young", "household": "The Young Family", "affiliation": "Family", "side": "Ash", "status": "declined", "plusOne": false}];
+const SIDE_COLOR = { Jeff:'var(--navy)', Ash:'var(--burg)', Both:'var(--tan)' };
+const STATUS = {
+  going:   {label:'Going',            color:'var(--going)'},
+  maybe:   {label:'Maybe',            color:'var(--maybe)'},
+  invited: {label:'Invited · no reply',color:'var(--invited)'},
+  declined:{label:'Not attending',    color:'var(--declined)'},
+};
+const ORDER = ['going','maybe','invited','declined'];
+const GMAP = Object.fromEntries(GUESTS.map(g=>[g.id,g]));
+const LS_KEY    = 'paineSeating_v2';
+const LS_KEY_V1 = 'paineSeating_v1';
+
+/* real-world scale: 1 foot = 40 world px */
+const PX_PER_FT = 40;
+const PX_PER_IN = PX_PER_FT/12;
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let state = { tables:[], placed:{}, view:{x:80,y:120,z:1}, nextT:1, bg:null, sidebarOpen:true };
+let sel = new Set();          // selected guest ids (magnets)
+let selTable = null;          // selected table id
+let filterSide = 'all';
+let searchQ = '';
+let accOpen = {going:true,maybe:true,invited:true,declined:false};
+let selectMode = false;       // touch box-select toggle
+let bgWarnShown = false;
+
+/* ============================================================
+   MIGRATION / NORMALIZATION
+   ============================================================ */
+function normalizeState(s){
+  s.tables = (s.tables||[]).map(t=>{
+    const nt = Object.assign({}, t);
+    if(nt.rot==null) nt.rot = 0;
+    if(nt.seats==null) nt.seats = nt.shape==='round' ? 8 : 10;
+    if(nt.shape==='round'){
+      if(nt.diaIn==null){
+        const raw = Math.min(72, Math.max(48, nt.seats*9));
+        const presets=[48,60,72];
+        nt.diaIn = presets.reduce((a,b)=>Math.abs(b-raw)<Math.abs(a-raw)?b:a, presets[0]);
+      }
+    }else{
+      if(nt.lenIn==null) nt.lenIn = 96;
+      if(nt.widIn==null) nt.widIn = 30;
+    }
+    return nt;
+  });
+  s.placed = s.placed || {};
+  s.view = s.view || {x:80,y:120,z:1};
+  s.nextT = s.nextT || (s.tables.length+1);
+  s.bg = s.bg || null;
+  if(s.sidebarOpen==null) s.sidebarOpen = true;
+  return s;
+}
+
+/* ============================================================
+   PERSIST
+   ============================================================ */
+function save(){
+  try{
+    const json = JSON.stringify(state);
+    const size = new Blob([json]).size;
+    if(size > 4.5*1024*1024 && state.bg && state.bg.data){
+      const clone = Object.assign({}, state, {bg:Object.assign({}, state.bg, {data:null})});
+      localStorage.setItem(LS_KEY, JSON.stringify(clone));
+      warnBgTooLarge();
+      return;
+    }
+    localStorage.setItem(LS_KEY, json);
+  }catch(e){
+    try{
+      const clone = Object.assign({}, state, {bg: state.bg ? Object.assign({}, state.bg, {data:null}) : null});
+      localStorage.setItem(LS_KEY, JSON.stringify(clone));
+      warnBgTooLarge();
+    }catch(e2){ /* give up quietly */ }
+  }
+}
+function warnBgTooLarge(){
+  if(bgWarnShown) return;
+  bgWarnShown = true;
+  toast('Floor plan is too large to auto-save · use Save file for a full backup');
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && s.tables){ state = normalizeState(s); return; }
+    }
+    const v1raw = localStorage.getItem(LS_KEY_V1);
+    if(v1raw){
+      const v1 = JSON.parse(v1raw);
+      if(v1 && v1.tables){ state = normalizeState(v1); toast('Upgraded your seating chart to v2'); }
+    }
+  }catch(e){}
+}
+
+/* ============================================================
+   DOM
+   ============================================================ */
+const world = document.getElementById('world');
+const host  = document.getElementById('host');
+const bankEl= document.getElementById('bank');
+
+/* ============================================================
+   VIEW TRANSFORM
+   ============================================================ */
+function applyView(){
+  world.style.transform = `translate(${state.view.x}px,${state.view.y}px) scale(${state.view.z})`;
+  updateScalePill();
+}
+function toWorld(clientX, clientY){
+  const r = host.getBoundingClientRect();
+  return { x:(clientX - r.left - state.view.x)/state.view.z, y:(clientY - r.top - state.view.y)/state.view.z };
+}
+function updateScalePill(){
+  const opts=[1,2,5,10,20];
+  let best=opts[0], bestPx=opts[0]*PX_PER_FT*state.view.z, inRange=false;
+  opts.forEach(ft=>{
+    const px = ft*PX_PER_FT*state.view.z;
+    if(px>=60 && px<=140){ best=ft; bestPx=px; inRange=true; }
+  });
+  if(!inRange){
+    let bestDiff=Infinity;
+    opts.forEach(ft=>{
+      const px=ft*PX_PER_FT*state.view.z;
+      const diff=Math.abs(px-100);
+      if(diff<bestDiff){ bestDiff=diff; best=ft; bestPx=px; }
+    });
+  }
+  const bar=document.getElementById('scaleBar'), lbl=document.getElementById('scaleLbl');
+  if(bar) bar.style.width = Math.max(18, Math.round(bestPx))+'px';
+  if(lbl) lbl.textContent = best+' ft';
+}
+
+/* ============================================================
+   TABLE GEOMETRY (real-world scale + rotation)
+   ============================================================ */
+function tableSize(t){
+  if(t.shape==='round'){ const d = t.diaIn*PX_PER_IN; return {w:d,h:d}; }
+  return { w: t.lenIn*PX_PER_IN, h: t.widIn*PX_PER_IN };
+}
+function tableRadius(t){ return tableSize(t).w/2; }
+function rot2(x,y,deg){
+  const r = (deg||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  return { x: x*c - y*s, y: x*s + y*c };
+}
+function ringSlots(t,n,extra){
+  const r = tableRadius(t)+extra;
+  const slots=[];
+  for(let i=0;i<n;i++){
+    const ang = -Math.PI/2 + (i/n)*2*Math.PI;
+    slots.push({x:r*Math.cos(ang), y:r*Math.sin(ang)});
+  }
+  return slots;
+}
+function edgeSlots(t,n,extra){
+  const sz = tableSize(t);
+  const perSide = Math.ceil(n/2);
+  const bottomN = n-perSide;
+  const slots=[];
+  for(let i=0;i<n;i++){
+    const top = i<perSide;
+    const idx = top ? i : i-perSide;
+    const cnt = top ? perSide : (bottomN||1);
+    const gapX = sz.w/(cnt+1);
+    const lx = -sz.w/2 + gapX*(idx+1);
+    const ly = top ? -(sz.h/2+extra) : (sz.h/2+extra);
+    slots.push({x:lx,y:ly});
+  }
+  return slots;
+}
+function seatSlotsLocal(t){
+  return t.shape==='round' ? ringSlots(t,t.seats,15) : edgeSlots(t,t.seats,15);
+}
+function membersOf(id){
+  return Object.keys(state.placed).filter(g=>state.placed[g].t===id)
+    .sort((a,b)=>(state.placed[a].seat||0)-(state.placed[b].seat||0));
+}
+function arrange(t){
+  const mem = membersOf(t.id);
+  if(!mem.length) return;
+  const count = mem.length<=t.seats ? t.seats : mem.length;
+  const slots = t.shape==='round' ? ringSlots(t,count,38) : edgeSlots(t,count,38);
+  mem.forEach((g,i)=>{
+    const slot = slots[i] || slots[slots.length-1];
+    const rp = rot2(slot.x, slot.y, t.rot);
+    state.placed[g].x = t.x + rp.x;
+    state.placed[g].y = t.y + rp.y;
+  });
+}
+function arrangeAll(){ state.tables.forEach(arrange); }
+function GMAP2t(id){ return state.tables.find(t=>t.id===id); }
+function dimLabel(t){
+  if(t.shape==='round') return `${t.diaIn} in`;
+  const ft = t.lenIn/12;
+  return `${Number.isInteger(ft)?ft:ft.toFixed(1)} ft`;
+}
+
+/* ============================================================
+   ASSIGN / UNASSIGN
+   ============================================================ */
+function tableAtPoint(wx,wy){
+  for(let i=state.tables.length-1;i>=0;i--){
+    const t = state.tables[i];
+    const dx = wx-t.x, dy = wy-t.y;
+    if(t.shape==='round'){
+      const r = tableRadius(t)+26;
+      if(dx*dx+dy*dy <= r*r) return t;
+    }else{
+      const inv = rot2(dx,dy,-(t.rot||0));
+      const sz = tableSize(t);
+      if(Math.abs(inv.x)<=sz.w/2+40 && Math.abs(inv.y)<=sz.h/2+40) return t;
+    }
+  }
+  return null;
+}
+function place(gid, wx, wy, tableId){
+  const seat = tableId ? membersOf(tableId).length : 0;
+  state.placed[gid] = { t: tableId||null, x:wx, y:wy, seat };
+  if(tableId) arrange(GMAP2t(tableId));
+}
+function unplace(gid){ delete state.placed[gid]; sel.delete(gid); }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function statSet(){
+  document.getElementById('stSeated').textContent = Object.values(state.placed).filter(p=>p.t).length;
+  document.getElementById('stTables').textContent = state.tables.length;
+  document.getElementById('stBank').textContent   = GUESTS.length - Object.keys(state.placed).length;
+}
+
+function renderBank(){
+  const placedSet = new Set(Object.keys(state.placed));
+  const q = searchQ.trim().toLowerCase();
+  const groups = {going:[],maybe:[],invited:[],declined:[]};
+  GUESTS.forEach(g=>{
+    if(filterSide!=='all' && g.side!==filterSide && g.side!=='Both') return;
+    if(q && !(g.name.toLowerCase().includes(q) || g.household.toLowerCase().includes(q))) return;
+    (groups[g.status]||groups.invited).push(g);
+  });
+  let html='';
+  ORDER.forEach(k=>{
+    const arr = groups[k]; const st = STATUS[k];
+    const totalPlaced = arr.filter(g=>placedSet.has(g.id)).length;
+    html += `<div class="acc ${accOpen[k]?'':'closed'}" data-acc="${k}">
+      <button class="acc-head" data-toggle="${k}">
+        <span class="tw"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span>
+        <span class="dot" style="background:${st.color}"></span>
+        <span class="lbl">${st.label}</span>
+        <span class="ct">${totalPlaced}/${arr.length}</span>
+      </button>
+      <div class="acc-body">`;
+    if(arr.length===0){ html+=`<div class="empty-note">No guests</div>`; }
+    arr.forEach(g=>{
+      const placed = placedSet.has(g.id);
+      html += `<div class="guest ${placed?'placed':''}" data-g="${g.id}" draggable="false">
+        <div class="side-bar" style="background:${SIDE_COLOR[g.side]||'var(--tan)'}"></div>
+        <div class="txt"><div class="nm">${esc(g.name)}</div><div class="sub">${esc(g.household)}</div></div>
+        ${g.plusOne?'<span class="po">+1</span>':''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  bankEl.innerHTML = html;
+  statSet();
+}
+
+function renderBoard(){
+  arrangeAll();
+  let html='';
+  // floor plan (beneath everything)
+  if(state.bg){
+    const b = state.bg;
+    const wPx = b.wFt*PX_PER_FT, hPx = wPx*(b.naturalH/b.naturalW);
+    html += `<img id="bgImg" src="${b.data}" draggable="false"
+      style="position:absolute;left:${b.x}px;top:${b.y}px;width:${wPx}px;height:${hPx}px;z-index:1;
+      opacity:${(b.opacity!=null?b.opacity:60)/100};pointer-events:${b.locked?'none':'auto'};
+      cursor:${b.locked?'default':'move'}" />`;
+  }
+  // tables
+  state.tables.forEach(t=>{
+    const sz = tableSize(t);
+    const mem = membersOf(t.id).length;
+    const capCls = mem>t.seats?'over':(mem===t.seats?'full':'');
+    const fs = t.shape==='round' ? Math.max(11, Math.min(16, sz.w/9)) : 15;
+    const stubs = seatSlotsLocal(t).map((s,i)=>{
+      const filled = i<mem;
+      return `<span class="stub ${filled?'filled':''}" style="left:calc(50% + ${s.x}px);top:calc(50% + ${s.y}px)"></span>`;
+    }).join('');
+    const rot = t.rot||0;
+    html += `<div class="table ${t.shape} ${selTable===t.id?'selected':''}" data-t="${t.id}"
+        style="left:${t.x}px;top:${t.y}px;width:${sz.w}px;height:${sz.h}px;transform:translate(-50%,-50%) rotate(${rot}deg)">
+      <div class="surface"></div>
+      <div class="stubs">${stubs}</div>
+      <div class="grip" data-tgrip="${t.id}"></div>
+      <div class="tlabel" style="transform:translate(-50%,-50%) rotate(${-rot}deg)">
+        <div class="nm" style="font-size:${fs}px">${esc(t.name)}</div>
+        <div class="cap ${capCls}">${esc(dimLabel(t))} &middot; ${mem}/${t.seats} seats</div>
+      </div>
+      <div class="tgear" data-tgear="${t.id}" style="transform:rotate(${-rot}deg)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1m0-12.8l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></div>
+    </div>`;
+  });
+  // magnets
+  Object.keys(state.placed).forEach(gid=>{
+    const p = state.placed[gid]; const g = GMAP[gid]; if(!g) return;
+    html += `<div class="mag ${p.t?'':'free'} ${sel.has(gid)?'selected':''}" data-mag="${gid}"
+        style="left:${p.x}px;top:${p.y}px">
+      <span class="mdot" style="background:${SIDE_COLOR[g.side]||'var(--tan)'}"></span>
+      <span class="mnm">${esc(g.name)}</span>
+    </div>`;
+  });
+  world.innerHTML = html;
+  refreshAssignSelect();
+  statSet();
+  updateSelbar();
+}
+
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderAll(){ renderBank(); renderBoard(); save(); }
+
+/* ============================================================
+   UNDO / REDO
+   ============================================================ */
+let history = [], histIndex = -1;
+function snapshot(){
+  return {
+    tables: JSON.parse(JSON.stringify(state.tables)),
+    placed: JSON.parse(JSON.stringify(state.placed)),
+    bg: state.bg, // shared by reference: bg is always replaced whole, never mutated in place
+    nextT: state.nextT
+  };
+}
+function pushHistory(){
+  history = history.slice(0, histIndex+1);
+  history.push(snapshot());
+  if(history.length>40) history.shift();
+  histIndex = history.length-1;
+  updateUndoButtons();
+}
+function applySnapshot(s){
+  state.tables = JSON.parse(JSON.stringify(s.tables));
+  state.placed = JSON.parse(JSON.stringify(s.placed));
+  state.bg = s.bg;
+  state.nextT = s.nextT;
+  sel.clear(); selTable = null;
+  renderAll();
+  renderBgControls();
+  updateUndoButtons();
+}
+function undo(){ if(histIndex<=0) return; histIndex--; applySnapshot(history[histIndex]); }
+function redo(){ if(histIndex>=history.length-1) return; histIndex++; applySnapshot(history[histIndex]); }
+function updateUndoButtons(){
+  document.getElementById('undoBtn').disabled = histIndex<=0;
+  document.getElementById('redoBtn').disabled = histIndex>=history.length-1;
+}
+function commit(){ renderAll(); pushHistory(); }
+
+/* ============================================================
+   SELECTION BAR
+   ============================================================ */
+function refreshAssignSelect(){
+  const s = document.getElementById('selAssign');
+  s.innerHTML = '<option value="">Assign to table&hellip;</option>' +
+    state.tables.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+}
+function updateSelbar(){
+  const bar = document.getElementById('selbar');
+  document.getElementById('selCnt').textContent = sel.size;
+  bar.classList.toggle('show', sel.size>0);
+}
+
+/* ============================================================
+   TABLE CRUD
+   ============================================================ */
+function centerWorld(){
+  const r = host.getBoundingClientRect();
+  return toWorld(r.left + r.width/2, r.top + r.height/2);
+}
+function addTable(shape){
+  const n = state.tables.length;
+  const id = 't'+(state.nextT++);
+  const col = n % 5, row = Math.floor(n / 5);
+  const t = { id, name:`Table ${n+1}`, shape, seats: shape==='round'?8:10, rot:0,
+    x: 240 + col*320, y: 220 + row*300 };
+  if(shape==='round') t.diaIn = 60; else { t.lenIn = 96; t.widIn = 30; }
+  state.tables.push(t);
+  selTable = id; sel.clear();
+  commit();
+  if(state.tables.length===1) fitView();
+  toast(shape==='round'?'Round table added':'Head table added');
+}
+
+/* ---- table edit modal ---- */
+let editingTable = null, mShape='round', mSeats=8, mDia=60, mLen=96, mWid=30, mRot=0;
+function openTableModal(id){
+  const t = GMAP2t(id); if(!t) return;
+  editingTable = id;
+  mShape = t.shape; mSeats = t.seats; mRot = t.rot||0;
+  mDia = t.diaIn||60; mLen = t.lenIn||96; mWid = t.widIn||30;
+  document.getElementById('mName').value = t.name;
+  document.getElementById('mSeats').textContent = mSeats;
+  syncModalUI();
+  document.getElementById('scrim').classList.add('show');
+  setTimeout(()=>document.getElementById('mName').focus(),40);
+}
+function syncModalUI(){
+  document.querySelectorAll('.shape-opt').forEach(o=>o.classList.toggle('on', o.dataset.shape===mShape));
+  document.getElementById('roundSizeFld').style.display = mShape==='round' ? '' : 'none';
+  document.getElementById('rectSizeFld').style.display  = mShape==='rect'  ? '' : 'none';
+  document.getElementById('rotFld').style.display       = mShape==='rect'  ? '' : 'none';
+  document.getElementById('mDiaCustom').value = mDia;
+  document.getElementById('mLenCustom').value = mLen;
+  document.getElementById('mWidCustom').value = mWid;
+  document.querySelectorAll('#roundSizeFld .preset-opt').forEach(o=>o.classList.toggle('on', Number(o.dataset.dia)===mDia));
+  document.querySelectorAll('#rectSizeFld .preset-opt').forEach(o=>o.classList.toggle('on', Number(o.dataset.len)===mLen && Number(o.dataset.wid)===mWid));
+  document.getElementById('mRotVal').textContent = mRot+'°';
+}
+function closeModal(){ document.getElementById('scrim').classList.remove('show'); editingTable=null; }
+
+document.getElementById('mMinus').onclick=()=>{ mSeats=Math.max(1,mSeats-1); document.getElementById('mSeats').textContent=mSeats; };
+document.getElementById('mPlus').onclick =()=>{ mSeats=Math.min(20,mSeats+1); document.getElementById('mSeats').textContent=mSeats; };
+document.querySelectorAll('.shape-opt').forEach(o=>o.onclick=()=>{ mShape=o.dataset.shape; syncModalUI(); });
+document.querySelectorAll('#roundSizeFld .preset-opt').forEach(o=>o.onclick=()=>{ mDia=Number(o.dataset.dia); syncModalUI(); });
+document.getElementById('mDiaCustom').addEventListener('input', e=>{ const v=parseFloat(e.target.value); if(isFinite(v)) mDia=Math.max(24,Math.min(120,v)); });
+document.querySelectorAll('#rectSizeFld .preset-opt').forEach(o=>o.onclick=()=>{ mLen=Number(o.dataset.len); mWid=Number(o.dataset.wid); syncModalUI(); });
+document.getElementById('mLenCustom').addEventListener('input', e=>{ const v=parseFloat(e.target.value); if(isFinite(v)) mLen=Math.max(24,Math.min(240,v)); });
+document.getElementById('mWidCustom').addEventListener('input', e=>{ const v=parseFloat(e.target.value); if(isFinite(v)) mWid=Math.max(18,Math.min(72,v)); });
+document.getElementById('mRotCCW').onclick=()=>{ mRot=((mRot-15)%360+360)%360; document.getElementById('mRotVal').textContent=mRot+'°'; };
+document.getElementById('mRotCW').onclick =()=>{ mRot=(mRot+15)%360; document.getElementById('mRotVal').textContent=mRot+'°'; };
+document.getElementById('mCancel').onclick=closeModal;
+document.getElementById('mSave').onclick=()=>{
+  const t = GMAP2t(editingTable); if(!t) return;
+  t.name = document.getElementById('mName').value.trim()||t.name;
+  t.shape = mShape; t.seats = mSeats; t.rot = mShape==='rect' ? mRot : 0;
+  if(mShape==='round'){ t.diaIn = mDia; delete t.lenIn; delete t.widIn; }
+  else { t.lenIn = mLen; t.widIn = mWid; delete t.diaIn; }
+  closeModal(); commit();
+};
+document.getElementById('mDup').onclick=()=>{
+  const t = GMAP2t(editingTable); if(!t) return;
+  const id = 't'+(state.nextT++);
+  const copy = JSON.parse(JSON.stringify(t));
+  copy.id = id; copy.name = t.name+' copy'; copy.x = t.x+40; copy.y = t.y+40;
+  state.tables.push(copy);
+  closeModal(); commit(); toast('Table duplicated');
+};
+document.getElementById('mDelete').onclick=()=>{
+  const id = editingTable;
+  membersOf(id).forEach(g=>unplace(g));   // return seated guests to bank
+  state.tables = state.tables.filter(t=>t.id!==id);
+  if(selTable===id) selTable=null;
+  closeModal(); commit(); toast('Table deleted · guests returned to bank');
+};
+
+/* ============================================================
+   POINTER / DRAG ENGINE (mouse, touch, pen)
+   ============================================================ */
+let drag = null;
+let spaceDown = false;
+let pointers = new Map(); // pointerId -> {x,y,type}
+
+host.addEventListener('pointerdown', e=>{
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY, type:e.pointerType});
+  if(pointers.size===2){ finalizeCurrentDrag(); startPinch(); return; }
+  if(pointers.size>2) return;
+  if(e.button===1 || spaceDown){ startPan(e); return; }
+  if(e.pointerType==='mouse' && e.button!==0) return;
+
+  const magEl = e.target.closest('[data-mag]');
+  const gripEl= e.target.closest('[data-tgrip]');
+  const gearEl= e.target.closest('[data-tgear]');
+  const bgEl  = e.target.closest('#bgImg');
+  if(gearEl){ openTableModal(gearEl.dataset.tgear); return; }
+  if(magEl){ startMagDrag(e, magEl.dataset.mag); return; }
+  if(gripEl){ startTableDrag(e, gripEl.dataset.tgrip); return; }
+  if(bgEl && state.bg && !state.bg.locked){ startBgDrag(e); return; }
+
+  // empty canvas
+  if(e.pointerType==='touch' || e.pointerType==='pen'){
+    if(selectMode) startMarquee(e); else startPan(e);
+  }else{
+    startMarquee(e);
+  }
+});
+
+/* ---- PAN ---- */
+function startPan(e){
+  drag={mode:'pan', sx:e.clientX, sy:e.clientY, ox:state.view.x, oy:state.view.y};
+  host.classList.add('panning'); host.setPointerCapture(e.pointerId);
+}
+
+/* ---- PINCH ZOOM (2 fingers) ---- */
+function startPinch(){
+  const ids=[...pointers.keys()];
+  const p1=pointers.get(ids[0]), p2=pointers.get(ids[1]);
+  const dist=Math.max(1, Math.hypot(p2.x-p1.x, p2.y-p1.y));
+  const r=host.getBoundingClientRect();
+  const midX=(p1.x+p2.x)/2 - r.left, midY=(p1.y+p2.y)/2 - r.top;
+  const worldMid={ x:(midX-state.view.x)/state.view.z, y:(midY-state.view.y)/state.view.z };
+  host.classList.remove('panning');
+  drag={ mode:'pinch', ids, startDist:dist, startZ:state.view.z, worldMid };
+}
+function updatePinch(){
+  const p1=pointers.get(drag.ids[0]), p2=pointers.get(drag.ids[1]);
+  if(!p1||!p2) return;
+  const dist=Math.max(1, Math.hypot(p2.x-p1.x, p2.y-p1.y));
+  const r=host.getBoundingClientRect();
+  const midX=(p1.x+p2.x)/2 - r.left, midY=(p1.y+p2.y)/2 - r.top;
+  let z=drag.startZ*(dist/drag.startDist);
+  z=Math.max(0.3, Math.min(2.5, z));
+  state.view.z=z;
+  state.view.x=midX - drag.worldMid.x*z;
+  state.view.y=midY - drag.worldMid.y*z;
+  applyView();
+}
+function finalizeCurrentDrag(){
+  if(!drag) return;
+  const mode=drag.mode, moved=drag.moved;
+  if(mode==='table' || mode==='mag' || mode==='bg'){
+    drag=null;
+    if(moved) commit(); else renderBoard();
+    return;
+  }
+  if(mode==='marquee'){
+    const mq=document.getElementById('marquee'); if(mq) mq.style.display='none';
+    drag=null; renderBoard(); return;
+  }
+  host.classList.remove('panning');
+  drag=null;
+}
+
+/* ---- TABLE DRAG ---- */
+function startTableDrag(e, id){
+  const t = GMAP2t(id); selTable=id; sel.clear();
+  drag={mode:'table', id, sx:e.clientX, sy:e.clientY, ox:t.x, oy:t.y, moved:false};
+  host.setPointerCapture(e.pointerId);
+  renderBoard();
+}
+
+/* ---- BG DRAG (unlocked floor plan) ---- */
+function startBgDrag(e){
+  const b = state.bg;
+  drag={mode:'bg', sx:e.clientX, sy:e.clientY, ox:b.x, oy:b.y, moved:false};
+  host.setPointerCapture(e.pointerId);
+}
+
+/* ---- MAGNET DRAG (single or group) ---- */
+function startMagDrag(e, gid){
+  if(e.shiftKey){ sel.has(gid)?sel.delete(gid):sel.add(gid); renderBoard(); return; }
+  const group = sel.has(gid) && sel.size>1;
+  const ids = group ? [...sel] : [gid];
+  if(!group){ sel.clear(); }
+  const start = {}; ids.forEach(id=>start[id]={x:state.placed[id].x,y:state.placed[id].y});
+  drag={mode:'mag', ids, gid, start, sx:e.clientX, sy:e.clientY, moved:false, group};
+  host.setPointerCapture(e.pointerId);
+  world.querySelectorAll('[data-mag]').forEach(el=>{ if(ids.includes(el.dataset.mag)) el.classList.add('dragging'); });
+}
+
+/* ---- MARQUEE ---- */
+function startMarquee(e){
+  if(!e.shiftKey){ sel.clear(); selTable=null; }
+  const r=host.getBoundingClientRect();
+  drag={mode:'marquee', sx:e.clientX-r.left, sy:e.clientY-r.top, r};
+  host.setPointerCapture(e.pointerId);
+  renderBoard();
+}
+
+host.addEventListener('pointermove', e=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.clientX, y:e.clientY, type:e.pointerType});
+  if(!drag) return;
+  if(drag.mode==='pinch'){ updatePinch(); return; }
+  if(drag.mode==='pan'){
+    state.view.x = drag.ox + (e.clientX-drag.sx);
+    state.view.y = drag.oy + (e.clientY-drag.sy);
+    applyView(); return;
+  }
+  if(drag.mode==='table'){
+    const dx=(e.clientX-drag.sx)/state.view.z, dy=(e.clientY-drag.sy)/state.view.z;
+    if(Math.abs(dx)+Math.abs(dy)>2) drag.moved=true;
+    const t=GMAP2t(drag.id); t.x=drag.ox+dx; t.y=drag.oy+dy;
+    positionTableDom(t); return;
+  }
+  if(drag.mode==='mag'){
+    const dx=(e.clientX-drag.sx)/state.view.z, dy=(e.clientY-drag.sy)/state.view.z;
+    if(Math.abs(dx)+Math.abs(dy)>2) drag.moved=true;
+    drag.ids.forEach(id=>{ state.placed[id].x=drag.start[id].x+dx; state.placed[id].y=drag.start[id].y+dy;
+      const el=world.querySelector(`[data-mag="${id}"]`); if(el){el.style.left=state.placed[id].x+'px';el.style.top=state.placed[id].y+'px';} });
+    const w=toWorld(e.clientX,e.clientY); highlightDrop(tableAtPoint(w.x,w.y));
+    overSidebar(e.clientX);
+    return;
+  }
+  if(drag.mode==='bg'){
+    const dx=(e.clientX-drag.sx)/state.view.z, dy=(e.clientY-drag.sy)/state.view.z;
+    if(Math.abs(dx)+Math.abs(dy)>2) drag.moved=true;
+    state.bg.x=drag.ox+dx; state.bg.y=drag.oy+dy;
+    const el=document.getElementById('bgImg'); if(el){ el.style.left=state.bg.x+'px'; el.style.top=state.bg.y+'px'; }
+    return;
+  }
+  if(drag.mode==='marquee'){
+    const mq=document.getElementById('marquee');
+    const x1=Math.min(drag.sx,e.clientX-drag.r.left), y1=Math.min(drag.sy,e.clientY-drag.r.top);
+    const x2=Math.max(drag.sx,e.clientX-drag.r.left), y2=Math.max(drag.sy,e.clientY-drag.r.top);
+    mq.style.display='block'; mq.style.left=x1+'px'; mq.style.top=y1+'px'; mq.style.width=(x2-x1)+'px'; mq.style.height=(y2-y1)+'px';
+    drag.box={x1,y1,x2,y2};
+  }
+});
+
+function positionTableDom(t){
+  const el=world.querySelector(`[data-t="${t.id}"]`); if(el){el.style.left=t.x+'px';el.style.top=t.y+'px';}
+  arrange(t);
+  membersOf(t.id).forEach(g=>{ const m=world.querySelector(`[data-mag="${g}"]`); if(m){m.style.left=state.placed[g].x+'px';m.style.top=state.placed[g].y+'px';} });
+}
+let lastHot=null;
+function highlightDrop(t){
+  if(lastHot && (!t||lastHot!==t.id)){ const e=world.querySelector(`[data-t="${lastHot}"] .surface`); if(e)e.classList.remove('drop-hot'); lastHot=null; }
+  if(t){ const e=world.querySelector(`[data-t="${t.id}"] .surface`); if(e)e.classList.add('drop-hot'); lastHot=t.id; }
+}
+function overSidebar(clientX){
+  const el = document.getElementById('side');
+  const on = state.sidebarOpen && clientX < el.getBoundingClientRect().right;
+  el.style.boxShadow = on ? 'inset -4px 0 0 var(--burg)' : '';
+  return on;
+}
+function overSidebarFinal(clientX){
+  const el = document.getElementById('side');
+  return state.sidebarOpen && clientX < el.getBoundingClientRect().right;
+}
+
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(drag && drag.mode==='pinch'){
+    if(pointers.size<2){ drag=null; save(); }
+    return;
+  }
+  if(!drag) return;
+  const mode=drag.mode;
+  host.classList.remove('panning');
+  try{ host.releasePointerCapture(e.pointerId); }catch(_){}
+
+  if(mode==='pan'){ drag=null; save(); return; }
+
+  if(mode==='table'){
+    if(!drag.moved){ const id=drag.id; drag=null; openTableModal(id); renderBoard(); return; }
+    drag=null; commit(); return;
+  }
+
+  if(mode==='mag'){
+    highlightDrop(null);
+    document.getElementById('side').style.boxShadow='';
+    if(!drag.moved){
+      if(!drag.group){ sel.clear(); sel.add(drag.gid); }
+      drag=null; renderBoard(); return;
+    }
+    if(overSidebarFinal(e.clientX)){
+      drag.ids.forEach(id=>unplace(id));
+    }else{
+      const w=toWorld(e.clientX,e.clientY);
+      const t=tableAtPoint(w.x,w.y);
+      drag.ids.forEach(id=>{
+        if(t){ state.placed[id].t=t.id; state.placed[id].seat=9999; }
+        else { state.placed[id].t=null; }
+      });
+      if(t){ membersOf(t.id).forEach((g,i)=>state.placed[g].seat=i); arrange(t); }
+    }
+    drag=null; commit(); return;
+  }
+
+  if(mode==='bg'){
+    const moved=drag.moved; drag=null;
+    if(moved) commit();
+    return;
+  }
+
+  if(mode==='marquee'){
+    document.getElementById('marquee').style.display='none';
+    if(drag.box){
+      Object.keys(state.placed).forEach(gid=>{
+        const p=state.placed[gid];
+        const sx=state.view.x + p.x*state.view.z, sy=state.view.y + p.y*state.view.z;
+        if(sx>=drag.box.x1&&sx<=drag.box.x2&&sy>=drag.box.y1&&sy<=drag.box.y2) sel.add(gid);
+      });
+    }
+    drag=null; renderBoard(); return;
+  }
+}
+host.addEventListener('pointerup', endPointer);
+host.addEventListener('pointercancel', endPointer);
+
+/* ============================================================
+   DRAG FROM BANK
+   ============================================================ */
+let bankDrag=null;
+bankEl.addEventListener('pointerdown', e=>{
+  const gEl=e.target.closest('[data-g]'); if(!gEl) return;
+  const gid=gEl.dataset.g;
+  if(state.placed[gid]){
+    toast('Already seated · find them on the board'); return;
+  }
+  bankDrag={gid, ghost:null, started:false, sx:e.clientX, sy:e.clientY, pointerType:e.pointerType, pid:e.pointerId};
+  window.addEventListener('pointermove', bankMove);
+  window.addEventListener('pointerup', bankUp);
+  window.addEventListener('pointercancel', bankUp);
+});
+function bankMove(e){
+  if(!bankDrag || e.pointerId!==bankDrag.pid) return;
+  if(!bankDrag.started){
+    const dx=e.clientX-bankDrag.sx, dy=e.clientY-bankDrag.sy;
+    const isTouch = bankDrag.pointerType!=='mouse';
+    if(isTouch){
+      if(Math.abs(dx)<=8 || Math.abs(dx)<=Math.abs(dy)) return;
+    }else{
+      if(Math.abs(dx)+Math.abs(dy)<4) return;
+    }
+    bankDrag.started=true;
+    const g=GMAP[bankDrag.gid];
+    const gh=document.createElement('div');
+    gh.className='mag'; gh.style.position='fixed'; gh.style.zIndex=999; gh.style.pointerEvents='none';
+    gh.innerHTML=`<span class="mdot" style="background:${SIDE_COLOR[g.side]||'var(--tan)'}"></span><span class="mnm">${esc(g.name)}</span>`;
+    document.body.appendChild(gh); bankDrag.ghost=gh;
+  }
+  e.preventDefault();
+  const gh=bankDrag.ghost; if(gh){ gh.style.left=e.clientX+'px'; gh.style.top=e.clientY+'px'; gh.style.transform='translate(-50%,-50%)'; }
+  const w=toWorld(e.clientX,e.clientY); highlightDrop(tableAtPoint(w.x,w.y));
+}
+function bankUp(e){
+  if(!bankDrag || e.pointerId!==bankDrag.pid) return;
+  window.removeEventListener('pointermove', bankMove);
+  window.removeEventListener('pointerup', bankUp);
+  window.removeEventListener('pointercancel', bankUp);
+  if(bankDrag.ghost) bankDrag.ghost.remove();
+  highlightDrop(null);
+  if(bankDrag.started){
+    const hostR=host.getBoundingClientRect();
+    if(e.clientX>hostR.left){
+      const w=toWorld(e.clientX,e.clientY);
+      const t=tableAtPoint(w.x,w.y);
+      place(bankDrag.gid, w.x, w.y, t?t.id:null);
+      commit();
+    }
+  }
+  bankDrag=null;
+}
+
+/* ============================================================
+   WHEEL: pan + zoom (desktop)
+   ============================================================ */
+host.addEventListener('wheel', e=>{
+  e.preventDefault();
+  if(e.ctrlKey || e.metaKey){
+    const r=host.getBoundingClientRect();
+    const mx=e.clientX-r.left, my=e.clientY-r.top;
+    const wx=(mx-state.view.x)/state.view.z, wy=(my-state.view.y)/state.view.z;
+    let z=state.view.z * (1 - e.deltaY*0.0015);
+    z=Math.max(0.3,Math.min(2.5,z));
+    state.view.z=z; state.view.x=mx-wx*z; state.view.y=my-wy*z;
+    applyView();
+  }else{
+    state.view.x -= e.deltaX; state.view.y -= e.deltaY; applyView();
+  }
+}, {passive:false});
+
+/* ============================================================
+   ZOOM BUTTONS + FIT VIEW
+   ============================================================ */
+function zoomBy(factor){
+  const r=host.getBoundingClientRect();
+  const mx=r.width/2, my=r.height/2;
+  const wx=(mx-state.view.x)/state.view.z, wy=(my-state.view.y)/state.view.z;
+  let z=Math.max(0.3, Math.min(2.5, state.view.z*factor));
+  state.view.z=z; state.view.x=mx-wx*z; state.view.y=my-wy*z;
+  applyView(); save();
+}
+function fitView(){
+  const pts=[];
+  state.tables.forEach(t=>{
+    const s=tableSize(t);
+    if(t.shape==='rect' && t.rot){
+      const hw=s.w/2, hh=s.h/2, diag=Math.sqrt(hw*hw+hh*hh);
+      pts.push([t.x-diag,t.y-diag],[t.x+diag,t.y+diag]);
+    }else{
+      pts.push([t.x-s.w/2,t.y-s.h/2],[t.x+s.w/2,t.y+s.h/2]);
+    }
+  });
+  Object.values(state.placed).forEach(p=>pts.push([p.x,p.y]));
+  if(pts.length===0){ state.view={x:80,y:120,z:1}; applyView(); return; }
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const minX=Math.min(...xs)-70,maxX=Math.max(...xs)+70,minY=Math.min(...ys)-70,maxY=Math.max(...ys)+70;
+  const r=host.getBoundingClientRect();
+  const padTop=84, padBot=24, padSide=24;
+  const availW=r.width-padSide*2, availH=r.height-padTop-padBot;
+  const z=Math.max(.3,Math.min(1.6, Math.min(availW/(maxX-minX), availH/(maxY-minY))));
+  const cw=(maxX-minX)*z, ch=(maxY-minY)*z;
+  state.view.z=z;
+  state.view.x=padSide+(availW-cw)/2 - minX*z;
+  state.view.y=padTop +(availH-ch)/2 - minY*z;
+  applyView();
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+document.getElementById('addRound').onclick=()=>addTable('round');
+document.getElementById('addHead').onclick =()=>addTable('rect');
+document.getElementById('fitBtn').onclick  =fitView;
+document.getElementById('zoomInBtn').onclick =()=>zoomBy(1.2);
+document.getElementById('zoomOutBtn').onclick=()=>zoomBy(1/1.2);
+document.getElementById('undoBtn').onclick=undo;
+document.getElementById('redoBtn').onclick=redo;
+document.getElementById('resetBtn').onclick =()=>{
+  if(confirm('Clear the whole board? Tables removed and all guests returned to the bank.')){
+    state.tables=[]; state.placed={}; state.nextT=1;
+    sel.clear(); selTable=null; commit(); toast('Board cleared');
+  }
+};
+document.getElementById('printBtn').onclick =()=>{ fitView(); setTimeout(()=>window.print(),120); };
+
+document.getElementById('selectModeBtn').onclick=()=>{
+  selectMode=!selectMode;
+  document.getElementById('selectModeBtn').classList.toggle('active', selectMode);
+};
+
+/* export / import */
+document.getElementById('exportBtn').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='paine-seating-chart.json'; a.click(); URL.revokeObjectURL(a.href); toast('Saved to file');
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const s=JSON.parse(rd.result);
+      if(s.tables){
+        state=normalizeState(s); sel.clear(); selTable=null;
+        applyView(); renderBgControls(); applySidebarState(); commit(); toast('Chart loaded');
+      }else{ toast('Could not read that file'); }
+    }catch(err){ toast('Could not read that file'); }
+  };
+  rd.readAsText(f); e.target.value='';
+};
+
+/* ============================================================
+   FLOOR PLAN (background image)
+   ============================================================ */
+document.getElementById('bgBtn').onclick=()=>togglePop('bgPanel');
+function togglePop(id){
+  const el=document.getElementById(id);
+  const showing=el.classList.contains('show');
+  document.querySelectorAll('.popover').forEach(p=>p.classList.remove('show'));
+  if(!showing) el.classList.add('show');
+}
+document.addEventListener('pointerdown', e=>{
+  if(e.target.closest('.popover') || e.target.closest('#bgBtn')) return;
+  document.querySelectorAll('.popover').forEach(p=>p.classList.remove('show'));
+});
+
+function renderBgControls(){
+  const has=!!state.bg;
+  document.getElementById('bgControls').style.display = has ? '' : 'none';
+  if(has){
+    document.getElementById('bgWidthFt').value = state.bg.wFt;
+    document.getElementById('bgOpacity').value = state.bg.opacity;
+    document.getElementById('bgLockBtn').textContent = state.bg.locked ? 'Unlock' : 'Lock';
+  }
+}
+
+document.getElementById('bgFile').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.naturalWidth, h=img.naturalHeight;
+      const maxDim=2200;
+      if(Math.max(w,h)>maxDim){ const sc=maxDim/Math.max(w,h); w=Math.round(w*sc); h=Math.round(h*sc); }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+      const dataUrl=cv.toDataURL('image/jpeg',0.82);
+      const c=centerWorld();
+      const wFt=60, hPx=wFt*PX_PER_FT*(h/w);
+      state.bg = { data:dataUrl, naturalW:w, naturalH:h, x:c.x-(wFt*PX_PER_FT)/2, y:c.y-hPx/2, wFt, opacity:60, locked:false };
+      bgWarnShown=false;
+      renderBgControls(); renderBoard(); commit(); toast('Floor plan added');
+    };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+  e.target.value='';
+});
+document.getElementById('bgWidthFt').addEventListener('change', e=>{
+  if(!state.bg) return;
+  let v=parseFloat(e.target.value); if(!isFinite(v)||v<=0) v=state.bg.wFt;
+  v=Math.max(1,Math.min(500,v));
+  state.bg.wFt=v; renderBoard(); commit();
+});
+document.getElementById('bgOpacity').addEventListener('input', e=>{
+  if(!state.bg) return;
+  state.bg.opacity=parseInt(e.target.value,10);
+  const el=document.getElementById('bgImg'); if(el) el.style.opacity = state.bg.opacity/100;
+});
+document.getElementById('bgOpacity').addEventListener('change', ()=>{ if(state.bg) commit(); });
+document.getElementById('bgLockBtn').addEventListener('click', ()=>{
+  if(!state.bg) return;
+  state.bg.locked=!state.bg.locked;
+  renderBgControls(); renderBoard(); commit();
+});
+document.getElementById('bgRemoveBtn').addEventListener('click', ()=>{
+  if(!state.bg) return;
+  if(confirm('Remove the floor plan image?')){
+    state.bg=null; renderBgControls(); renderBoard(); commit(); toast('Floor plan removed');
+  }
+});
+
+/* ============================================================
+   SIDEBAR COLLAPSE
+   ============================================================ */
+function applySidebarState(){
+  document.getElementById('side').classList.toggle('collapsed', !state.sidebarOpen);
+  document.getElementById('sidebarBtn').classList.toggle('active', state.sidebarOpen);
+}
+document.getElementById('sidebarBtn').onclick=()=>{
+  state.sidebarOpen=!state.sidebarOpen;
+  applySidebarState(); save();
+};
+document.getElementById('sideClose').onclick=()=>{
+  state.sidebarOpen=false; applySidebarState(); save();
+};
+
+/* ============================================================
+   SELECTION BAR ACTIONS
+   ============================================================ */
+document.getElementById('selAssign').onchange=e=>{
+  const tid=e.target.value; if(!tid) return;
+  [...sel].forEach(id=>{ state.placed[id].t=tid; state.placed[id].seat=9999; });
+  membersOf(tid).forEach((g,i)=>state.placed[g].seat=i); arrange(GMAP2t(tid));
+  e.target.value=''; commit(); toast(`${sel.size} guest(s) seated`);
+};
+document.getElementById('selBank').onclick=()=>{
+  const n=sel.size; [...sel].forEach(id=>unplace(id)); sel.clear(); commit(); toast(`${n} returned to bank`);
+};
+
+/* ============================================================
+   SIDEBAR EVENTS
+   ============================================================ */
+document.getElementById('search').addEventListener('input',e=>{ searchQ=e.target.value; renderBank(); });
+document.getElementById('sideFilters').addEventListener('click',e=>{
+  const b=e.target.closest('[data-side]'); if(!b) return;
+  filterSide=b.dataset.side;
+  document.querySelectorAll('#sideFilters .chipbtn').forEach(x=>x.classList.toggle('on',x===b));
+  renderBank();
+});
+bankEl.addEventListener('click',e=>{
+  const tg=e.target.closest('[data-toggle]'); if(tg){ const k=tg.dataset.toggle; accOpen[k]=!accOpen[k]; renderBank(); }
+});
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space' && !isTyping(e)){ spaceDown=true; host.classList.add('panmode'); e.preventDefault(); }
+  if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z') && !isTyping(e)){
+    e.preventDefault();
+    if(e.shiftKey) redo(); else undo();
+    return;
+  }
+  if((e.key==='Delete'||e.key==='Backspace') && sel.size && !isTyping(e)){
+    e.preventDefault(); const n=sel.size; [...sel].forEach(id=>unplace(id)); sel.clear(); commit(); toast(`${n} returned to bank`);
+  }
+  if(e.key==='Escape'){ sel.clear(); selTable=null; closeModal(); renderBoard(); }
+});
+window.addEventListener('keyup',e=>{ if(e.code==='Space'){ spaceDown=false; host.classList.remove('panmode'); } });
+function isTyping(e){ const t=e.target.tagName; return t==='INPUT'||t==='TEXTAREA'; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastT;
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1800); }
+
+/* ============================================================
+   INIT
+   ============================================================ */
+load();
+applyView();
+renderBgControls();
+applySidebarState();
+renderAll();
+pushHistory();
+updateUndoButtons();
+</script>
+</body>
+</html>
