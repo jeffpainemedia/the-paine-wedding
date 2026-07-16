@@ -120,6 +120,14 @@
   .canvas-host{position:absolute;inset:0;touch-action:none;cursor:default}
   .canvas-host.panning{cursor:grabbing}
   .canvas-host.panmode{cursor:grab}
+  .canvas-host.rulermode{cursor:crosshair}
+
+  /* ruler / measure overlay (screen-space, above world, below toolbar) */
+  .rulerlayer{position:absolute;inset:0;z-index:16;pointer-events:none}
+  .rulerlayer svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .ruler-lbl{position:absolute;transform:translate(-50%,-50%);background:var(--burg);color:#fff;
+    font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:20px;white-space:nowrap;
+    box-shadow:0 2px 8px rgba(124,31,40,.32)}
 
   #bgImg{-webkit-user-select:none;user-select:none;touch-action:none}
 
@@ -270,7 +278,7 @@
   /* file input hidden */
   #importFile{display:none}
   @media print{
-    .side,.toolbar,.selbar,.hint,.tgear,.scalepill,.popover{display:none!important}
+    .side,.toolbar,.selbar,.hint,.tgear,.scalepill,.popover,.rulerlayer{display:none!important}
     .main{position:static}
     body{overflow:visible}
   }
@@ -357,6 +365,7 @@
       </div>
       <div class="tgroup">
         <button class="tbtn" id="selectModeBtn" title="Box-select tool (for touch)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg></button>
+        <button class="tbtn" id="rulerBtn" title="Ruler — measure to scale (Cmd/Ctrl+R)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M15.6 2.6l5.8 5.8a1 1 0 0 1 0 1.4L9.8 21.4a1 1 0 0 1-1.4 0l-5.8-5.8a1 1 0 0 1 0-1.4L14.2 2.6a1 1 0 0 1 1.4 0Z"/><path d="M8 7l2 2M11 4l3 3M5 10l2 2M14 13l2 2M11 16l2 2"/></svg></button>
       </div>
       <div class="tgroup">
         <button class="tbtn" id="zoomOutBtn" title="Zoom out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6"/></svg></button>
@@ -376,6 +385,11 @@
     <div class="canvas-host" id="host">
       <div id="world"></div>
       <div class="marquee" id="marquee" style="display:none"></div>
+    </div>
+
+    <div class="rulerlayer" id="rulerLayer" style="display:none">
+      <svg id="rulerSvg"></svg>
+      <div class="ruler-lbl" id="rulerLbl"></div>
     </div>
 
     <div class="selbar" id="selbar">
@@ -493,6 +507,8 @@ let searchQ = '';
 let accOpen = {going:true,maybe:true,invited:true,declined:false};
 let selectMode = false;       // touch box-select toggle
 let bgWarnShown = false;
+let rulerMode = false;        // measuring-tape tool active
+let rulerMeasure = null;      // {ax,ay,bx,by} in world coords
 
 /* ============================================================
    MIGRATION / NORMALIZATION
@@ -577,6 +593,7 @@ const bankEl= document.getElementById('bank');
 function applyView(){
   world.style.transform = `translate(${state.view.x}px,${state.view.y}px) scale(${state.view.z})`;
   updateScalePill();
+  renderRuler();
 }
 function toWorld(clientX, clientY){
   const r = host.getBoundingClientRect();
@@ -600,6 +617,43 @@ function updateScalePill(){
   const bar=document.getElementById('scaleBar'), lbl=document.getElementById('scaleLbl');
   if(bar) bar.style.width = Math.max(18, Math.round(bestPx))+'px';
   if(lbl) lbl.textContent = best+' ft';
+}
+
+/* ---- ruler / measuring tape (to scale) ---- */
+function fmtDist(worldPx){
+  const totalIn = worldPx / PX_PER_IN;
+  let feet = Math.floor(totalIn/12);
+  let inch = Math.round(totalIn - feet*12);
+  if(inch===12){ feet++; inch=0; }
+  if(feet===0) return inch+' in';
+  if(inch===0) return feet+' ft';
+  return feet+' ft '+inch+' in';
+}
+function renderRuler(){
+  const layer=document.getElementById('rulerLayer');
+  if(!layer) return;
+  if(!rulerMode || !rulerMeasure){ layer.style.display='none'; return; }
+  const m=rulerMeasure, z=state.view.z;
+  const sax=state.view.x+m.ax*z, say=state.view.y+m.ay*z;
+  const sbx=state.view.x+m.bx*z, sby=state.view.y+m.by*z;
+  document.getElementById('rulerSvg').innerHTML =
+    `<line x1="${sax}" y1="${say}" x2="${sbx}" y2="${sby}" stroke="var(--burg)" stroke-width="2" stroke-dasharray="7 4"/>`+
+    `<circle cx="${sax}" cy="${say}" r="4.5" fill="#fff" stroke="var(--burg)" stroke-width="2"/>`+
+    `<circle cx="${sbx}" cy="${sby}" r="4.5" fill="#fff" stroke="var(--burg)" stroke-width="2"/>`;
+  const dist=Math.hypot(m.bx-m.ax, m.by-m.ay);
+  const lbl=document.getElementById('rulerLbl');
+  lbl.textContent = fmtDist(dist);
+  lbl.style.left = ((sax+sbx)/2)+'px';
+  lbl.style.top  = ((say+sby)/2)+'px';
+  layer.style.display='block';
+}
+function toggleRuler(on){
+  rulerMode = (on===undefined) ? !rulerMode : on;
+  document.getElementById('rulerBtn').classList.toggle('active', rulerMode);
+  host.classList.toggle('rulermode', rulerMode);
+  if(!rulerMode) rulerMeasure=null;
+  renderRuler();
+  toast(rulerMode ? 'Ruler on — drag across the canvas to measure' : 'Ruler off');
 }
 
 /* ============================================================
@@ -945,6 +999,7 @@ host.addEventListener('pointerdown', e=>{
   if(pointers.size>2) return;
   if(e.button===1 || spaceDown){ startPan(e); return; }
   if(e.pointerType==='mouse' && e.button!==0) return;
+  if(rulerMode){ startRuler(e); return; }   // measuring tool intercepts all canvas clicks
 
   const magEl = e.target.closest('[data-mag]');
   const gripEl= e.target.closest('[data-tgrip]');
@@ -1036,6 +1091,15 @@ function startMagDrag(e, gid){
   world.querySelectorAll('[data-mag]').forEach(el=>{ if(ids.includes(el.dataset.mag)) el.classList.add('dragging'); });
 }
 
+/* ---- RULER (measure to scale) ---- */
+function startRuler(e){
+  const w=toWorld(e.clientX, e.clientY);
+  rulerMeasure={ax:w.x, ay:w.y, bx:w.x, by:w.y};
+  drag={mode:'ruler'};
+  host.setPointerCapture(e.pointerId);
+  renderRuler();
+}
+
 /* ---- MARQUEE ---- */
 function startMarquee(e){
   if(!e.shiftKey){ sel.clear(); selTable=null; }
@@ -1049,6 +1113,7 @@ host.addEventListener('pointermove', e=>{
   if(pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.clientX, y:e.clientY, type:e.pointerType});
   if(!drag) return;
   if(drag.mode==='pinch'){ updatePinch(); return; }
+  if(drag.mode==='ruler'){ const w=toWorld(e.clientX,e.clientY); rulerMeasure.bx=w.x; rulerMeasure.by=w.y; renderRuler(); return; }
   if(drag.mode==='pan'){
     state.view.x = drag.ox + (e.clientX-drag.sx);
     state.view.y = drag.oy + (e.clientY-drag.sy);
@@ -1118,6 +1183,8 @@ function endPointer(e){
   try{ host.releasePointerCapture(e.pointerId); }catch(_){}
 
   if(mode==='pan'){ drag=null; save(); return; }
+
+  if(mode==='ruler'){ drag=null; renderRuler(); return; }  // keep measurement on screen
 
   if(mode==='table'){
     if(!drag.moved){ const id=drag.id; drag=null; openTableModal(id); renderBoard(); return; }
@@ -1298,6 +1365,7 @@ document.getElementById('selectModeBtn').onclick=()=>{
   selectMode=!selectMode;
   document.getElementById('selectModeBtn').classList.toggle('active', selectMode);
 };
+document.getElementById('rulerBtn').onclick=()=>toggleRuler();
 
 /* export / import */
 document.getElementById('exportBtn').onclick=()=>{
@@ -1461,10 +1529,18 @@ window.addEventListener('keydown',e=>{
     if(e.shiftKey) redo(); else undo();
     return;
   }
+  if((e.metaKey||e.ctrlKey) && (e.key==='r'||e.key==='R') && !isTyping(e)){
+    e.preventDefault();   // override browser reload; toggle the measuring tool
+    toggleRuler();
+    return;
+  }
   if((e.key==='Delete'||e.key==='Backspace') && sel.size && !isTyping(e)){
     e.preventDefault(); const n=sel.size; [...sel].forEach(id=>unplace(id)); sel.clear(); commit(); toast(`${n} returned to bank`);
   }
-  if(e.key==='Escape'){ sel.clear(); selTable=null; closeModal(); renderBoard(); }
+  if(e.key==='Escape'){
+    if(rulerMode){ toggleRuler(false); return; }
+    sel.clear(); selTable=null; closeModal(); renderBoard();
+  }
 });
 window.addEventListener('keyup',e=>{ if(e.code==='Space'){ spaceDown=false; host.classList.remove('panmode'); } });
 function isTyping(e){ const t=e.target.tagName; return t==='INPUT'||t==='TEXTAREA'; }
