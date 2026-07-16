@@ -54,8 +54,11 @@
   .chipbtn{
     flex:1;font:inherit;font-size:11px;font-weight:600;padding:5px 4px;border-radius:7px;
     border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;letter-spacing:.02em;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
   }
   .chipbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chipbtn .fdot{width:7px;height:7px;border-radius:50%;flex:none}
+  .chipbtn.on .fdot{outline:1.5px solid rgba(255,255,255,.75)}
 
   .bank{flex:1;overflow-y:auto;padding:6px 10px 20px}
   .acc{margin-top:6px}
@@ -144,21 +147,19 @@
   .table .tlabel .cap.over{color:var(--burg)}
   .table .grip{position:absolute;inset:0;cursor:move}
   .table .tgear{
-    position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:50%;background:#fff;
-    border:1px solid var(--line);display:none;align-items:center;justify-content:center;cursor:pointer;
+    position:absolute;top:-11px;right:-11px;width:28px;height:28px;border-radius:50%;background:#fff;
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:var(--navy);box-shadow:var(--shadow);z-index:3;
   }
-  .table:hover .tgear,.table.selected .tgear{display:flex}
   .table .tgear:hover{background:var(--cream)}
 
   .mag{
     position:absolute;transform:translate(-50%,-50%);z-index:5;touch-action:none;
-    display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:20px;
+    display:flex;align-items:center;padding:3px 8px;border-radius:16px;
     background:#fff;border:1.5px solid var(--line);box-shadow:0 2px 6px rgba(22,56,101,.16);
-    font-size:12px;font-weight:600;color:var(--ink);cursor:grab;user-select:none;white-space:nowrap;
-    max-width:150px;
+    font-size:11px;font-weight:600;color:var(--ink);cursor:grab;user-select:none;white-space:nowrap;
+    max-width:118px;
   }
-  .mag .mdot{width:7px;height:7px;border-radius:50%;flex:none}
   .mag .mnm{overflow:hidden;text-overflow:ellipsis}
   .mag:active{cursor:grabbing}
   .mag.free{border-style:dashed}
@@ -225,6 +226,7 @@
     border-radius:12px;box-shadow:var(--shadow);padding:14px;display:none;z-index:50}
   .popover.show{display:block}
   .popover .pop-head{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .popover .pop-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:12px;max-width:220px}
   .popover .fld{margin-top:11px}
   .popover .fld:first-child{margin-top:0}
   .popover label{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:5px}
@@ -268,7 +270,7 @@
   /* file input hidden */
   #importFile{display:none}
   @media print{
-    .side,.toolbar,.selbar,.hint,.tgear{display:none!important}
+    .side,.toolbar,.selbar,.hint,.tgear,.scalepill,.popover{display:none!important}
     .main{position:static}
     body{overflow:visible}
   }
@@ -295,8 +297,8 @@
       </div>
       <div class="side-filters" id="sideFilters">
         <button class="chipbtn on" data-side="all">All</button>
-        <button class="chipbtn" data-side="Jeff">Jeff</button>
-        <button class="chipbtn" data-side="Ash">Ash</button>
+        <button class="chipbtn" data-side="Jeff"><span class="fdot" style="background:var(--navy)"></span>Jeff</button>
+        <button class="chipbtn" data-side="Ash"><span class="fdot" style="background:var(--burg)"></span>Ash</button>
       </div>
     </div>
     <div class="bank" id="bank"></div>
@@ -312,9 +314,22 @@
         <button class="tbtn" id="undoBtn" title="Undo (Ctrl/Cmd+Z)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
         <button class="tbtn" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
       </div>
-      <div class="tgroup">
+      <div class="tgroup rel">
         <button class="tbtn primary" id="addRound"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>Round table</button>
         <button class="tbtn" id="addHead"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>Head table</button>
+        <button class="tbtn" id="defBtn" title="Default seats for new tables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+        <div class="popover" id="defPanel">
+          <div class="pop-head">Defaults for new tables</div>
+          <div class="fld">
+            <label>Round table seats</label>
+            <div class="seatstep"><button type="button" id="defRoundMinus">&minus;</button><span id="defRoundSeats">8</span><button type="button" id="defRoundPlus">+</button></div>
+          </div>
+          <div class="fld">
+            <label>Head / banquet seats</label>
+            <div class="seatstep"><button type="button" id="defRectMinus">&minus;</button><span id="defRectSeats">10</span><button type="button" id="defRectPlus">+</button></div>
+          </div>
+          <div class="pop-note">Applies to tables you add from now on. Change any existing table with its gear button.</div>
+        </div>
       </div>
       <div class="tgroup rel">
         <button class="tbtn" id="bgBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-3-3-6 6"/></svg>Floor plan</button>
@@ -430,7 +445,7 @@
     </div>
 
     <div class="fld">
-      <label>Seats</label>
+      <label>Seats at this table</label>
       <div class="seatstep">
         <button id="mMinus">&minus;</button><span id="mSeats">8</span><button id="mPlus">+</button>
       </div>
@@ -599,16 +614,18 @@ function rot2(x,y,deg){
   const r = (deg||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
   return { x: x*c - y*s, y: x*s + y*c };
 }
-function ringSlots(t,n,extra){
-  const r = tableRadius(t)+extra;
+function ringSlots(t,n,extra,stagger){
+  // stagger: alternate slots sit further out so name chips form two rings and never overlap
+  const base = tableRadius(t);
   const slots=[];
   for(let i=0;i<n;i++){
     const ang = -Math.PI/2 + (i/n)*2*Math.PI;
+    const r = base + extra + (stagger && i%2===1 ? stagger : 0);
     slots.push({x:r*Math.cos(ang), y:r*Math.sin(ang)});
   }
   return slots;
 }
-function edgeSlots(t,n,extra){
+function edgeSlots(t,n,extra,stagger){
   const sz = tableSize(t);
   const perSide = Math.ceil(n/2);
   const bottomN = n-perSide;
@@ -619,7 +636,8 @@ function edgeSlots(t,n,extra){
     const cnt = top ? perSide : (bottomN||1);
     const gapX = sz.w/(cnt+1);
     const lx = -sz.w/2 + gapX*(idx+1);
-    const ly = top ? -(sz.h/2+extra) : (sz.h/2+extra);
+    const off = extra + (stagger && idx%2===1 ? stagger : 0); // alternate near/far rows per side
+    const ly = top ? -(sz.h/2+off) : (sz.h/2+off);
     slots.push({x:lx,y:ly});
   }
   return slots;
@@ -635,7 +653,7 @@ function arrange(t){
   const mem = membersOf(t.id);
   if(!mem.length) return;
   const count = mem.length<=t.seats ? t.seats : mem.length;
-  const slots = t.shape==='round' ? ringSlots(t,count,38) : edgeSlots(t,count,38);
+  const slots = t.shape==='round' ? ringSlots(t,count,30,34) : edgeSlots(t,count,26,32);
   mem.forEach((g,i)=>{
     const slot = slots[i] || slots[slots.length-1];
     const rp = rot2(slot.x, slot.y, t.rot);
@@ -760,9 +778,8 @@ function renderBoard(){
   Object.keys(state.placed).forEach(gid=>{
     const p = state.placed[gid]; const g = GMAP[gid]; if(!g) return;
     html += `<div class="mag ${p.t?'':'free'} ${sel.has(gid)?'selected':''}" data-mag="${gid}"
-        style="left:${p.x}px;top:${p.y}px">
-      <span class="mdot" style="background:${SIDE_COLOR[g.side]||'var(--tan)'}"></span>
-      <span class="mnm">${esc(g.name)}</span>
+        style="left:${p.x}px;top:${p.y}px" title="${esc(g.name)} &middot; ${esc(g.household)}">
+      <span class="mnm">${esc(shortName(g))}</span>
     </div>`;
   });
   world.innerHTML = html;
@@ -772,6 +789,12 @@ function renderBoard(){
 }
 
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function shortName(g){
+  // "Blake Bimmerle" -> "Blake B." (compact chips; full name lives in the bank + tooltip)
+  const parts = (g.name||'').trim().split(/\s+/);
+  if(parts.length<2) return g.name||'';
+  return parts[0]+' '+parts[parts.length-1][0]+'.';
+}
 
 function renderAll(){ renderBank(); renderBoard(); save(); }
 
@@ -837,7 +860,7 @@ function addTable(shape){
   const n = state.tables.length;
   const id = 't'+(state.nextT++);
   const col = n % 5, row = Math.floor(n / 5);
-  const t = { id, name:`Table ${n+1}`, shape, seats: shape==='round'?8:10, rot:0,
+  const t = { id, name:`Table ${n+1}`, shape, seats: shape==='round'?defaults.roundSeats:defaults.rectSeats, rot:0,
     x: 240 + col*320, y: 220 + row*300 };
   if(shape==='round') t.diaIn = 60; else { t.lenIn = 96; t.widIn = 30; }
   state.tables.push(t);
@@ -1172,7 +1195,7 @@ function bankMove(e){
     const g=GMAP[bankDrag.gid];
     const gh=document.createElement('div');
     gh.className='mag'; gh.style.position='fixed'; gh.style.zIndex=999; gh.style.pointerEvents='none';
-    gh.innerHTML=`<span class="mdot" style="background:${SIDE_COLOR[g.side]||'var(--tan)'}"></span><span class="mnm">${esc(g.name)}</span>`;
+    gh.innerHTML=`<span class="mnm">${esc(shortName(g))}</span>`;
     document.body.appendChild(gh); bankDrag.ghost=gh;
   }
   e.preventDefault();
@@ -1309,9 +1332,25 @@ function togglePop(id){
   if(!showing) el.classList.add('show');
 }
 document.addEventListener('pointerdown', e=>{
-  if(e.target.closest('.popover') || e.target.closest('#bgBtn')) return;
+  if(e.target.closest('.popover') || e.target.closest('#bgBtn') || e.target.closest('#defBtn')) return;
   document.querySelectorAll('.popover').forEach(p=>p.classList.remove('show'));
 });
+
+/* ---- new-table seat defaults ---- */
+const DEF_KEY='paineSeatingDefaults';
+let defaults={roundSeats:8, rectSeats:10};
+try{ const d=JSON.parse(localStorage.getItem(DEF_KEY)); if(d) defaults={...defaults,...d}; }catch(e){}
+function renderDefaults(){
+  document.getElementById('defRoundSeats').textContent=defaults.roundSeats;
+  document.getElementById('defRectSeats').textContent=defaults.rectSeats;
+}
+function saveDefaults(){ try{localStorage.setItem(DEF_KEY,JSON.stringify(defaults));}catch(e){} renderDefaults(); }
+document.getElementById('defBtn').onclick=()=>togglePop('defPanel');
+document.getElementById('defRoundMinus').onclick=()=>{ defaults.roundSeats=Math.max(1,defaults.roundSeats-1); saveDefaults(); };
+document.getElementById('defRoundPlus').onclick =()=>{ defaults.roundSeats=Math.min(20,defaults.roundSeats+1); saveDefaults(); };
+document.getElementById('defRectMinus').onclick =()=>{ defaults.rectSeats=Math.max(1,defaults.rectSeats-1); saveDefaults(); };
+document.getElementById('defRectPlus').onclick  =()=>{ defaults.rectSeats=Math.min(20,defaults.rectSeats+1); saveDefaults(); };
+renderDefaults();
 
 function renderBgControls(){
   const has=!!state.bg;
