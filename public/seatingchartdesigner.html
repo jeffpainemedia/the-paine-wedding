@@ -301,6 +301,22 @@
   .kbd-list{font-size:12.5px;color:var(--muted);line-height:2}
   .kbd-list b{color:var(--ink);font-weight:600}
   .kbd{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink)}
+  /* library */
+  .lib-save{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:13px;font-weight:600;
+    padding:11px;border-radius:10px;border:none;background:var(--brand);color:#fff;cursor:pointer;margin-top:14px}
+  .lib-save:hover{filter:brightness(1.08)}
+  .lib-cur{font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px;min-height:14px}
+  .lib-row{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:8px}
+  .lib-row .li-main{flex:1;min-width:0}
+  .lib-row .li-nm{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lib-row .li-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .lib-row.tap{cursor:pointer}
+  .lib-row.tap:hover{border-color:var(--tan)}
+  .li-act{display:flex;gap:2px;flex:none}
+  .li-act button{width:30px;height:30px;border-radius:7px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .li-act button:hover{background:var(--panel);color:var(--navy)}
+  .li-act button.del:hover{color:var(--burg)}
+  .lib-empty{font-size:12px;color:var(--muted);font-style:italic;padding:6px 2px 10px}
 
   @media (max-width:900px){
     .side{position:absolute;left:0;top:0;bottom:0;transition:transform .2s;width:320px;min-width:320px}
@@ -322,7 +338,7 @@
   /* file input hidden */
   #importFile{display:none}
   @media print{
-    .side,.toolbar,.selbar,.hint,.tgear,.scalepill,.popover,.rulerlayer,.drawer,.drawer-scrim{display:none!important}
+    .side,.toolbar,.selbar,.hint,.tgear,.scalepill,.popover,.rulerlayer,.drawer,.drawer-scrim,.scrim{display:none!important}
     .main{position:static}
     body{overflow:visible}
   }
@@ -418,6 +434,7 @@
       </div>
       <div class="spacer"></div>
       <div class="tgroup">
+        <button class="tbtn" id="libraryBtn" title="Saved plans & backups"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></button>
         <button class="tbtn" id="settingsBtn" title="Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
       </div>
       <div class="tgroup">
@@ -488,6 +505,32 @@
         </div>
       </div>
     </aside>
+
+    <!-- Library: saved plans + auto-backups -->
+    <aside class="drawer" id="libDrawer" aria-hidden="true">
+      <div class="drawer-head">
+        <h2>Saved plans</h2>
+        <button class="drawer-close" id="libClose" title="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="drawer-body">
+        <button class="lib-save" id="libSaveBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save current layout as…</button>
+        <div class="lib-cur" id="libCur"></div>
+        <div class="set-sec"><div class="sec-lbl">Your plans</div><div id="planList"></div></div>
+        <div class="set-sec"><div class="sec-lbl">Auto-backups</div>
+          <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.5">Saved automatically as you work. Tap one to restore it.</div>
+          <div id="backupList"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- text prompt (name a plan / rename) -->
+    <div class="scrim" id="promptScrim">
+      <div class="modal" style="width:360px">
+        <h2 id="promptTitle">Name</h2>
+        <div class="fld" style="margin-top:12px"><input type="text" id="promptInput" maxlength="60" placeholder="e.g. Reception — final" /></div>
+        <div class="modal-actions"><button id="promptCancel">Cancel</button><button class="save" id="promptOk">Save</button></div>
+      </div>
+    </div>
 
     <div class="selbar" id="selbar">
       <span class="cnt" id="selCnt">0</span>
@@ -1052,7 +1095,7 @@ function updateUndoButtons(){
   document.getElementById('undoBtn').disabled = histIndex<=0;
   document.getElementById('redoBtn').disabled = histIndex>=history.length-1;
 }
-function commit(){ renderAll(); pushHistory(); }
+function commit(){ renderAll(); pushHistory(); scheduleBackup(); }
 
 /* ============================================================
    SELECTION BAR
@@ -1565,6 +1608,126 @@ document.getElementById('selectModeBtn').onclick=()=>{
 };
 document.getElementById('rulerBtn').onclick=()=>toggleRuler();
 
+/* ============================================================
+   LIBRARY: named plans + rolling auto-backups + prompt modal
+   ============================================================ */
+const LS_PLANS='paineSeating_plans', LS_BACKUPS='paineSeating_backups';
+let currentPlanName='';
+let backupTimer=null, lastBackupSig='';
+
+function compactBackup(){ return JSON.stringify({tables:state.tables, placed:state.placed, nextT:state.nextT, view:state.view}); } // no image bytes
+function planSummary(s){ try{ const o=JSON.parse(s); return (o.tables||[]).length+' tables · '+Object.values(o.placed||{}).filter(p=>p.t).length+' seated'; }catch(e){ return ''; } }
+function fmtTime(ts){
+  const d=new Date(ts), now=new Date();
+  const time=d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  if(d.toDateString()===now.toDateString()) return 'Today '+time;
+  const y=new Date(now); y.setDate(now.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return 'Yesterday '+time;
+  return d.toLocaleDateString([], {month:'short', day:'numeric'})+' '+time;
+}
+function readLS(key){ try{ return JSON.parse(localStorage.getItem(key))||[]; }catch(e){ return []; } }
+function writeLS(key, arr){
+  try{ localStorage.setItem(key, JSON.stringify(arr)); return true; }
+  catch(e){ while(arr.length>3){ arr.pop(); try{ localStorage.setItem(key, JSON.stringify(arr)); return true; }catch(_){}} return false; }
+}
+function downloadJSON(obj, name){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(name||'seating-chart')+'.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ---- prompt (text input) modal ---- */
+let promptCb=null;
+function askPrompt(title, def, okLabel, cb){
+  document.getElementById('promptTitle').textContent=title;
+  const inp=document.getElementById('promptInput'); inp.value=def||'';
+  document.getElementById('promptOk').textContent=okLabel||'Save';
+  promptCb=cb;
+  document.getElementById('promptScrim').classList.add('show');
+  setTimeout(()=>{ inp.focus(); inp.select(); }, 40);
+}
+function hidePrompt(){ document.getElementById('promptScrim').classList.remove('show'); promptCb=null; }
+document.getElementById('promptCancel').onclick=hidePrompt;
+document.getElementById('promptOk').onclick=()=>{ const v=document.getElementById('promptInput').value.trim(); const cb=promptCb; hidePrompt(); if(cb&&v) cb(v); };
+document.getElementById('promptInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('promptOk').click(); } });
+document.getElementById('promptScrim').addEventListener('click', e=>{ if(e.target.id==='promptScrim') hidePrompt(); });
+
+/* ---- auto-backups (debounced, tiny, timestamped) ---- */
+function pushBackup(){
+  const sig=compactBackup();
+  if(sig===lastBackupSig) return;             // nothing changed since last backup
+  lastBackupSig=sig;
+  const arr=readLS(LS_BACKUPS);
+  arr.unshift({ t:Date.now(), s:sig });
+  writeLS(LS_BACKUPS, arr.slice(0,25));
+  if(document.getElementById('libDrawer').classList.contains('show')) renderBackups();
+}
+function scheduleBackup(){ if(backupTimer) return; backupTimer=setTimeout(()=>{ backupTimer=null; pushBackup(); }, 4000); }
+
+/* ---- named plans (versioning) ---- */
+function saveCurrentPlan(name){
+  const arr=readLS(LS_PLANS);
+  arr.unshift({ id:'p'+Date.now(), name, savedAt:Date.now(), s:JSON.stringify(state) });
+  if(writeLS(LS_PLANS, arr)){ currentPlanName=name; toast('Plan saved'); renderLibrary(); }
+  else toast('Storage full — delete a plan or the floor plan image');
+}
+function loadPlan(id){ const p=readLS(LS_PLANS).find(x=>x.id===id); if(!p) return; applyLoadedState(JSON.parse(p.s)); currentPlanName=p.name; toast('Loaded'); renderLibrary(); }
+function deletePlan(id){ writeLS(LS_PLANS, readLS(LS_PLANS).filter(x=>x.id!==id)); renderLibrary(); }
+function renamePlan(id, name){ const arr=readLS(LS_PLANS); const p=arr.find(x=>x.id===id); if(p){ p.name=name; writeLS(LS_PLANS,arr); renderLibrary(); } }
+function exportPlan(id){ const p=readLS(LS_PLANS).find(x=>x.id===id); if(!p) return; downloadJSON(JSON.parse(p.s), (p.name||'plan').replace(/\s+/g,'-').toLowerCase()); }
+function applyLoadedState(s){ state=normalizeState(s); sel.clear(); selTable=null; applyView(); renderBgControls(); applySidebarState(); commit(); }
+function restoreBackup(entry){
+  const s=JSON.parse(entry.s);
+  state.tables=s.tables||[]; state.placed=s.placed||{}; state.nextT=s.nextT||1; if(s.view) state.view=s.view;
+  state=normalizeState(state); sel.clear(); selTable=null; applyView(); commit(); toast('Backup restored'); renderLibrary();
+}
+
+/* ---- library rendering ---- */
+const ICO_RESTORE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v6h6"/><path d="M3.5 9a9 9 0 1 1-.5 6"/></svg>';
+const ICO_EDIT='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const ICO_EXPORT='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>';
+const ICO_TRASH='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>';
+function renderLibrary(){ renderPlans(); renderBackups(); document.getElementById('libCur').textContent = currentPlanName ? ('Current plan: '+currentPlanName) : 'Working layout (unsaved)'; }
+function renderPlans(){
+  const arr=readLS(LS_PLANS), el=document.getElementById('planList');
+  if(!arr.length){ el.innerHTML='<div class="lib-empty">No saved plans yet.</div>'; return; }
+  el.innerHTML=arr.map(p=>`<div class="lib-row">
+    <div class="li-main"><div class="li-nm">${esc(p.name)}</div><div class="li-sub">${fmtTime(p.savedAt)} &middot; ${planSummary(p.s)}</div></div>
+    <div class="li-act">
+      <button data-load="${p.id}" title="Load">${ICO_RESTORE}</button>
+      <button data-rename="${p.id}" title="Rename">${ICO_EDIT}</button>
+      <button data-export="${p.id}" title="Export file">${ICO_EXPORT}</button>
+      <button class="del" data-delplan="${p.id}" title="Delete">${ICO_TRASH}</button>
+    </div></div>`).join('');
+}
+function renderBackups(){
+  const arr=readLS(LS_BACKUPS), el=document.getElementById('backupList');
+  if(!arr.length){ el.innerHTML='<div class="lib-empty">No backups yet — they appear as you edit.</div>'; return; }
+  el.innerHTML=arr.map((b,i)=>`<div class="lib-row tap" data-restore="${i}">
+    <div class="li-main"><div class="li-nm">${fmtTime(b.t)}</div><div class="li-sub">${planSummary(b.s)}</div></div>
+    <div class="li-act"><button title="Restore">${ICO_RESTORE}</button></div></div>`).join('');
+}
+
+/* ---- library events ---- */
+function openLibrary(){ renderLibrary(); document.getElementById('libDrawer').classList.add('show'); document.getElementById('setScrim').classList.add('show'); }
+function closeLibrary(){ document.getElementById('libDrawer').classList.remove('show'); document.getElementById('setScrim').classList.remove('show'); }
+document.getElementById('libraryBtn').onclick=openLibrary;
+document.getElementById('libClose').onclick=closeLibrary;
+document.getElementById('setScrim').onclick=()=>{ closeSettings(); closeLibrary(); };
+document.getElementById('libSaveBtn').onclick=()=>askPrompt('Name this plan', currentPlanName||'', 'Save', saveCurrentPlan);
+document.getElementById('planList').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.load) askConfirm('Load this plan?','This replaces the current board. Save your work first if you want to keep it.','Load',false,()=>loadPlan(b.dataset.load));
+  else if(b.dataset.rename){ const p=readLS(LS_PLANS).find(x=>x.id===b.dataset.rename); askPrompt('Rename plan', p?p.name:'', 'Rename', v=>renamePlan(b.dataset.rename, v)); }
+  else if(b.dataset.export) exportPlan(b.dataset.export);
+  else if(b.dataset.delplan) askConfirm('Delete this plan?','This cannot be undone.','Delete',true,()=>deletePlan(b.dataset.delplan));
+});
+document.getElementById('backupList').addEventListener('click', e=>{
+  const row=e.target.closest('[data-restore]'); if(!row) return;
+  const b=readLS(LS_BACKUPS)[parseInt(row.dataset.restore,10)]; if(!b) return;
+  askConfirm('Restore this backup?','This replaces the current board. You can undo afterwards.','Restore',false,()=>restoreBackup(b));
+});
+
 /* export / import */
 document.getElementById('exportBtn').onclick=()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -1577,9 +1740,11 @@ document.getElementById('importFile').onchange=e=>{
   const rd=new FileReader();
   rd.onload=()=>{
     try{
-      const s=JSON.parse(rd.result);
-      if(s.tables){
-        state=normalizeState(s); sel.clear(); selTable=null;
+      let s=JSON.parse(rd.result);
+      if(s && typeof s.s==='string') s=JSON.parse(s.s);   // a plan export {name,s}
+      if(s && s.state) s=s.state;                          // a wrapped export {state}
+      if(s && s.tables){
+        state=normalizeState(s); sel.clear(); selTable=null; currentPlanName='';
         applyView(); renderBgControls(); applySidebarState(); commit(); toast('Chart loaded');
       }else{ toast('Could not read that file'); }
     }catch(err){ toast('Could not read that file'); }
@@ -1737,8 +1902,10 @@ window.addEventListener('keydown',e=>{
     e.preventDefault(); const n=sel.size; [...sel].forEach(id=>unplace(id)); sel.clear(); commit(); toast(`${n} returned to bank`);
   }
   if(e.key==='Escape'){
-    if(document.getElementById('setDrawer').classList.contains('show')){ closeSettings(); return; }
+    if(document.getElementById('promptScrim').classList.contains('show')){ hidePrompt(); return; }
     if(document.getElementById('confirmScrim').classList.contains('show')){ hideConfirm(); return; }
+    if(document.getElementById('setDrawer').classList.contains('show')){ closeSettings(); return; }
+    if(document.getElementById('libDrawer').classList.contains('show')){ closeLibrary(); return; }
     if(rulerMode){ toggleRuler(false); return; }
     sel.clear(); selTable=null; closeModal(); renderBoard();
   }
