@@ -165,10 +165,13 @@
     position:absolute;transform:translate(-50%,-50%);z-index:5;touch-action:none;
     display:flex;align-items:center;padding:3px 8px;border-radius:16px;
     background:#fff;border:1.5px solid var(--line);box-shadow:0 2px 6px rgba(22,56,101,.16);
-    font-size:11px;font-weight:600;color:var(--ink);cursor:grab;user-select:none;white-space:nowrap;
-    max-width:118px;
+    font-size:var(--chip-font,11px);font-weight:600;color:var(--ink);cursor:grab;user-select:none;white-space:nowrap;
+    max-width:var(--chip-maxw,118px);
   }
   .mag .mnm{overflow:hidden;text-overflow:ellipsis}
+  /* hairline tethers connecting each seated name to its seat */
+  .tethers{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:4}
+  .tethers line{stroke:var(--muted);stroke-width:1;opacity:.4}
   .mag:active{cursor:grabbing}
   .mag.free{border-style:dashed}
   .mag.selected{border-color:var(--burg);box-shadow:0 0 0 3px rgba(124,31,40,.22),0 2px 6px rgba(22,56,101,.16)}
@@ -228,6 +231,7 @@
   .modal-actions .save{background:var(--navy);color:#fff;border-color:var(--navy)}
   .modal-actions .del{color:var(--burg);border-color:transparent}
   .modal-actions .del:hover{background:#f6e9e9}
+  .modal-actions .save.danger-btn{background:var(--burg);border-color:var(--burg)}
 
   /* floor plan popover */
   .popover{position:absolute;top:calc(100% + 8px);left:0;width:236px;background:var(--panel);border:1px solid var(--line);
@@ -469,6 +473,18 @@
       <button id="mDup">Duplicate</button>
       <button id="mCancel">Cancel</button>
       <button class="save" id="mSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- generic confirm dialog (replaces browser confirm, which some browsers suppress) -->
+<div class="scrim" id="confirmScrim">
+  <div class="modal" style="width:360px">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p id="confirmBody" style="margin:8px 0 0;font-size:13.5px;line-height:1.5;color:var(--muted)"></p>
+    <div class="modal-actions">
+      <button id="confirmCancel">Cancel</button>
+      <button class="save" id="confirmOk">Confirm</button>
     </div>
   </div>
 </div>
@@ -717,6 +733,24 @@ function arrange(t){
 }
 function arrangeAll(){ state.tables.forEach(arrange); }
 function GMAP2t(id){ return state.tables.find(t=>t.id===id); }
+// world-space seat-stub positions (rotated + translated), for drawing tethers
+function seatSlotsWorld(t){
+  return seatSlotsLocal(t).map(s=>{ const rp=rot2(s.x,s.y,t.rot); return {x:t.x+rp.x, y:t.y+rp.y}; });
+}
+function buildTethers(){
+  let out='';
+  state.tables.forEach(t=>{
+    const mem = membersOf(t.id); if(!mem.length) return;
+    const stubs = seatSlotsWorld(t);
+    mem.forEach((g,i)=>{
+      const p = state.placed[g]; if(!p) return;
+      const tgt = (i<stubs.length) ? stubs[i] : {x:t.x, y:t.y};
+      out += `<line x1="${p.x}" y1="${p.y}" x2="${tgt.x}" y2="${tgt.y}" vector-effect="non-scaling-stroke"/>`;
+    });
+  });
+  return out;
+}
+function updateTethers(){ const svg=document.getElementById('tethers'); if(svg) svg.innerHTML=buildTethers(); }
 function dimLabel(t){
   if(t.shape==='round') return `${t.diaIn} in`;
   const ft = t.lenIn/12;
@@ -836,7 +870,9 @@ function renderBoard(){
       <span class="mnm">${esc(shortName(g))}</span>
     </div>`;
   });
+  html += `<svg class="tethers" id="tethers"></svg>`;
   world.innerHTML = html;
+  updateTethers();
   refreshAssignSelect();
   statSet();
   updateSelbar();
@@ -1130,6 +1166,7 @@ host.addEventListener('pointermove', e=>{
     if(Math.abs(dx)+Math.abs(dy)>2) drag.moved=true;
     drag.ids.forEach(id=>{ state.placed[id].x=drag.start[id].x+dx; state.placed[id].y=drag.start[id].y+dy;
       const el=world.querySelector(`[data-mag="${id}"]`); if(el){el.style.left=state.placed[id].x+'px';el.style.top=state.placed[id].y+'px';} });
+    updateTethers();
     const w=toWorld(e.clientX,e.clientY); highlightDrop(tableAtPoint(w.x,w.y));
     overSidebar(e.clientX);
     return;
@@ -1154,6 +1191,7 @@ function positionTableDom(t){
   const el=world.querySelector(`[data-t="${t.id}"]`); if(el){el.style.left=t.x+'px';el.style.top=t.y+'px';}
   arrange(t);
   membersOf(t.id).forEach(g=>{ const m=world.querySelector(`[data-mag="${g}"]`); if(m){m.style.left=state.placed[g].x+'px';m.style.top=state.placed[g].y+'px';} });
+  updateTethers();
 }
 let lastHot=null;
 function highlightDrop(t){
@@ -1354,10 +1392,12 @@ document.getElementById('zoomOutBtn').onclick=()=>zoomBy(1/1.2);
 document.getElementById('undoBtn').onclick=undo;
 document.getElementById('redoBtn').onclick=redo;
 document.getElementById('resetBtn').onclick =()=>{
-  if(confirm('Clear the whole board? Tables removed and all guests returned to the bank.')){
-    state.tables=[]; state.placed={}; state.nextT=1;
-    sel.clear(); selTable=null; commit(); toast('Board cleared');
-  }
+  askConfirm('Clear the board?',
+    'All tables will be removed and every guest returned to the bank. You can undo this.',
+    'Clear', true, ()=>{
+      state.tables=[]; state.placed={}; state.nextT=1;
+      sel.clear(); selTable=null; commit(); toast('Board cleared');
+    });
 };
 document.getElementById('printBtn').onclick =()=>{ fitView(); setTimeout(()=>window.print(),120); };
 
@@ -1472,9 +1512,9 @@ document.getElementById('bgLockBtn').addEventListener('click', ()=>{
 });
 document.getElementById('bgRemoveBtn').addEventListener('click', ()=>{
   if(!state.bg) return;
-  if(confirm('Remove the floor plan image?')){
+  askConfirm('Remove the floor plan?', 'The background image will be deleted from this board.', 'Remove', true, ()=>{
     state.bg=null; renderBgControls(); renderBoard(); commit(); toast('Floor plan removed');
-  }
+  });
 });
 
 /* ============================================================
@@ -1550,6 +1590,22 @@ function isTyping(e){ const t=e.target.tagName; return t==='INPUT'||t==='TEXTARE
    ============================================================ */
 let toastT;
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1800); }
+
+/* ---- in-app confirm dialog (reliable across browsers, unlike window.confirm) ---- */
+let confirmCb=null;
+function askConfirm(title, body, okLabel, danger, cb){
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmBody').textContent=body;
+  const ok=document.getElementById('confirmOk');
+  ok.textContent=okLabel||'Confirm';
+  ok.classList.toggle('danger-btn', !!danger);
+  confirmCb=cb;
+  document.getElementById('confirmScrim').classList.add('show');
+}
+function hideConfirm(){ document.getElementById('confirmScrim').classList.remove('show'); confirmCb=null; }
+document.getElementById('confirmCancel').onclick=hideConfirm;
+document.getElementById('confirmOk').onclick=()=>{ const cb=confirmCb; hideConfirm(); if(cb) cb(); };
+document.getElementById('confirmScrim').addEventListener('click', e=>{ if(e.target.id==='confirmScrim') hideConfirm(); });
 
 /* ============================================================
    INIT
